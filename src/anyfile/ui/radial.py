@@ -1,0 +1,609 @@
+"""Menu radiale: le destinazioni pertinenti al file, disposte attorno al puntatore.
+
+È una sovrapposizione trasparente a schermo intero. Su Wayland una finestra non può
+posizionarsi da sola sotto il cursore, ma riceve la posizione del puntatore appena
+questo entra nella sua superficie: il menu compare lì. Se la posizione non arriva
+(es. sessione X11 senza movimento) si usa il cursore noto o il centro dello schermo.
+"""
+
+from __future__ import annotations
+
+import math
+from dataclasses import dataclass
+from enum import Enum, auto
+from pathlib import Path
+
+from PySide6.QtCore import (
+    QEasingCurve, QMimeDatabase, QPointF, QRectF, Qt, QTimer, QVariantAnimation, Signal,
+)
+from PySide6.QtGui import (
+    QColor, QCursor, QEnterEvent, QFont, QFontMetricsF, QGuiApplication, QIcon, QKeyEvent,
+    QMouseEvent, QPainter, QPainterPath, QPaintEvent, QPen, QRadialGradient,
+)
+from PySide6.QtWidgets import QWidget
+
+from anyfile.core import formats
+from anyfile.core.detector import detect
+from anyfile.core.executor import Executor
+from anyfile.core.registry import Registry
+from anyfile.models.conversion import Category, Conversion
+from anyfile.models.file_info import FileInfo
+from anyfile.models.job import Job, JobStatus
+from anyfile.ui.desktop import human_size, notify
+from anyfile.ui.job_queue import QtJobQueue
+from anyfile.ui.radial_geometry import CENTER, Ring, groups, polar, qt_angle, step
+from anyfile.ui.settings import Settings
+
+CATEGORY_COLORS = {
+    Category.IMAGE: "#3daee9",
+    Category.AUDIO: "#f67400",
+    Category.VIDEO: "#e93a9a",
+    Category.DOCUMENT: "#27ae60",
+    Category.TEXT: "#9b59b6",
+    Category.SPREADSHEET: "#c29a10",
+    Category.PRESENTATION: "#b5541c",
+    Category.PDF: "#da4453",
+}
+MORE_COLOR = "#7f8c8d"
+OK_COLOR = "#27ae60"
+ERROR_COLOR = "#da4453"
+
+INNER, OUTER = 66.0, 172.0
+BAND_IN, BAND_OUT = 181.0, 186.0
+CAPTION_Y = 236.0
+# Spazio da lasciare tra il centro del menu e il bordo dello schermo.
+MARGIN = 270.0
+HOVER_GROW = 8.0
+GAP = 3.0
+MAX_SLICES = 14
+DONE_CLOSE_MS = 1300
+
+
+class Phase(Enum):
+    CHOOSING = auto()
+    RUNNING = auto()
+    DONE = auto()
+    FAILED = auto()
+
+
+@dataclass(frozen=True)
+class Entry:
+    # None: la voce «Altro…», che apre la finestra completa.
+    conversion: Conversion | None
+    label: str
+    short: str
+    category_label: str
+    color: str
+
+
+def common_targets(infos: list[FileInfo], registry: Registry) -> list[Conversion]:
+    """Destinazioni valide per tutti i file riconosciuti della selezione."""
+    recognized = [i for i in infos if i.format]
+    if not recognized:
+        return []
+    first = registry.targets(recognized[0].format.id)
+    others = [{c.target for c in registry.targets(i.format.id)} for i in recognized[1:]]
+    return [c for c in first if all(c.target in o for o in others)]
+
+
+def build_entries(conversions: list[Conversion]) -> list[Entry]:
+    entries = []
+    for conv in conversions:
+        fmt = formats.get(conv.target)
+        entries.append(Entry(conv, fmt.label, fmt.ext.upper(), fmt.category.label,
+                             CATEGORY_COLORS[fmt.category]))
+    if len(entries) > MAX_SLICES:
+        entries = entries[:MAX_SLICES - 1]
+        entries.append(Entry(None, "Altri formati", "…", "", MORE_COLOR))
+    return entries
+
+
+def mix(a: QColor, b: QColor, t: float) -> QColor:
+    return QColor.fromRgbF(
+        a.redF() + (b.redF() - a.redF()) * t,
+        a.greenF() + (b.greenF() - a.greenF()) * t,
+        a.blueF() + (b.blueF() - a.blueF()) * t,
+        a.alphaF() + (b.alphaF() - a.alphaF()) * t,
+    )
+
+
+def sector(a0: float, a1: float, r_in: float, r_out: float, gap: float = GAP) -> QPainterPath:
+    """Settore di corona circolare con bordi paralleli distanti `gap` px dai vicini."""
+    go = math.degrees(gap / 2 / r_out)
+    gi = math.degrees(gap / 2 / r_in)
+    outer = QRectF(-r_out, -r_out, 2 * r_out, 2 * r_out)
+    inner = QRectF(-r_in, -r_in, 2 * r_in, 2 * r_in)
+    path = QPainterPath()
+    path.arcMoveTo(outer, qt_angle(a0 + go))
+    path.arcTo(outer, qt_angle(a0 + go), -(a1 - a0 - 2 * go))
+    path.arcTo(inner, qt_angle(a1 - gi), a1 - a0 - 2 * gi)
+    path.closeSubpath()
+    return path
+
+
+class RadialMenu(QWidget):
+    open_window = Signal(list)  # list[Path]: passa alla finestra completa
+    finished = Signal()
+
+    def __init__(self, registry: Registry, paths: list[Path]) -> None:
+        super().__init__(None, Qt.WindowType.FramelessWindowHint
+                         | Qt.WindowType.WindowStaysOnTopHint)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setMouseTracking(True)
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.setWindowTitle("ANYFILE")
+
+        self.registry = registry
+        self.settings = Settings()
+        self.paths = paths
+        self.infos = [detect(p) for p in paths]
+        self.recognized = [i for i in self.infos if i.format]
+        self.entries = build_entries(common_targets(self.infos, registry))
+        self.ring = Ring(INNER, OUTER, len(self.entries))
+
+        self.phase = Phase.CHOOSING
+        self.hover: int | None = None
+        self.chosen: Entry | None = None
+        self.jobs: dict[int, Job] = {}
+        self.in_background = False
+        self.error_text = ""
+        self._done = False
+
+        self.origin: QPointF | None = None
+        self.t = 0.0  # avanzamento dell'animazione di apertura/chiusura
+        self.spin = 0.0
+        self._anim = QVariantAnimation(self)
+        self._anim.valueChanged.connect(self._on_anim)
+        self._anim.finished.connect(self._on_anim_finished)
+        self._after_anim = None
+        self._spinner = QTimer(self, interval=16)
+        self._spinner.timeout.connect(self._on_spin)
+
+        self.queue = QtJobQueue(Executor(registry), self)
+        self.queue.job_updated.connect(self._on_job)
+
+    # --- apertura e posizionamento ------------------------------------------
+
+    def popup(self) -> None:
+        screen = QGuiApplication.screenAt(QCursor.pos()) or QGuiApplication.primaryScreen()
+        if screen:
+            self.setScreen(screen)
+            self.setGeometry(screen.geometry())
+        self.showFullScreen()
+        self.activateWindow()
+        self.setFocus()
+        QTimer.singleShot(0, self._place_from_cursor)
+        # Nessuna notizia del puntatore: si apre al centro.
+        QTimer.singleShot(300, lambda: self._place(QPointF(self.rect().center())))
+
+    def _place_from_cursor(self) -> None:
+        if QGuiApplication.platformName() == "wayland":
+            return  # la posizione arriva con l'evento di ingresso del puntatore
+        pos = self.mapFromGlobal(QCursor.pos())
+        if self.rect().contains(pos):
+            self._place(QPointF(pos))
+
+    def _place(self, pos: QPointF) -> None:
+        if self.origin is not None:
+            return
+        w, h = self.width(), self.height()
+        x = min(max(pos.x(), MARGIN), w - MARGIN) if w > 2 * MARGIN else w / 2
+        y = min(max(pos.y(), MARGIN), h - MARGIN) if h > 2 * MARGIN else h / 2
+        self.origin = QPointF(x, y)
+        self._animate(1.0, 180, QEasingCurve.Type.OutCubic)
+        self._update_hover(pos)
+
+    def enterEvent(self, event: QEnterEvent) -> None:  # noqa: N802
+        self._place(event.position())
+
+    # --- animazione -------------------------------------------------------
+
+    def _animate(self, to: float, ms: int, curve: QEasingCurve.Type, done=None) -> None:
+        self._anim.stop()
+        self._after_anim = done
+        self._anim.setStartValue(self.t)
+        self._anim.setEndValue(to)
+        self._anim.setDuration(ms)
+        self._anim.setEasingCurve(curve)
+        self._anim.start()
+
+    def _on_anim_finished(self) -> None:
+        callback, self._after_anim = self._after_anim, None
+        if callback:
+            callback()
+
+    def _on_anim(self, value: float) -> None:
+        self.t = float(value)
+        self.update()
+
+    def _on_spin(self) -> None:
+        self.spin = (self.spin + 6) % 360
+        self.update()
+
+    def _scale(self) -> float:
+        return 0.82 + 0.18 * self.t
+
+    # --- interazione --------------------------------------------------------
+
+    def _hit(self, pos: QPointF) -> int | None:
+        if self.origin is None:
+            return None
+        s = self._scale()
+        return self.ring.hit((pos.x() - self.origin.x()) / s, (pos.y() - self.origin.y()) / s)
+
+    def _update_hover(self, pos: QPointF) -> None:
+        hit = self._hit(pos)
+        if self.phase is not Phase.CHOOSING and hit != CENTER:
+            hit = None
+        if hit != self.hover:
+            self.hover = hit
+            self.setCursor(Qt.CursorShape.PointingHandCursor if hit is not None
+                           else Qt.CursorShape.ArrowCursor)
+            self.update()
+
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:  # noqa: N802
+        self._place(event.position())
+        self._update_hover(event.position())
+
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:  # noqa: N802
+        if self.origin is None:
+            return
+        if event.button() == Qt.MouseButton.RightButton:
+            self._dismiss()
+            return
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._activate(self._hit(event.position()))
+
+    def keyPressEvent(self, event: QKeyEvent) -> None:  # noqa: N802
+        key = event.key()
+        if key == Qt.Key.Key_Escape:
+            self._dismiss()
+        elif self.phase is Phase.CHOOSING and key in (Qt.Key.Key_Right, Qt.Key.Key_Down, Qt.Key.Key_Tab):
+            self.hover = step(self.hover, 1, len(self.entries))
+            self.update()
+        elif self.phase is Phase.CHOOSING and key in (Qt.Key.Key_Left, Qt.Key.Key_Up, Qt.Key.Key_Backtab):
+            self.hover = step(self.hover, -1, len(self.entries))
+            self.update()
+        elif key in (Qt.Key.Key_Return, Qt.Key.Key_Enter, Qt.Key.Key_Space):
+            self._activate(self.hover if self.hover is not None else CENTER)
+        else:
+            super().keyPressEvent(event)
+
+    def _activate(self, hit: int | None) -> None:
+        if self.phase is Phase.CHOOSING:
+            if hit is None:
+                self._dismiss()
+            elif hit == CENTER:
+                self._to_window()
+            elif self.entries[hit].conversion is None:
+                self._to_window()
+            else:
+                self._start(self.entries[hit])
+        elif self.phase is Phase.RUNNING:
+            if hit == CENTER:
+                self.queue.cancel_all()
+            else:
+                self._to_background()
+        elif self.phase is Phase.FAILED and hit == CENTER:
+            self._to_window()
+        else:
+            self._close()
+
+    def _dismiss(self) -> None:
+        if self.phase is Phase.RUNNING:
+            self._to_background()
+        else:
+            self._close()
+
+    def _to_window(self) -> None:
+        self.open_window.emit(self.paths)
+        self._close()
+
+    def _to_background(self) -> None:
+        """Nasconde il menu: la conversione continua e una notifica ne darà l'esito."""
+        self.in_background = True
+        self._animate(0.0, 120, QEasingCurve.Type.InCubic, self.hide)
+
+    def _close(self) -> None:
+        if self.isHidden():
+            self._finish()
+        else:
+            self._animate(0.0, 120, QEasingCurve.Type.InCubic, self._finish)
+
+    def _finish(self) -> None:
+        if self._done:
+            return
+        self._done = True
+        self._spinner.stop()
+        self.queue.close()
+        self.hide()
+        self.finished.emit()
+
+    # --- conversione --------------------------------------------------------
+
+    def _start(self, entry: Entry) -> None:
+        assert entry.conversion is not None
+        self.phase, self.chosen, self.hover = Phase.RUNNING, entry, None
+        self.setCursor(Qt.CursorShape.ArrowCursor)
+        output_dir = self.settings.custom_dir if self.settings.use_custom_dir else None
+        for info in self.recognized:
+            job = self.queue.submit(info.path, entry.conversion.target, output_dir,
+                                    self.settings.overwrite)
+            self.jobs[job.id] = job
+        self._spinner.start()
+        self.update()
+
+    def _on_job(self, job: Job) -> None:
+        if job.id not in self.jobs:
+            return
+        self.jobs[job.id] = job
+        if all(j.finished for j in self.jobs.values()):
+            self._all_finished()
+        self.update()
+
+    def _all_finished(self) -> None:
+        self._spinner.stop()
+        jobs = list(self.jobs.values())
+        done = [j for j in jobs if j.status is JobStatus.DONE]
+        failed = [j for j in jobs if j.status is JobStatus.FAILED]
+        if not done and not failed:  # tutto annullato
+            self._close()
+            return
+        if failed:
+            self.phase = Phase.FAILED
+            first = failed[0]
+            prefix = f"{len(failed)} di {len(jobs)} non convertiti. " if len(jobs) > 1 else ""
+            self.error_text = f"{prefix}{first.source.name}: {first.message}"
+            if self.in_background:
+                notify("Conversione non riuscita", self.error_text)
+                self._finish()
+            return
+        self.phase = Phase.DONE
+        summary = (done[0].output.name if len(done) == 1 and done[0].output
+                   else f"{len(done)} file convertiti")
+        if self.in_background:
+            notify("Conversione completata", summary)
+            self._finish()
+        else:
+            QTimer.singleShot(DONE_CLOSE_MS, self._close)
+
+    def progress(self) -> float | None:
+        """Avanzamento complessivo; None se indeterminato."""
+        jobs = list(self.jobs.values())
+        if not jobs:
+            return None
+        if len(jobs) == 1 and jobs[0].progress is None and not jobs[0].finished:
+            return None
+        total = sum(1.0 if j.finished else (j.progress or 0.0) for j in jobs)
+        return total / len(jobs)
+
+    # --- disegno ----------------------------------------------------------
+
+    def paintEvent(self, _event: QPaintEvent) -> None:  # noqa: N802
+        if self.origin is None:
+            return
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        p.setRenderHint(QPainter.RenderHint.TextAntialiasing)
+        p.fillRect(self.rect(), QColor(0, 0, 0, int(40 * self.t)))
+        p.translate(self.origin)
+        p.scale(self._scale(), self._scale())
+        p.setOpacity(self.t)
+
+        pal = self.palette()
+        self.c_base = pal.color(pal.ColorRole.Window)
+        self.c_text = pal.color(pal.ColorRole.WindowText)
+        self.c_muted = mix(self.c_base, self.c_text, 0.55)
+
+        self._paint_shadow(p)
+        self._paint_slices(p)
+        self._paint_center(p)
+        self._paint_caption(p)
+        p.end()
+
+    def _font(self, scale: float = 1.0, bold: bool = False) -> QFont:
+        f = QFont(self.font())
+        f.setPointSizeF(f.pointSizeF() * scale)
+        f.setBold(bold)
+        return f
+
+    def _paint_shadow(self, p: QPainter) -> None:
+        plate = BAND_OUT + 7
+        r = plate + 26
+        g = QRadialGradient(QPointF(0, 4), r)
+        g.setColorAt(plate / r - 0.02, QColor(0, 0, 0, 70))
+        g.setColorAt(1.0, QColor(0, 0, 0, 0))
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(g)
+        p.drawEllipse(QPointF(0, 4), r, r)
+        # Disco di fondo su cui poggiano fette e archi di categoria.
+        p.setBrush(self.c_base)
+        p.drawEllipse(QPointF(0, 0), plate, plate)
+
+    def _paint_slices(self, p: QPainter) -> None:
+        dim = 0.35 if self.phase is not Phase.CHOOSING else 1.0
+        for i, entry in enumerate(self.entries):
+            a0, a1 = self.ring.bounds(i)
+            hovered = i == self.hover
+            chosen = self.chosen is entry
+            color = QColor(entry.color)
+            p.setOpacity(self.t * (1.0 if chosen else dim))
+            p.setPen(Qt.PenStyle.NoPen)
+            p.setBrush(color if hovered or chosen else mix(self.c_base, color, 0.20))
+            grow = HOVER_GROW if hovered else 0.0
+            p.drawPath(sector(a0, a1, INNER + 4, OUTER + grow))
+
+            text_color = QColor("white") if hovered or chosen else self.c_text
+            cx, cy = polar(self.ring.mid_angle(i), (INNER + OUTER) / 2 + grow / 2)
+            arc_width = math.radians(a1 - a0) * (INNER + OUTER) / 2
+            p.setPen(text_color)
+            p.setFont(self._font(1.15, bold=True))
+            small = self._font(0.8)
+            # Il nome esteso compare solo se aggiunge qualcosa e sta nella fetta.
+            show_label = (entry.conversion is not None
+                          and entry.short not in entry.label.upper()
+                          and QFontMetricsF(small).horizontalAdvance(entry.label) <= arc_width - 16)
+            if show_label:
+                p.drawText(QRectF(cx - 60, cy - 17, 120, 20), Qt.AlignmentFlag.AlignCenter, entry.short)
+                p.setFont(small)
+                p.drawText(QRectF(cx - 60, cy + 2, 120, 16), Qt.AlignmentFlag.AlignCenter, entry.label)
+            else:
+                p.drawText(QRectF(cx - 40, cy - 10, 80, 20), Qt.AlignmentFlag.AlignCenter, entry.short)
+
+        p.setOpacity(self.t * dim)
+        for key, start, end in groups([e.category_label for e in self.entries]):
+            if not key:
+                continue
+            color = QColor(self.entries[start].color)
+            a0, a1 = self.ring.bounds(start)[0], self.ring.bounds(end - 1)[1]
+            p.setPen(Qt.PenStyle.NoPen)
+            p.setBrush(color)
+            p.drawPath(sector(a0, a1, BAND_IN, BAND_OUT, gap=6))
+            self._paint_group_label(p, key, (a0 + a1) / 2, color)
+        p.setOpacity(self.t)
+
+    def _paint_group_label(self, p: QPainter, text: str, angle: float, color: QColor) -> None:
+        p.setFont(self._font(0.85, bold=True))
+        fm = QFontMetricsF(p.font())
+        w, h = fm.horizontalAdvance(text) + 14, fm.height() + 4
+        # Il riquadro si sposta verso l'esterno lungo la direzione del gruppo,
+        # così non tocca l'arco qualunque sia l'angolo.
+        ux, uy = polar(angle, 1.0)
+        ax, ay = polar(angle, BAND_OUT + 6)
+        cx, cy = ax + ux * w / 2, ay + uy * h / 2
+        box = QRectF(cx - w / 2, cy - h / 2, w, h)
+        # Fondo proprio: l'etichetta sta sopra lo sfondo del desktop, che può essere qualsiasi.
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(self.c_base)
+        p.drawRoundedRect(box, h / 2, h / 2)
+        p.setPen(color.lighter(130) if self.c_base.lightness() < 128 else color.darker(115))
+        p.drawText(box, Qt.AlignmentFlag.AlignCenter, text)
+
+    def _paint_center(self, p: QPainter) -> None:
+        r = INNER - 2
+        hovered = self.hover == CENTER
+        p.setPen(QPen(mix(self.c_base, self.c_text, 0.15), 1))
+        p.setBrush(mix(self.c_base, self.c_text, 0.06) if hovered else self.c_base)
+        p.drawEllipse(QPointF(0, 0), r, r)
+
+        if self.phase is Phase.CHOOSING:
+            if hovered:
+                self._center_lines(p, "⤢", "Finestra", "completa")
+            elif self.hover is not None:
+                entry = self.entries[self.hover]
+                self._center_lines(p, entry.short, entry.label if entry.conversion else "",
+                                   "", accent=QColor(entry.color))
+            else:
+                self._paint_file_summary(p)
+        elif self.phase is Phase.RUNNING:
+            self._paint_progress(p, r - 3)
+            if hovered:
+                self._center_lines(p, "✕", "Annulla", "", accent=QColor(ERROR_COLOR))
+            else:
+                value = self.progress()
+                big = f"{value:.0%}" if value is not None else "…"
+                self._center_lines(p, big, f"→ {self.chosen.short}" if self.chosen else "", "")
+        elif self.phase is Phase.DONE:
+            self._center_lines(p, "✓", "Fatto", "", accent=QColor(OK_COLOR))
+        else:
+            self._center_lines(p, "✕", "Errore", "", accent=QColor(ERROR_COLOR))
+
+    def _center_lines(self, p: QPainter, big: str, line1: str, line2: str,
+                      accent: QColor | None = None) -> None:
+        p.setPen(accent or self.c_text)
+        p.setFont(self._font(1.9 if len(big) <= 4 else 1.4, bold=True))
+        p.drawText(QRectF(-56, -34, 112, 36), Qt.AlignmentFlag.AlignCenter, big)
+        p.setPen(self.c_text)
+        p.setFont(self._font(0.85))
+        fm = QFontMetricsF(p.font())
+        for k, line in enumerate((line1, line2)):
+            if line:
+                text = fm.elidedText(line, Qt.TextElideMode.ElideRight, 104)
+                p.drawText(QRectF(-56, 4 + k * 16, 112, 16), Qt.AlignmentFlag.AlignCenter, text)
+
+    def _paint_file_summary(self, p: QPainter) -> None:
+        if len(self.infos) == 1:
+            info = self.infos[0]
+            icon = QIcon.fromTheme(QMimeDatabase().mimeTypeForFile(str(info.path)).iconName(),
+                                   QIcon.fromTheme("text-x-generic"))
+            name = info.name
+            detail = (f"{info.format.label} · {human_size(info.size)}" if info.format
+                      else info.reason or "Formato sconosciuto")
+        else:
+            icon = QIcon.fromTheme("document-multiple", QIcon.fromTheme("folder-documents"))
+            name = f"{len(self.infos)} file"
+            kinds = {i.format.label for i in self.recognized}
+            detail = kinds.pop() if len(kinds) == 1 else "formati diversi"
+        icon.paint(p, QRectF(-18, -44, 36, 36).toRect())
+        p.setPen(self.c_text)
+        p.setFont(self._font(0.85, bold=True))
+        fm = QFontMetricsF(p.font())
+        p.drawText(QRectF(-56, -4, 112, 18), Qt.AlignmentFlag.AlignCenter,
+                   fm.elidedText(name, Qt.TextElideMode.ElideMiddle, 108))
+        p.setPen(self.c_muted)
+        p.setFont(self._font(0.75))
+        fm = QFontMetricsF(p.font())
+        p.drawText(QRectF(-56, 14, 112, 16), Qt.AlignmentFlag.AlignCenter,
+                   fm.elidedText(detail, Qt.TextElideMode.ElideRight, 104))
+
+    def _paint_progress(self, p: QPainter, r: float) -> None:
+        color = QColor(self.chosen.color) if self.chosen else self.c_text
+        rect = QRectF(-r, -r, 2 * r, 2 * r)
+        p.setBrush(Qt.BrushStyle.NoBrush)
+        p.setPen(QPen(mix(self.c_base, color, 0.2), 5))
+        p.drawEllipse(rect)
+        pen = QPen(color, 5)
+        pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+        p.setPen(pen)
+        value = self.progress()
+        if value is None:
+            p.drawArc(rect, int(qt_angle(self.spin) * 16), int(-90 * 16))
+        elif value > 0:
+            p.drawArc(rect, 90 * 16, int(-360 * value * 16))
+
+    def _caption(self) -> tuple[str, QColor | None]:
+        if self.phase is Phase.CHOOSING:
+            if self.hover is not None and self.hover != CENTER:
+                entry = self.entries[self.hover]
+                if entry.conversion is None:
+                    return "Mostra tutte le conversioni nella finestra completa", None
+                source = self.recognized[0].format.label if len(self.recognized) == 1 else "tutti"
+                note = f" · {entry.conversion.notes}" if entry.conversion.notes else ""
+                return f"{source} → {entry.label}{note}", None
+            if not self.entries:
+                if not self.recognized:
+                    return "Nessun file riconosciuto. Clic al centro per i dettagli.", None
+                return "Nessuna conversione comune a tutti i file selezionati.", None
+            skipped = len(self.infos) - len(self.recognized)
+            hint = "Clic su un formato per convertire · Esc per chiudere"
+            if skipped:
+                hint = ("1 file non riconosciuto sarà ignorato" if skipped == 1
+                        else f"{skipped} file non riconosciuti saranno ignorati")
+            return hint, self.c_muted
+        if self.phase is Phase.RUNNING:
+            return "Esc: continua in background · Centro: annulla", self.c_muted
+        if self.phase is Phase.DONE:
+            done = [j for j in self.jobs.values() if j.output]
+            text = (str(done[0].output.name) if len(done) == 1 else f"{len(done)} file convertiti")
+            return text, None
+        return f"{self.error_text}\nClic al centro per i dettagli", QColor(ERROR_COLOR)
+
+    def _paint_caption(self, p: QPainter) -> None:
+        text, color = self._caption()
+        if not text:
+            return
+        p.setOpacity(self.t)
+        p.setFont(self._font(0.9))
+        fm = QFontMetricsF(p.font())
+        max_w = 440.0
+        bounds = fm.boundingRect(QRectF(0, 0, max_w, 200),
+                                 Qt.TextFlag.TextWordWrap | Qt.AlignmentFlag.AlignCenter, text)
+        w = min(max_w, bounds.width()) + 28
+        h = min(bounds.height(), fm.lineSpacing() * 4) + 14
+        box = QRectF(-w / 2, CAPTION_Y, w, h)
+        p.setPen(QPen(mix(self.c_base, self.c_text, 0.15), 1))
+        p.setBrush(self.c_base)
+        p.drawRoundedRect(box, h / 2 if h < 40 else 12, h / 2 if h < 40 else 12)
+        p.setPen(color or self.c_text)
+        p.drawText(box.adjusted(14, 7, -14, -7),
+                   Qt.TextFlag.TextWordWrap | Qt.AlignmentFlag.AlignCenter, text)

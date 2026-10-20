@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-import shutil
-import subprocess
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QUrl
-from PySide6.QtGui import QAction, QDesktopServices, QDragEnterEvent, QDropEvent, QIcon, QKeySequence
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QAction, QDragEnterEvent, QDropEvent, QIcon, QKeySequence
 from PySide6.QtWidgets import (
     QButtonGroup, QCheckBox, QFileDialog, QHBoxLayout, QLabel, QLineEdit, QMainWindow,
     QMessageBox, QPushButton, QRadioButton, QSizePolicy, QStackedWidget, QToolBar, QVBoxLayout, QWidget,
@@ -15,10 +13,9 @@ from anyfile.core.executor import Executor
 from anyfile.core.registry import Registry
 from anyfile.models.job import Job, JobStatus
 from anyfile.ui.conversion_view import ConversionView, Row
+from anyfile.ui.desktop import APP_ICON, notify, reveal
 from anyfile.ui.job_queue import QtJobQueue
 from anyfile.ui.settings import EnginesDialog, Settings
-
-APP_ICON = "document-export"
 
 
 class MainWindow(QMainWindow):
@@ -222,12 +219,8 @@ class MainWindow(QMainWindow):
             self._reveal(row.output)
 
     def _reveal(self, path: Path | None) -> None:
-        if path is None:
-            return
-        if shutil.which("dolphin"):
-            subprocess.Popen(["dolphin", "--select", str(path)], start_new_session=True)
-        else:
-            QDesktopServices.openUrl(QUrl.fromLocalFile(str(path.parent)))
+        if path is not None:
+            reveal(path)
 
     def _show_engines(self) -> None:
         EnginesDialog(self.registry, self).exec()
@@ -257,8 +250,3 @@ class MainWindow(QMainWindow):
         self.jobs.close()
         event.accept()
 
-
-def notify(title: str, body: str) -> None:
-    if shutil.which("notify-send"):
-        subprocess.Popen(["notify-send", "-a", "ANYFILE", "-i", APP_ICON, title, body],
-                         start_new_session=True)

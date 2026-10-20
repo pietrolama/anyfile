@@ -7,4 +7,4 @@ X-KDE-Priority=TopLevel
 [Desktop Action convertWithAnyfile]
 Name=Converti con ANYFILE
 Icon=document-export
-Exec=anyfile --from-dolphin %F
+Exec=anyfile --radial %F

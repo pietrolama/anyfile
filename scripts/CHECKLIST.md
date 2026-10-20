@@ -1,8 +1,26 @@
 # Checklist delle prove manuali
 
-Apri questa cartella in Dolphin. Per ogni prova: tasto destro sul file →
-**Converti con ANYFILE**, scegli il formato, premi **Converti**.
+Apri questa cartella in Dolphin. Tasto destro sul file → **Converti con ANYFILE**
+apre il **menu radiale** sotto il puntatore: clic su un formato per convertire.
+Per le prove indicate «in ANYFILE» clicca il **centro** del menu: si apre la finestra completa.
 Per ripartire da zero: `python3 scripts/genera_prove.py --pulisci`.
+
+## Menu radiale
+
+| # | File | Azione | Risultato atteso |
+|---|------|--------|------------------|
+| R1 | `01-foto.png` | Tasto destro → Converti con ANYFILE | Il menu compare **sotto il puntatore**, con le fette raggruppate per categoria |
+| R2 | `01-foto.png` | Passa sulle fette | La fetta si evidenzia; al centro il formato, sotto la nota (es. «Le aree trasparenti diventano bianche») |
+| R3 | `01-foto.png` | Clic su WEBP | Avanzamento al centro, «✓ Fatto», il menu si chiude da solo; il file è accanto all'originale |
+| R4 | `01-foto.png` | Frecce ←/→ e Invio | Stessa scelta da tastiera |
+| R5 | Qualsiasi | Esc, clic fuori, tasto destro | Il menu si chiude senza fare nulla |
+| R6 | `09-video-lungo.mp4` | Clic su WEBM, poi **Esc** | Il menu sparisce, la conversione continua; a fine lavoro arriva una notifica |
+| R7 | `09-video-lungo.mp4` | Clic su WEBM, poi clic al **centro** («Annulla») | Conversione annullata, nessun file parziale |
+| R8 | `01-foto.png` + `06-animata.gif` + `07-tono.wav` | Selezionali insieme → menu | Nessuna conversione comune: il messaggio lo dice; centro → finestra |
+| R9 | `01-foto.png` + `02-trasparente.png` + `17-archivio.zip` | Selezionali insieme → menu | Solo formati immagine; «1 file non riconosciuto sarà ignorato» |
+| R10 | `08-clip-breve.mp4` | Menu | 12 fette: Video, Immagine (GIF), Audio |
+| R11 | `18-danneggiato.png` | Menu → JPG | «✕ Errore» al centro e messaggio sotto; il centro apre la finestra completa, dove riconvertendo si leggono i dettagli nel tooltip |
+| R12 | Vicino al bordo dello schermo | Menu | Il menu resta interamente visibile |
 
 ## Immagini
 

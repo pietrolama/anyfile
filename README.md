@@ -19,7 +19,12 @@ Lo script crea un virtualenv in `~/.local/share/anyfile/venv`, il comando
 
 ## Uso
 
-- **Dolphin**: tasto destro su uno o più file → *Converti con ANYFILE*.
+- **Dolphin**: tasto destro su uno o più file → *Converti con ANYFILE*. Si apre il
+  **menu radiale** sotto il puntatore: una fetta per ogni formato raggiungibile,
+  raggruppate per categoria. Clic su una fetta per convertire; clic al centro per la
+  finestra completa; Esc per chiudere (durante una conversione lunga, Esc la lascia
+  proseguire in background con una notifica finale). Funziona anche con frecce e Invio.
+- **Menu radiale da terminale**: `anyfile --radial FILE...`
 - **Interfaccia**: `anyfile [FILE...]`, oppure trascina i file nella finestra.
 - **Terminale**:
   ```sh
@@ -54,7 +59,7 @@ src/anyfile/
   core/validation.py  verifica dell'output (firma, testo, tracce audio/video)
   core/jobs.py        coda dei lavori con avanzamento e annullamento
   engines/            FFmpeg, ImageMagick, LibreOffice + Pandoc, Poppler
-  ui/                 interfaccia PySide6
+  ui/                 interfaccia PySide6 (finestra e menu radiale)
   cli.py, app.py      punti di ingresso
 packaging/            .desktop, service menu Dolphin, script di installazione
 ```
@@ -79,5 +84,5 @@ python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'
 
 ## Prossimi passi
 
-Menu radiale, preset di qualità, conversioni concatenate (es. DOCX → HTML → EPUB)
+Preset di qualità, conversioni concatenate (es. DOCX → HTML → EPUB)
 con valutazione della perdita, cronologia, pacchetto `.deb`/Flatpak.
