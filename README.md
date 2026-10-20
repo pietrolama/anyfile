@@ -1,108 +1,195 @@
 # ANYFILE
 
-Convertitore di file locale per Linux (KDE Plasma su Debian/Ubuntu), con integrazione
-nel menu contestuale di Dolphin. Si sceglie il risultato, non il motore: ANYFILE
-rileva il formato, mostra solo le conversioni realmente eseguibili con i programmi
-installati, le esegue in sicurezza e verifica il file prodotto.
+Convertitore di file locale per Linux, pensato per KDE Plasma su Debian/Ubuntu.
+Tasto destro su un file in Dolphin, e una ruota sotto il puntatore mostra cosa puoi
+farne: convertirlo, comprimerlo, scegliere la qualità. Si sceglie il risultato, non
+il programma: ANYFILE rileva il formato, offre solo le conversioni che i motori
+installati sanno davvero eseguire, le esegue in sicurezza e verifica il file prodotto.
 
-## Installazione (utente, senza root)
+Tutto avviene sul computer: nessun file viene caricato in rete.
+
+## Installazione
+
+Installazione per l'utente corrente, senza privilegi di amministratore:
 
 ```sh
-sudo apt install ffmpeg imagemagick pandoc libreoffice poppler-utils   # anche solo alcuni
+sudo apt install ffmpeg imagemagick poppler-utils libreoffice pandoc ghostscript
+git clone https://github.com/pietrolama/anyfile.git && cd anyfile
 packaging/install-user.sh
 ```
 
+I motori sono tutti facoltativi: ANYFILE usa quelli presenti e spiega cosa installare
+per sbloccare le altre conversioni (`anyfile engines`).
+
 Lo script crea un virtualenv in `~/.local/share/anyfile/venv`, il comando
-`~/.local/bin/anyfile`, la voce nel menu applicazioni e il service menu di Dolphin
+`~/.local/bin/anyfile`, la voce nel menu delle applicazioni e l'azione di Dolphin
 (`~/.local/share/kio/servicemenus/anyfile.desktop`). Per rimuovere tutto:
 `packaging/install-user.sh --uninstall`.
 
-## Uso
+## Il menu radiale
 
-- **Dolphin**: tasto destro su uno o più file → *Converti con ANYFILE*. Si apre il
-  **menu radiale** sotto il puntatore: una fetta per ogni formato raggiungibile,
-  raggruppate per categoria. Clic su una fetta per convertire; clic al centro per la
-  finestra completa; Esc per chiudere (durante una conversione lunga, Esc la lascia
-  proseguire in background con una notifica finale). Funziona anche con frecce e Invio.
-  Con più file selezionati la ruota mostra tutto ciò che si può fare: le fette che
-  valgono solo per una parte dei file indicano quanti (es. «6/9») e convertono solo quelli.
-- **Comprimi**: la prima fetta della ruota rende il file più leggero restando nello
-  stesso formato (JPEG, WebP, audio e video con perdita, PDF con Ghostscript) e salva
-  `nome-compresso.ext` accanto all'originale. Se il risultato non è più leggero viene
-  scartato e la ruota mostra «Già compatto». Da terminale: `anyfile convert foto.jpg -t jpg`.
-- **Conversioni concatenate**: se un formato non è raggiungibile direttamente, ANYFILE
-  passa da un formato intermedio, per esempio XLSX → PDF → PNG (una immagine per pagina),
-  DOC → DOCX → Markdown, EPUB → DOCX → PDF. La ruota e la finestra indicano «via PDF» e
-  sommano le perdite dichiarate di ogni passaggio. Regole: al massimo un intermedio, mai
-  un intermedio con perdita (niente doppia compressione), nessun percorso che darebbe un
-  file vuoto (un'immagine non diventa testo senza OCR); ogni file intermedio viene
-  verificato e un errore indica il passaggio in cui è avvenuto.
-- **Qualità**: per i formati con perdita (JPEG, WebP, MP3, Ogg, Opus, AAC, video, GIF)
-  ci sono tre preset: *Massima qualità*, *Bilanciata* (predefinita) e *File più leggero*
-  (che riduce anche i video a 720p e toglie i metadati dalle foto). Nella ruota, il clic
-  sulla fetta usa la qualità predefinita; scorrendo verso l'esterno compare l'anello dei
-  preset (o si premono 1-2-3). Per PNG, WAV, FLAC e documenti i preset non compaiono:
-  non cambierebbero nulla. La qualità predefinita si sceglie nella finestra completa.
-- **Menu radiale da terminale**: `anyfile --radial FILE...`
-- **Interfaccia**: `anyfile [FILE...]`, oppure trascina i file nella finestra.
-- **Terminale**:
-  ```sh
-  anyfile info foto.heic              # formato rilevato e destinazioni possibili
-  anyfile convert *.wav -t mp3 -o ~/Musica
-  anyfile convert video.mov -t mp4 -q leggera   # massima | bilanciata | leggera
-  anyfile engines                     # motori installati e comando per i mancanti
-  ```
+In Dolphin: tasto destro su uno o più file → **Converti con ANYFILE**.
+
+- Compare una ruota **sotto il puntatore** (anche su Wayland), con una fetta per ogni
+  destinazione possibile, colorata e raggruppata per categoria: immagine, audio, video,
+  documento, PDF…
+- **Clic su una fetta** per convertire: al centro si vede l'avanzamento, poi «✓ Fatto»
+  e la ruota si chiude da sola. Il nuovo file è accanto all'originale.
+- **Clic al centro** apre la finestra completa con i file già caricati.
+- **Esc**, clic fuori o tasto destro chiudono la ruota. Durante una conversione lunga,
+  Esc la lascia proseguire in background: una notifica ne darà l'esito. Il clic al
+  centro, invece, la annulla.
+- Da tastiera: frecce per scegliere, Invio per confermare, 1-2-3 per la qualità.
+
+### Comprimi
+
+La prima fetta, in alto, rende il file **più leggero restando nello stesso formato**:
+foto JPEG e WebP, audio e video con perdita, PDF (con Ghostscript). Il risultato è
+`nome-compresso.ext`; l'originale non viene mai toccato. Se la versione compressa non
+è più leggera viene scartata e la ruota mostra «Già compatto». PNG, WAV, FLAC e
+documenti non hanno questa fetta: nello stesso formato non c'è nulla da guadagnare.
+
+### Qualità
+
+Per i formati con perdita ci sono tre preset, con parametri adatti a ciascun formato:
+
+| Preset | Foto (JPEG/WebP) | Audio (MP3, Opus…) | Video (H.264/VP9) | GIF |
+|---|---|---|---|---|
+| Massima qualità | qualità 95 | ~245 kbit/s (MP3) | CRF 18 | 15 fps, 960 px |
+| Bilanciata (predefinita) | 85 / 80 | ~190 kbit/s | CRF 23 / 32 | 12 fps, 640 px |
+| File più leggero | 70 / 60, senza metadati | ~115 kbit/s | CRF 28 / 40, max 720p | 8 fps, 400 px |
+
+Il clic sulla fetta usa la qualità predefinita, che si sceglie nella finestra completa.
+**Scorrendo verso l'esterno** dalla fetta compare un anello con le tre qualità. L'anello
+resta agganciato alla fetta anche passando in diagonale sopra quelle vicine. Per
+«Comprimi» le qualità sono due: alla massima il file crescerebbe. Per i formati senza
+perdita l'anello non compare.
+
+### Conversioni concatenate
+
+Se un formato non è raggiungibile direttamente, ANYFILE passa da un formato intermedio
+e lo indica sulla fetta («via PDF»):
+
+| Da | A | Via |
+|---|---|---|
+| DOCX, XLSX, PPTX, ODT, CSV… | PNG / JPG, una immagine per pagina | PDF |
+| DOC, RTF, TXT | Markdown, HTML, EPUB, LaTeX | DOCX |
+| EPUB, HTML | PDF, RTF | DOCX |
+| PDF | DOCX, ODT, RTF (solo il testo) | testo |
+
+Regole: al massimo un intermedio, e solo se manca la conversione diretta. L'intermedio
+non è mai un formato con perdita, per non comprimere due volte. Sono esclusi i percorsi
+che darebbero un file vuoto: un'immagine non diventa testo senza OCR. Le perdite di
+ogni passaggio vengono sommate e dichiarate. Ogni file intermedio viene verificato, e
+un errore indica il passaggio in cui è avvenuto.
+
+### Più file insieme
+
+Con una selezione mista la ruota mostra tutto ciò che si può fare, mettendo prima le
+destinazioni valide per più file. Una fetta che vale solo per una parte della
+selezione indica quanti file copre (es. «PDF 6/9») e converte solo quelli. «Comprimi»
+è una sola fetta: comprime ogni file nel proprio formato.
+
+## La finestra completa
+
+`anyfile [FILE...]`, il menu delle applicazioni, o il centro della ruota. Le funzioni:
+
+- trascinamento dei file nella finestra;
+- formato scelto file per file, oppure per tutti con «Converti tutti in»;
+- cartella di destinazione e qualità predefinita, entrambe ricordate;
+- sovrascrittura solo se richiesta: altrimenti il nuovo file diventa `nome (1).ext`;
+- coda con avanzamento e annullamento;
+- errori leggibili, con i dettagli tecnici nel tooltip;
+- stato dei motori, con il comando per installare quelli mancanti.
+
+## Terminale
+
+```sh
+anyfile info documento.docx                   # formato rilevato e destinazioni possibili
+anyfile convert *.wav -t mp3 -o ~/Musica       # conversione, anche di più file
+anyfile convert video.mov -t mp4 -q leggera    # qualità: massima | bilanciata | leggera
+anyfile convert foto.jpg -t jpg                # stesso formato = comprimi
+anyfile engines                                # motori installati e mancanti
+anyfile --radial FILE...                       # apre la ruota
+```
 
 ## Motori
 
-| Motore      | Conversioni                                                            |
-| ----------- | ---------------------------------------------------------------------- |
-| FFmpeg      | audio ↔ audio, video ↔ video, estrazione audio, video → GIF            |
-| ImageMagick | PNG, JPEG, WebP, GIF, BMP, TIFF, ICO (lettura AVIF/HEIC), immagini → PDF |
-| Poppler     | PDF → testo, PDF → PNG/JPEG (una immagine per pagina)                  |
-| Ghostscript | compressione dei PDF (facoltativo: `sudo apt install ghostscript`)     |
-| LibreOffice | DOCX/DOC/ODT/RTF/TXT, XLSX/XLS/ODS/CSV, PPTX/PPT/ODP ↔ e → PDF          |
-| Pandoc      | Markdown, HTML, EPUB, RST, LaTeX ↔ DOCX/ODT; → PDF se c'è LaTeX        |
+| Motore | Usato per |
+|---|---|
+| FFmpeg | audio ↔ audio, video ↔ video, estrazione dell'audio, video → GIF, compressione |
+| ImageMagick | PNG, JPEG, WebP, GIF, BMP, TIFF, ICO (lettura AVIF/HEIC), immagini → PDF, compressione |
+| Poppler | PDF → testo, PDF → PNG/JPEG (una immagine per pagina) |
+| LibreOffice | DOCX/DOC/ODT/RTF/TXT, XLSX/XLS/ODS/CSV, PPTX/PPT/ODP tra loro e → PDF |
+| Pandoc | Markdown, HTML, EPUB, RST, LaTeX ↔ DOCX/ODT; → PDF se c'è LaTeX |
+| Ghostscript | compressione dei PDF |
 
-Le capacità vengono rilevate all'avvio (encoder di FFmpeg, coder di ImageMagick,
-presenza di LaTeX): un motore assente nasconde le sue conversioni e l'app spiega
-cosa installare.
+Le capacità vengono rilevate all'avvio: encoder di FFmpeg, coder di ImageMagick,
+presenza di LaTeX. Un motore assente nasconde le sue conversioni, e l'app spiega cosa
+installare.
+
+## Sicurezza e affidabilità
+
+- I motori sono invocati con argomenti separati, mai tramite shell.
+- Il motore legge un collegamento con nome neutro (`input.png`): spazi, parentesi o
+  trattini iniziali nel nome del file non arrivano mai alla riga di comando.
+- Il formato si riconosce dal contenuto, non dall'estensione: un PNG chiamato `.jpg`
+  viene trattato come PNG.
+- L'output si prepara in una cartella temporanea e viene spostato in modo atomico. Il
+  file sorgente non viene mai sostituito.
+- Il risultato è verificato nel contenuto (firma del formato, testo, tracce audio/video),
+  non solo con il codice di uscita del motore.
+- LibreOffice usa un profilo dedicato, quindi funziona anche se è già aperto.
+- Ghostscript è eseguito con `-dSAFER`.
 
 ## Architettura
 
 ```
 src/anyfile/
-  core/detector.py    firma del contenuto → MIME → estensione
-  core/formats.py     catalogo dei formati
-  core/registry.py    grafo delle conversioni offerte dai motori installati
-  core/planner.py     scelta del percorso: diretto o con un passaggio intermedio
-  core/executor.py    esecuzione isolata, file temporanei, collocamento sicuro
-  core/validation.py  verifica dell'output (firma, testo, tracce audio/video)
-  core/jobs.py        coda dei lavori con avanzamento e annullamento
-  engines/            FFmpeg, ImageMagick, LibreOffice + Pandoc, Poppler
-  ui/                 interfaccia PySide6 (finestra e menu radiale)
-  cli.py, app.py      punti di ingresso
-packaging/            .desktop, service menu Dolphin, script di installazione
+  core/detector.py      rilevamento: firma del contenuto → MIME → estensione
+  core/formats.py       catalogo dei formati
+  core/registry.py      grafo delle conversioni dei motori installati, percorsi concatenati
+  core/planner.py       scelta del percorso per un file e una destinazione
+  core/executor.py      esecuzione passo per passo, file temporanei, collocamento sicuro
+  core/validation.py    verifica dei file prodotti
+  core/jobs.py          coda dei lavori con avanzamento e annullamento
+  engines/              FFmpeg, ImageMagick, Poppler, LibreOffice + Pandoc, Ghostscript
+  ui/radial.py          menu radiale (ui/radial_geometry.py: geometria senza Qt)
+  ui/main_window.py     finestra completa
+  cli.py, app.py        punti di ingresso
+packaging/              .desktop, azione di Dolphin, script di installazione
+scripts/                generatore dei file di prova e checklist
+tests/                  test automatici
 ```
 
-Scelte di sicurezza:
+Aggiungere un formato o un motore significa dichiararne le conversioni in `engines/`.
+Ruota, finestra, terminale e percorsi concatenati le usano senza altre modifiche.
 
-- i motori sono invocati con argomenti separati, mai tramite shell;
-- il motore legge un collegamento con nome neutro (`input.png`), quindi spazi,
-  parentesi o trattini iniziali nel nome del file non arrivano alla riga di comando;
-- l'output si prepara in una cartella temporanea nella destinazione e viene spostato
-  in modo atomico; senza consenso non si sovrascrive nulla (`nome (1).ext`) e il file
-  sorgente non viene mai sostituito;
-- LibreOffice usa un profilo dedicato, così funziona anche con LibreOffice già aperto;
-- il risultato è verificato nel contenuto, non solo con il codice di uscita.
-
-## Sviluppo
+## Sviluppo e prove
 
 ```sh
 python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'
-.venv/bin/pytest            # i test generano piccoli file di esempio con i motori
+.venv/bin/pytest
 ```
 
-## Prossimi passi
+I test automatici sono 99. Generano piccoli file di esempio con i motori stessi e
+controllano le conversioni reali. Coprono anche annullamento, conflitti di nome,
+preset, catene e il comportamento della ruota (con Qt offscreen). Un test viene
+saltato se il motore che serve non è installato.
 
-Cronologia e ripetizione delle conversioni, pacchetto `.deb`/Flatpak.
+Per le prove a mano:
+
+```sh
+python3 scripts/genera_prove.py        # crea prove-manuali/ con un file per ogni caso
+```
+
+Poi si apre `prove-manuali/` in Dolphin e si segue `00-CHECKLIST.md`: azione e
+risultato atteso per ogni caso, inclusi ruota, qualità, Comprimi, catene e casi limite.
+
+## Stato
+
+Prototipo in sviluppo attivo, usato su Debian 13 con KDE Plasma 6.3 (Wayland).
+Ancora da verificare sul desktop reale: la compressione dei PDF con Ghostscript.
+
+Prossimi passi: cronologia con ripetizione delle conversioni, pacchetto `.deb`,
+poi Flatpak.
