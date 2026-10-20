@@ -29,7 +29,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("convert", help="converte uno o più file")
     p.add_argument("files", nargs="+", type=Path)
-    p.add_argument("-t", "--to", required=True, help="formato di destinazione (es. png, mp3, pdf)")
+    p.add_argument("-t", "--to", required=True,
+                   help="formato di destinazione (es. png, mp3, pdf); lo stesso formato del "
+                        "file lo comprime (es. foto.jpg -t jpg)")
     p.add_argument("-o", "--output-dir", type=Path, help="cartella di destinazione "
                    "(predefinita: la cartella di ciascun file)")
     p.add_argument("--overwrite", action="store_true", help="sovrascrive i file già esistenti")
@@ -117,6 +119,8 @@ def cmd_convert(registry: Registry, args: argparse.Namespace) -> int:
                 print(f"✓ {name} → {job.output}")
             elif job.status is JobStatus.FAILED:
                 print(f"✗ {name}: {job.message}", file=sys.stderr)
+            elif job.status is JobStatus.UNCHANGED:
+                print(f"= {job.message}")
             elif job.status is JobStatus.CANCELLED:
                 print(f"- {name}: annullato", file=sys.stderr)
 
@@ -130,4 +134,4 @@ def cmd_convert(registry: Registry, args: argparse.Namespace) -> int:
         queue.cancel_all()
         queue.wait()
         return 130
-    return 0 if all(j.status is JobStatus.DONE for j in jobs) else 1
+    return 0 if all(j.status in (JobStatus.DONE, JobStatus.UNCHANGED) for j in jobs) else 1

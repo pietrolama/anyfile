@@ -115,6 +115,14 @@ class ConversionContext:
     quality: Quality = Quality.BALANCED
 
 
+COMPRESS_NOTE = "Stesso formato, file più leggero; l'originale resta intatto"
+
+
+def compressions(engine: str, formats: Iterable[str], notes: str = COMPRESS_NOTE) -> list[Conversion]:
+    """Ricompressione nello stesso formato, per i soli formati con perdita."""
+    return [Conversion(f, f, engine, notes) for f in formats]
+
+
 def pairs(
     engine: str,
     sources: Iterable[str],

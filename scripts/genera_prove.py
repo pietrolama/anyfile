@@ -79,6 +79,9 @@ def make_images() -> None:
     shutil.copy(OUT / "01-foto.png", OUT / "05-nome strano [1] -x.png")
     run(MAGICK, "-size", "120x120", "-delay", "40", "xc:red", "xc:gold", "xc:seagreen",
         "xc:royalblue", "-loop", "0", OUT / "06-animata.gif")
+    # Per «Comprimi»: una foto pesante e una già compressa (nessun risparmio possibile).
+    run(MAGICK, OUT / "01-foto.png", "-quality", "97", OUT / "20-foto-pesante.jpg")
+    run(MAGICK, OUT / "01-foto.png", "-quality", "40", OUT / "21-gia-compressa.jpg")
     damaged = (OUT / "01-foto.png").read_bytes()[:400]
     (OUT / "18-danneggiato.png").write_bytes(damaged)
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-from anyfile.engines.base import ConversionContext, Engine, EngineError, Runner, pairs
+from anyfile.engines.base import ConversionContext, Engine, EngineError, Runner, compressions, pairs
 from anyfile.models.conversion import Conversion, Presets, Quality
 
 AUDIO = ("mp3", "wav", "flac", "ogg", "opus", "m4a", "aac")
@@ -123,6 +123,7 @@ class FFmpegEngine(Engine):
             *pairs(self.name, VIDEO, [*VIDEO, "gif"], _notes),
             *pairs(self.name, VIDEO, AUDIO, _notes),
             *pairs(self.name, ["gif"], ["mp4", "webm"], _notes),
+            *compressions(self.name, [*AUDIO_PRESETS, *(v for v in VIDEO_PRESETS if v != "gif")]),
         ]
 
     def probe(self) -> list[Conversion]:

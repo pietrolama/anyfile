@@ -44,8 +44,13 @@ def test_status_reports_missing_binaries():
     assert status.missing == ("anyfile-missing-z",)
 
 
-def test_real_registry_has_no_self_conversions():
+def test_compressions_only_for_lossy_formats():
+    # Stesso formato in uscita solo dove un preset riduce davvero il file.
     reg = Registry()
     for engine in reg.engines:
         for c in engine.declared():
-            assert c.source != c.target
+            if c.is_compression:
+                presets = engine.presets(c.target)
+                assert presets, c
+    for c in (reg.find("png", "png"), reg.find("wav", "wav"), reg.find("flac", "flac")):
+        assert c is None

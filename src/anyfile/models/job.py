@@ -16,6 +16,8 @@ class JobStatus(Enum):
     RUNNING = "In corso"
     DONE = "Completato"
     FAILED = "Errore"
+    # Compressione senza risparmio: il risultato è stato scartato, l'originale resta.
+    UNCHANGED = "Già compatto"
     CANCELLED = "Annullato"
 
 
@@ -37,4 +39,5 @@ class Job:
 
     @property
     def finished(self) -> bool:
-        return self.status in (JobStatus.DONE, JobStatus.FAILED, JobStatus.CANCELLED)
+        return self.status in (JobStatus.DONE, JobStatus.FAILED, JobStatus.CANCELLED,
+                               JobStatus.UNCHANGED)

@@ -37,11 +37,16 @@ def plan(info: FileInfo, target: str, registry: Registry) -> Plan:
     if target_fmt is None:
         raise PlanError(f"Formato di destinazione sconosciuto: {target}")
     src = info.format
-    if src.id == target_fmt.id:
-        raise PlanError(f"«{info.name}» è già in formato {src.label}")
-
     if conv := registry.find(src.id, target_fmt.id):
         return Plan(info, conv)
+
+    if src.id == target_fmt.id:
+        if missing := registry.missing_engines_for(src.id, src.id):
+            engine = missing[0]
+            raise PlanError(f"Per comprimere un {src.label} serve {engine.label}, "
+                            f"che non è installato (sudo apt install {engine.package})")
+        raise PlanError(f"«{info.name}» è già in formato {src.label} e non si può comprimere "
+                        "ulteriormente senza cambiare formato")
 
     if missing := registry.missing_engines_for(src.id, target_fmt.id):
         engine = missing[0]

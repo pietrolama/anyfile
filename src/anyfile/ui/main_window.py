@@ -15,6 +15,8 @@ from anyfile.models.conversion import Quality
 from anyfile.models.job import Job, JobStatus
 from anyfile.ui.conversion_view import ConversionView, Row
 from anyfile.ui.desktop import APP_ICON, notify, reveal
+
+FINISHED = (JobStatus.DONE, JobStatus.FAILED, JobStatus.CANCELLED, JobStatus.UNCHANGED)
 from anyfile.ui.job_queue import QtJobQueue
 from anyfile.ui.settings import EnginesDialog, Settings
 
@@ -207,7 +209,7 @@ class MainWindow(QMainWindow):
         if job.status is JobStatus.DONE and job.output:
             self._last_output = job.output
         if job.finished and self._batch and all(
-            s in (JobStatus.DONE, JobStatus.FAILED, JobStatus.CANCELLED) for s in self._batch.values()
+            s in FINISHED for s in self._batch.values()
         ):
             self._batch_finished()
         self._update_buttons()
@@ -215,7 +217,10 @@ class MainWindow(QMainWindow):
     def _batch_finished(self) -> None:
         done = sum(s is JobStatus.DONE for s in self._batch.values())
         failed = sum(s is JobStatus.FAILED for s in self._batch.values())
-        summary = f"{done} file convertiti" + (f", {failed} con errori" if failed else "")
+        unchanged = sum(s is JobStatus.UNCHANGED for s in self._batch.values())
+        summary = (f"{done} file convertiti"
+                   + (f", {unchanged} già compatti" if unchanged else "")
+                   + (f", {failed} con errori" if failed else ""))
         self.statusBar().showMessage(summary, 10000)
         if not self.isActiveWindow():
             notify("Conversione completata" if not failed else "Conversione terminata con errori",

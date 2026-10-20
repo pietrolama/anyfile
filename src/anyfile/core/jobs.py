@@ -8,7 +8,7 @@ import traceback
 from collections.abc import Callable
 from pathlib import Path
 
-from anyfile.core.errors import AnyfileError, ConversionCancelled
+from anyfile.core.errors import AnyfileError, ConversionCancelled, NothingGained
 from anyfile.core.executor import Executor
 from anyfile.models.conversion import Quality
 from anyfile.models.job import Job, JobStatus
@@ -77,6 +77,8 @@ class JobQueue:
             job.status, job.progress, job.message = JobStatus.DONE, 1.0, ""
         except ConversionCancelled:
             job.status, job.message = JobStatus.CANCELLED, "Annullato"
+        except NothingGained as e:
+            job.status, job.message = JobStatus.UNCHANGED, e.message
         except AnyfileError as e:
             job.status, job.message, job.details = JobStatus.FAILED, e.message, e.details
         except Exception as e:  # noqa: BLE001 — un errore imprevisto non deve fermare la coda

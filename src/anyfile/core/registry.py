@@ -7,17 +7,19 @@ from dataclasses import dataclass
 
 from anyfile.core import formats
 from anyfile.engines.base import Engine
-from anyfile.models.conversion import Conversion, Presets
+from anyfile.models.conversion import Conversion, Presets, Quality
 
 
 def default_engines() -> list[Engine]:
     from anyfile.engines.documents import LibreOfficeEngine, PandocEngine
     from anyfile.engines.ffmpeg import FFmpegEngine
+    from anyfile.engines.ghostscript import GhostscriptEngine
     from anyfile.engines.imagemagick import ImageMagickEngine
     from anyfile.engines.pdf import PopplerEngine
 
     # L'ordine è la priorità: se due motori offrono la stessa coppia vince il primo.
-    return [FFmpegEngine(), ImageMagickEngine(), PopplerEngine(), LibreOfficeEngine(), PandocEngine()]
+    return [FFmpegEngine(), ImageMagickEngine(), PopplerEngine(), LibreOfficeEngine(), PandocEngine(),
+            GhostscriptEngine()]
 
 
 @dataclass(frozen=True)
@@ -53,7 +55,11 @@ class Registry:
         return self._by_name[name]
 
     def presets(self, conversion: Conversion) -> Presets:
-        return self.engine(conversion.engine).presets(conversion.target)
+        presets = self.engine(conversion.engine).presets(conversion.target)
+        if conversion.is_compression:
+            # Ricomprimere alla massima qualità darebbe quasi sempre un file più grande.
+            presets = {q: d for q, d in presets.items() if q is not Quality.MAX}
+        return presets
 
     def find(self, source: str, target: str) -> Conversion | None:
         return self._edges.get((source, target))
@@ -83,6 +89,7 @@ class Registry:
         ]
 
 
-def _target_order(c: Conversion) -> tuple[int, str]:
+def _target_order(c: Conversion) -> tuple[int, int, str]:
+    # La compressione nello stesso formato viene per prima: è l'operazione più frequente.
     fmt = formats.get(c.target)
-    return (fmt.category.order, fmt.label.lower())
+    return (0 if c.is_compression else 1, fmt.category.order, fmt.label.lower())

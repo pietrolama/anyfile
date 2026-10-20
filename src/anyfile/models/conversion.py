@@ -48,6 +48,11 @@ class Conversion:
     # Il motore produce più file (es. una immagine per pagina di un PDF).
     multi_output: bool = False
 
+    @property
+    def is_compression(self) -> bool:
+        """Stesso formato in uscita: si ricomprime il file per renderlo più leggero."""
+        return self.source == self.target
+
 
 class Quality(Enum):
     """Preset di qualità, offerti solo dove cambiano davvero il risultato (formati con perdita)."""

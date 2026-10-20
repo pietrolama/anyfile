@@ -47,6 +47,9 @@ CATEGORY_COLORS = {
     Category.PDF: "#da4453",
 }
 MORE_COLOR = "#7f8c8d"
+COMPRESS_COLOR = "#6c5ce7"
+# Chiave della fetta «Comprimi»: ogni file resta nel proprio formato.
+COMPRESS = "="
 OK_COLOR = "#27ae60"
 ERROR_COLOR = "#da4453"
 
@@ -97,13 +100,16 @@ def selection_targets(infos: list[FileInfo], registry: Registry) -> list[Option]
         if info.format is None:
             continue
         for conv in registry.targets(info.format.id):
-            found.setdefault(conv.target, (conv, []))[1].append(info.path)
+            key = COMPRESS if conv.is_compression else conv.target
+            found.setdefault(key, (conv, []))[1].append(info.path)
     return [(conv, tuple(paths)) for conv, paths in found.values()]
 
 
-def _category_order(option: Option) -> tuple[int, str]:
-    fmt = formats.get(option[0].target)
-    return fmt.category.order, fmt.label.lower()
+def _category_order(option: Option) -> tuple[int, int, str]:
+    # «Comprimi» per prima, in alto: è l'operazione più frequente.
+    conv = option[0]
+    fmt = formats.get(conv.target)
+    return (0 if conv.is_compression else 1), fmt.category.order, fmt.label.lower()
 
 
 def build_entries(options: list[Option]) -> list[Entry]:
@@ -114,8 +120,11 @@ def build_entries(options: list[Option]) -> list[Entry]:
     entries = []
     for conv, paths in sorted(options, key=_category_order):
         fmt = formats.get(conv.target)
-        entries.append(Entry(conv, fmt.label, fmt.ext.upper(), fmt.category.label,
-                             CATEGORY_COLORS[fmt.category], paths))
+        if conv.is_compression:
+            entries.append(Entry(conv, "Comprimi", "COMPRIMI", "Comprimi", COMPRESS_COLOR, paths))
+        else:
+            entries.append(Entry(conv, fmt.label, fmt.ext.upper(), fmt.category.label,
+                                 CATEGORY_COLORS[fmt.category], paths))
     if truncated:
         entries.append(Entry(None, "Altri formati", "…", "", MORE_COLOR))
     return entries
@@ -267,8 +276,15 @@ class RadialMenu(QWidget):
         """Preset in senso orario lungo l'arco, con «Massima» sempre a sinistra o in alto.
         In basso e a sinistra il senso orario va da destra a sinistra o dal basso in alto,
         quindi lì l'ordine si inverte."""
-        order = list(Quality)
+        order = list(self.presets(index))
         return order[::-1] if 135 < self.ring.mid_angle(index) < 315 else order
+
+    def default_for(self, index: int | None) -> Quality:
+        """Qualità del clic diretto sulla fetta: la predefinita, se la fetta la offre."""
+        presets = self.presets(index)
+        if not presets or self.default_quality in presets:
+            return self.default_quality
+        return Quality.BALANCED
 
     def _target_at(self, pos: QPointF) -> tuple[int | None, Quality | None]:
         """Fetta (o CENTER/None) e preset sotto il punto."""
@@ -284,8 +300,9 @@ class RadialMenu(QWidget):
             if OUTER < r <= SUB_OUT + 24 and in_arc(angle, a0, a1):
                 if r < SUB_IN:
                     return self.hover, None
-                k = min(int(((angle - a0) % 360) / ((a1 - a0) / 3)), 2)
-                return self.hover, self.preset_order(self.hover)[k]
+                order = self.preset_order(self.hover)
+                k = min(int(((angle - a0) % 360) / ((a1 - a0) / len(order))), len(order) - 1)
+                return self.hover, order[k]
         return self.ring.hit(dx, dy), None
 
     def _hit(self, pos: QPointF) -> int | None:
@@ -327,8 +344,10 @@ class RadialMenu(QWidget):
         elif key in (Qt.Key.Key_Return, Qt.Key.Key_Enter, Qt.Key.Key_Space):
             self._activate(self.hover if self.hover is not None else CENTER, self.hover_quality)
         elif key in (Qt.Key.Key_1, Qt.Key.Key_2, Qt.Key.Key_3) and self.presets(self.hover):
-            # 1 = massima, 2 = bilanciata, 3 = più leggera
-            self._activate(self.hover, list(Quality)[key - Qt.Key.Key_1])
+            # 1 = massima, 2 = bilanciata, 3 = più leggera (se la fetta la offre)
+            quality = list(Quality)[key - Qt.Key.Key_1]
+            if quality in self.presets(self.hover):
+                self._activate(self.hover, quality)
         else:
             super().keyPressEvent(event)
 
@@ -341,7 +360,7 @@ class RadialMenu(QWidget):
             elif self.entries[hit].conversion is None:
                 self._to_window()
             else:
-                self._start(self.entries[hit], quality or self.default_quality)
+                self._start(self.entries[hit], quality or self.default_for(hit))
         elif self.phase is Phase.RUNNING:
             if hit == CENTER:
                 self.queue.cancel_all()
@@ -389,8 +408,10 @@ class RadialMenu(QWidget):
         self.phase, self.chosen, self.hover, self.hover_quality = Phase.RUNNING, entry, None, None
         self.setCursor(Qt.CursorShape.ArrowCursor)
         output_dir = self.settings.custom_dir if self.settings.use_custom_dir else None
+        formats_by_path = {i.path: i.format.id for i in self.recognized}
         for path in entry.paths:
-            job = self.queue.submit(path, entry.conversion.target, output_dir,
+            target = formats_by_path[path] if entry.conversion.is_compression else entry.conversion.target
+            job = self.queue.submit(path, target, output_dir,
                                     self.settings.overwrite, quality)
             self.jobs[job.id] = job
         self._spinner.start()
@@ -409,7 +430,8 @@ class RadialMenu(QWidget):
         jobs = list(self.jobs.values())
         done = [j for j in jobs if j.status is JobStatus.DONE]
         failed = [j for j in jobs if j.status is JobStatus.FAILED]
-        if not done and not failed:  # tutto annullato
+        unchanged = [j for j in jobs if j.status is JobStatus.UNCHANGED]
+        if not done and not failed and not unchanged:  # tutto annullato
             self._close()
             return
         if failed:
@@ -422,13 +444,23 @@ class RadialMenu(QWidget):
                 self._finish()
             return
         self.phase = Phase.DONE
-        summary = (done[0].output.name if len(done) == 1 and done[0].output
-                   else f"{len(done)} file convertiti")
         if self.in_background:
-            notify("Conversione completata", summary)
+            notify("Conversione completata", self.outcome_text())
             self._finish()
         else:
             QTimer.singleShot(DONE_CLOSE_MS, self._close)
+
+    def outcome_text(self) -> str:
+        jobs = list(self.jobs.values())
+        done = [j for j in jobs if j.status is JobStatus.DONE and j.output]
+        unchanged = [j for j in jobs if j.status is JobStatus.UNCHANGED]
+        if len(jobs) == 1:
+            return done[0].output.name if done else unchanged[0].message
+        verb = "compressi" if self.chosen and self.chosen.conversion.is_compression else "convertiti"
+        text = f"{len(done)} file {verb}"
+        if unchanged:
+            text += f", {len(unchanged)} già compatti (originali invariati)"
+        return text
 
     def progress(self) -> float | None:
         """Avanzamento complessivo; None se indeterminato."""
@@ -501,7 +533,12 @@ class RadialMenu(QWidget):
             cx, cy = polar(self.ring.mid_angle(i), (INNER + OUTER) / 2 + grow / 2)
             arc_width = math.radians(a1 - a0) * (INNER + OUTER) / 2
             p.setPen(text_color)
-            p.setFont(self._font(1.15, bold=True))
+            # La scritta si riduce se non entra nella fetta (es. «COMPRIMI» con molte fette).
+            title = self._font(1.15, bold=True)
+            width = QFontMetricsF(title).horizontalAdvance(entry.short)
+            if width > arc_width - 12:
+                title.setPointSizeF(max(title.pointSizeF() * (arc_width - 12) / width, 6.5))
+            p.setFont(title)
             small = self._font(0.8)
             partial = entry.conversion is not None and len(entry.paths) < len(self.recognized)
             # Seconda riga: quanti file copre la fetta, oppure il nome esteso se aggiunge
@@ -537,15 +574,16 @@ class RadialMenu(QWidget):
             return
         color = QColor(self.entries[self.hover].color)
         a0, a1 = self.preset_arc(self.hover)
-        third = (a1 - a0) / 3
-        for k, quality in enumerate(self.preset_order(self.hover)):
+        order = self.preset_order(self.hover)
+        third = (a1 - a0) / len(order)
+        for k, quality in enumerate(order):
             b0 = a0 + k * third
             active = quality is (self.hover_quality or None)
             p.setPen(QPen(mix(self.c_base, color, 0.5), 1))
             p.setBrush(color if active else mix(self.c_base, color, 0.12))
             p.drawPath(sector(b0, b0 + third, SUB_IN, SUB_OUT))
             x, y = polar(b0 + third / 2, (SUB_IN + SUB_OUT) / 2)
-            is_default = quality is self.default_quality
+            is_default = quality is self.default_for(self.hover)
             p.setFont(self._font(0.8, bold=active or is_default))
             p.setPen(QColor("white") if active else self.c_text)
             label = quality.short + (" •" if is_default and not active else "")
@@ -580,7 +618,7 @@ class RadialMenu(QWidget):
                 self._center_lines(p, "⤢", "Finestra", "completa")
             elif self.hover is not None:
                 entry = self.entries[self.hover]
-                quality = self.hover_quality or self.default_quality
+                quality = self.hover_quality or self.default_for(self.hover)
                 self._center_lines(p, entry.short, entry.label if entry.conversion else "",
                                    quality.short if self.presets(self.hover) else "",
                                    accent=QColor(entry.color))
@@ -595,7 +633,10 @@ class RadialMenu(QWidget):
                 big = f"{value:.0%}" if value is not None else "…"
                 self._center_lines(p, big, f"→ {self.chosen.short}" if self.chosen else "", "")
         elif self.phase is Phase.DONE:
-            self._center_lines(p, "✓", "Fatto", "", accent=QColor(OK_COLOR))
+            if any(j.status is JobStatus.DONE for j in self.jobs.values()):
+                self._center_lines(p, "✓", "Fatto", "", accent=QColor(OK_COLOR))
+            else:
+                self._center_lines(p, "＝", "Già compatto", "", accent=self.c_muted)
         else:
             self._center_lines(p, "✕", "Errore", "", accent=QColor(ERROR_COLOR))
 
@@ -659,6 +700,8 @@ class RadialMenu(QWidget):
                 if entry.conversion is None:
                     return "Mostra tutte le conversioni nella finestra completa", None
                 kinds = {i.format.label for i in self.recognized if i.path in entry.paths}
+                if entry.conversion.is_compression:
+                    return self._compress_caption(entry, kinds), None
                 # La nota descrive una coppia sorgente → destinazione: con sorgenti diverse
                 # (es. PNG e DOCX → PDF) non sarebbe vera per tutti i file.
                 note = (f" · {entry.conversion.notes}"
@@ -672,10 +715,11 @@ class RadialMenu(QWidget):
                 presets = self.presets(self.hover)
                 if not presets:
                     return text, None
-                quality = self.hover_quality or self.default_quality
+                quality = self.hover_quality or self.default_for(self.hover)
                 text = f"{text} · {quality.label}: {presets[quality]}"
                 if self.hover_quality is None:
-                    text += "\nScorri verso l'esterno (o premi 1-2-3) per cambiare qualità"
+                    keys = "-".join(str(list(Quality).index(q) + 1) for q in presets)
+                    text += f"\nScorri verso l'esterno (o premi {keys}) per cambiare qualità"
                 return text, None
             if not self.entries:
                 if not self.recognized:
@@ -690,10 +734,24 @@ class RadialMenu(QWidget):
         if self.phase is Phase.RUNNING:
             return "Esc: continua in background · Centro: annulla", self.c_muted
         if self.phase is Phase.DONE:
-            done = [j for j in self.jobs.values() if j.output]
-            text = (str(done[0].output.name) if len(done) == 1 else f"{len(done)} file convertiti")
-            return text, None
+            return self.outcome_text(), None
         return f"{self.error_text}\nClic al centro per i dettagli", QColor(ERROR_COLOR)
+
+    def _compress_caption(self, entry: Entry, kinds: set[str]) -> str:
+        quality = self.hover_quality or self.default_for(self.hover)
+        presets = self.presets(self.hover)
+        if len(kinds) == 1:
+            # I parametri valgono per un solo formato: con formati diversi non si mostrano.
+            text = f"Comprimi {next(iter(kinds))} · {quality.label}: {presets[quality]}"
+        else:
+            text = f"Comprimi {len(entry.paths)} file ({', '.join(sorted(kinds))}) · {quality.label}"
+        others = len(self.recognized) - len(entry.paths)
+        if others:
+            text += f" · {others} non comprimibili senza cambiare formato"
+        text += "\nGli originali restano intatti" if len(entry.paths) > 1 else "\nL'originale resta intatto"
+        if self.hover_quality is None:
+            text += " · scorri verso l'esterno per «Leggera»"
+        return text
 
     def _paint_caption(self, p: QPainter) -> None:
         text, color = self._caption()

@@ -21,6 +21,8 @@ from anyfile.models.job import Job, JobStatus
 
 COL_FILE, COL_FORMAT, COL_TARGET, COL_STATUS = range(4)
 PLACEHOLDER = "Scegli formato…"
+# Valore della voce «Comprimi»: la destinazione è il formato stesso di ciascun file.
+COMPRESS = "="
 
 
 @dataclass
@@ -35,7 +37,10 @@ class Row:
 
     @property
     def target(self) -> str | None:
-        return self.combo.currentData()
+        data = self.combo.currentData()
+        if data == COMPRESS:
+            return self.info.format.id if self.info.format else None
+        return data
 
     @property
     def busy(self) -> bool:
@@ -46,13 +51,17 @@ def fill_target_combo(combo: QComboBox, targets: list[Conversion]) -> None:
     """Popola il menu delle destinazioni raggruppando i formati per categoria."""
     combo.clear()
     combo.addItem(PLACEHOLDER, None)
-    last_category = None
+    last_group = None
     for conv in targets:
         fmt = formats.get(conv.target)
-        if last_category is not None and fmt.category is not last_category:
+        group = COMPRESS if conv.is_compression else fmt.category
+        if last_group is not None and group != last_group:
             combo.insertSeparator(combo.count())
-        last_category = fmt.category
-        combo.addItem(f"{fmt.label}  (.{fmt.ext})", fmt.id)
+        last_group = group
+        if conv.is_compression:
+            combo.addItem("Comprimi  (stesso formato)", COMPRESS)
+        else:
+            combo.addItem(f"{fmt.label}  (.{fmt.ext})", fmt.id)
         if conv.notes:
             combo.setItemData(combo.count() - 1, conv.notes, Qt.ItemDataRole.ToolTipRole)
 
@@ -184,9 +193,9 @@ class ConversionView(QWidget):
         union: dict[str, Conversion] = {}
         for row in self.rows:
             for conv in row.targets:
-                union.setdefault(conv.target, conv)
-        ordered = sorted(union.values(),
-                         key=lambda c: (formats.get(c.target).category.order, formats.get(c.target).label))
+                union.setdefault(COMPRESS if conv.is_compression else conv.target, conv)
+        ordered = sorted(union.values(), key=lambda c: (
+            not c.is_compression, formats.get(c.target).category.order, formats.get(c.target).label))
         fill_target_combo(self.bulk_combo, ordered)
         self.bulk_combo.setEnabled(bool(ordered))
 
@@ -224,6 +233,9 @@ class ConversionView(QWidget):
             row.output = job.output
             self._set_status_text(r, f"✓ {job.output.name if job.output else ''}",
                                   tooltip=f"{job.output}\nDoppio clic per mostrarlo nella cartella")
+        elif job.status is JobStatus.UNCHANGED:
+            self._set_status_text(r, "＝ Già compatto: l'originale resta", muted=True,
+                                  tooltip=job.message)
         elif job.status is JobStatus.FAILED:
             self._set_status_text(r, f"✗ {job.message}", error=True,
                                   tooltip=f"{job.message}\n\n{job.details}".strip())

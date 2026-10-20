@@ -26,6 +26,10 @@ Lo script crea un virtualenv in `~/.local/share/anyfile/venv`, il comando
   proseguire in background con una notifica finale). Funziona anche con frecce e Invio.
   Con più file selezionati la ruota mostra tutto ciò che si può fare: le fette che
   valgono solo per una parte dei file indicano quanti (es. «6/9») e convertono solo quelli.
+- **Comprimi**: la prima fetta della ruota rende il file più leggero restando nello
+  stesso formato (JPEG, WebP, audio e video con perdita, PDF con Ghostscript) e salva
+  `nome-compresso.ext` accanto all'originale. Se il risultato non è più leggero viene
+  scartato e la ruota mostra «Già compatto». Da terminale: `anyfile convert foto.jpg -t jpg`.
 - **Qualità**: per i formati con perdita (JPEG, WebP, MP3, Ogg, Opus, AAC, video, GIF)
   ci sono tre preset: *Massima qualità*, *Bilanciata* (predefinita) e *File più leggero*
   (che riduce anche i video a 720p e toglie i metadati dalle foto). Nella ruota, il clic
@@ -49,6 +53,7 @@ Lo script crea un virtualenv in `~/.local/share/anyfile/venv`, il comando
 | FFmpeg      | audio ↔ audio, video ↔ video, estrazione audio, video → GIF            |
 | ImageMagick | PNG, JPEG, WebP, GIF, BMP, TIFF, ICO (lettura AVIF/HEIC), immagini → PDF |
 | Poppler     | PDF → testo, PDF → PNG/JPEG (una immagine per pagina)                  |
+| Ghostscript | compressione dei PDF (facoltativo: `sudo apt install ghostscript`)     |
 | LibreOffice | DOCX/DOC/ODT/RTF/TXT, XLSX/XLS/ODS/CSV, PPTX/PPT/ODP ↔ e → PDF          |
 | Pandoc      | Markdown, HTML, EPUB, RST, LaTeX ↔ DOCX/ODT; → PDF se c'è LaTeX        |
 

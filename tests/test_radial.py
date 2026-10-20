@@ -32,6 +32,7 @@ def make_menu(app, registry):
         menu = RadialMenu(registry, list(paths))
         # Preferenze isolate: i test non devono leggere quelle dell'utente.
         menu.settings = SimpleNamespace(use_custom_dir=False, custom_dir=None, overwrite=False)
+        menu.default_quality = Quality.BALANCED
         menu.resize(800, 700)
         menu.show()
         menu._place(QPointF(400, 350))
@@ -220,7 +221,7 @@ def test_max_quality_is_always_left_or_top(make_menu, sample):
     menu = make_menu(sample("mp4"))
     checked = 0
     for i in range(len(menu.entries)):
-        if not menu.presets(i):
+        if Quality.MAX not in menu.presets(i):
             continue
         a = menu.ring.mid_angle(i)
         first, last = _preset_point(menu, i, Quality.MAX), _preset_point(menu, i, Quality.SMALL)
@@ -246,3 +247,30 @@ def test_clicking_a_preset_converts_with_that_quality(app, make_menu, sample):
     assert [j.quality for j in menu.jobs.values()] == [Quality.SMALL]
     assert wait_until(app, lambda: menu.phase in (Phase.DONE, Phase.FAILED))
     assert menu.phase is Phase.DONE
+
+
+def test_compress_is_first_and_merged_for_mixed_selection(make_menu, sample, tmp_path):
+    import subprocess
+    jpg = tmp_path / "foto.jpg"
+    subprocess.run(["magick", "-size", "200x100", "plasma:", str(jpg)], check=True)
+    mp4 = sample("mp4")
+    menu = make_menu(jpg, mp4, sample("png"))
+    first = menu.entries[0]
+    assert first.conversion.is_compression and first.label == "Comprimi"
+    # PNG non si comprime senza cambiare formato: la fetta copre solo JPEG e MP4.
+    assert set(first.paths) == {jpg, mp4}
+    assert sum(e.conversion is not None and e.conversion.is_compression for e in menu.entries) == 1
+
+
+@needs("magick", "ffmpeg")
+def test_compress_slice_keeps_each_file_format(app, make_menu, sample, tmp_path):
+    import subprocess
+    jpg = tmp_path / "foto.jpg"
+    subprocess.run(["magick", "-size", "600x400", "plasma:", "-quality", "98", str(jpg)], check=True)
+    mp4 = sample("mp4")
+    menu = make_menu(jpg, mp4)
+    menu._activate(0)  # clic su «Comprimi»
+    assert sorted(j.target for j in menu.jobs.values()) == ["jpg", "mp4"]
+    assert all(j.quality is Quality.BALANCED for j in menu.jobs.values())
+    assert wait_until(app, lambda: menu.phase in (Phase.DONE, Phase.FAILED))
+    assert (tmp_path / "foto-compresso.jpg").is_file()

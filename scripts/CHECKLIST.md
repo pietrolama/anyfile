@@ -34,6 +34,20 @@ Per ripartire da zero: `python3 scripts/genera_prove.py --pulisci`.
 | Q6 | `09-video-lungo.mp4` | WEBM → Leggera | Video a 720p, molto più piccolo (verifica con le proprietà in Dolphin) |
 | Q7 | Finestra | Qualità: «File più leggero», chiudi e riapri | La scelta è ricordata, e la ruota la usa come predefinita (segnata con •) |
 
+## Comprimi
+
+| # | File | Azione | Risultato atteso |
+|---|------|--------|------------------|
+| C1 | `20-foto-pesante.jpg` | Menu | Prima fetta in alto: **COMPRIMI**; anello con sole «Bilanciata» e «Leggera» |
+| C2 | `20-foto-pesante.jpg` | Clic su COMPRIMI | Nasce `20-foto-pesante-compresso.jpg` (≈ 240 KB invece di ≈ 950 KB); l'originale resta |
+| C3 | `20-foto-pesante.jpg` | COMPRIMI → Leggera | ≈ 140 KB, senza metadati |
+| C4 | `21-gia-compressa.jpg` | Clic su COMPRIMI | Al centro «＝ Già compatto», sotto le dimensioni a confronto; nessun file creato |
+| C5 | `09-video-lungo.mp4` | COMPRIMI → Leggera | `09-video-lungo-compresso.mp4` a 720p |
+| C6 | `15-tre-pagine.pdf` | Menu | Senza Ghostscript niente fetta COMPRIMI; dopo `sudo apt install ghostscript` compare |
+| C7 | `01-foto.png` | Menu | Niente COMPRIMI: un PNG non si riduce senza cambiare formato (usa JPG o WEBP) |
+| C8 | `20-foto-pesante.jpg` + `09-video-lungo.mp4` + `01-foto.png` | Selezionali → menu | Una sola fetta COMPRIMI «2/3»: ogni file resta nel suo formato |
+| C9 | Finestra | Riga di una JPEG | Prima voce: «Comprimi (stesso formato)» |
+
 ## Selezioni multiple
 
 | # | File | Azione | Risultato atteso |

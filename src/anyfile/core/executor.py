@@ -9,11 +9,12 @@ import tempfile
 from pathlib import Path
 
 from anyfile.core.detector import detect
-from anyfile.core.errors import AnyfileError, ConversionCancelled
+from anyfile.core.errors import AnyfileError, ConversionCancelled, NothingGained
 from anyfile.core.planner import plan
 from anyfile.core.registry import Registry
 from anyfile.core.validation import validate_output
 from anyfile.engines.base import ConversionContext, ProgressFn, Runner
+from anyfile.models.conversion import Quality
 from anyfile.models.job import Job
 
 
@@ -56,7 +57,11 @@ class Executor:
             if multi:
                 produced.mkdir()
 
-            ctx = ConversionContext(Runner(job.cancel_event), progress, src, job.quality)
+            quality = job.quality
+            if p.conversion.is_compression and quality is Quality.MAX:
+                # Comprimi ha due livelli: alla massima qualità il file crescerebbe.
+                quality = Quality.BALANCED
+            ctx = ConversionContext(Runner(job.cancel_event), progress, src, quality)
             try:
                 engine.convert(p.conversion, link, produced, ctx)
             except AnyfileError as e:
@@ -68,15 +73,32 @@ class Executor:
                 raise ConversionCancelled()
             validate_output(produced, target)
 
+            if p.conversion.is_compression:
+                before, after = src.stat().st_size, produced.stat().st_size
+                if after >= before:
+                    raise NothingGained(
+                        f"«{src.name}» è già compatto: la versione compressa non sarebbe più "
+                        f"leggera ({_kb(after)} contro {_kb(before)})")
+
             if multi:
                 files = sorted(f for f in produced.iterdir() if f.is_file())
                 if len(files) == 1:
                     produced, multi = files[0], False
-            final = out_dir / (f"{src.stem}-pagine" if multi else f"{src.stem}.{target.ext}")
+            if p.conversion.is_compression:
+                name = f"{src.stem}-compresso.{target.ext}"
+            elif multi:
+                name = f"{src.stem}-pagine"
+            else:
+                name = f"{src.stem}.{target.ext}"
+            final = out_dir / name
             return place(produced, final, overwrite=job.overwrite, protect=src)
         finally:
             shutil.rmtree(work_dir, ignore_errors=True)
             shutil.rmtree(input_dir, ignore_errors=True)
+
+
+def _kb(size: int) -> str:
+    return f"{size / 1024:,.0f} KB".replace(",", ".")
 
 
 def place(produced: Path, final: Path, *, overwrite: bool, protect: Path | None = None) -> Path:

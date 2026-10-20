@@ -4,7 +4,7 @@ import re
 import subprocess
 from pathlib import Path
 
-from anyfile.engines.base import ConversionContext, Engine, pairs
+from anyfile.engines.base import ConversionContext, Engine, compressions, pairs
 from anyfile.models.conversion import Conversion, Presets, Quality
 
 # id ANYFILE → nome del coder ImageMagick
@@ -49,7 +49,8 @@ class ImageMagickEngine(Engine):
     requires = (("magick", "convert"),)
 
     def declared(self) -> list[Conversion]:
-        return pairs(self.name, IMAGES, [*IMAGES, "pdf"], _notes)
+        return [*pairs(self.name, IMAGES, [*IMAGES, "pdf"], _notes),
+                *compressions(self.name, QUALITY)]
 
     def probe(self) -> list[Conversion]:
         try:

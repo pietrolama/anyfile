@@ -73,3 +73,53 @@ def test_media_presets_change_size(registry, tmp_path):
 def test_cli_rejects_unknown_quality(sample, capsys):
     assert cli.main(["convert", str(sample("md")), "-t", "html", "-q", "enorme"]) == 2
     assert "qualità sconosciuta" in capsys.readouterr().err
+
+
+@needs("magick")
+def test_compress_jpeg_keeps_original_and_is_smaller(registry, tmp_path):
+    src = tmp_path / "foto.jpg"
+    subprocess.run(["magick", "-size", "800x600", "plasma:fractal", "-quality", "98", str(src)],
+                   check=True)
+    original = src.read_bytes()
+    out = Executor(registry).run(Job(src, "jpg", quality=Quality.SMALL, overwrite=True))
+    assert out.name == "foto-compresso.jpg"
+    assert out.stat().st_size < src.stat().st_size
+    assert src.read_bytes() == original
+
+
+@needs("magick")
+def test_compress_without_gain_is_discarded(registry, tmp_path):
+    from anyfile.core.errors import NothingGained
+    src = tmp_path / "piccola.jpg"
+    subprocess.run(["magick", "-size", "800x600", "plasma:fractal", "-quality", "30", str(src)],
+                   check=True)
+    with pytest.raises(NothingGained, match="già compatto"):
+        Executor(registry).run(Job(src, "jpg", quality=Quality.BALANCED))
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["piccola.jpg"]
+
+
+def test_compress_offers_no_max_preset(registry):
+    conv = registry.find("jpg", "jpg")
+    if conv is None:
+        pytest.skip("ImageMagick non disponibile")
+    assert list(registry.presets(conv)) == [Quality.BALANCED, Quality.SMALL]
+
+
+def test_lossless_format_cannot_be_compressed(registry, sample):
+    from anyfile.core.planner import PlanError
+    with pytest.raises(PlanError, match="non si può comprimere"):
+        Executor(registry).run(Job(sample("png"), "png"))
+
+
+def test_queue_reports_unchanged(registry, tmp_path):
+    if registry.find("jpg", "jpg") is None:
+        pytest.skip("ImageMagick non disponibile")
+    from anyfile.core.jobs import JobQueue
+    from anyfile.models.job import JobStatus
+    src = tmp_path / "piccola.jpg"
+    subprocess.run(["magick", "-size", "400x300", "plasma:fractal", "-quality", "30", str(src)],
+                   check=True)
+    queue = JobQueue(Executor(registry))
+    job = queue.submit(src, "jpg")
+    queue.wait()
+    assert job.status is JobStatus.UNCHANGED and "già compatto" in job.message
