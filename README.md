@@ -10,21 +10,51 @@ Tutto avviene sul computer: nessun file viene caricato in rete.
 
 ## Installazione
 
-Installazione per l'utente corrente, senza privilegi di amministratore:
+### Compatibilità
+
+Verificata con `packaging/deb/test-clean-install.sh` in container puliti:
+
+| Sistema | Installazione | Risultato |
+|---|---|---|
+| Debian 13 (trixie) | pacchetto `.deb` | installazione, 111 test sul pacchetto, aggiornamento e rimozione senza residui |
+| Ubuntu 26.04 LTS | pacchetto `.deb` | come sopra |
+| Ubuntu 24.04 LTS | `packaging/install-user.sh` | conversioni e ruota funzionanti (anche con ImageMagick 6). Il `.deb` non si installa perché la 24.04 non ha PySide6 nei repository |
+
+### Pacchetto .deb (Debian 13, Ubuntu 26.04 e successive)
 
 ```sh
-sudo apt install ffmpeg imagemagick poppler-utils libreoffice pandoc ghostscript
+sudo apt install ./anyfile_0.2.0_all.deb
+```
+
+Il pacchetto pesa circa 40 KB e usa Python e PySide6 del sistema. Le dipendenze sono
+divise così:
+
+| Tipo | Pacchetti | Cosa sbloccano |
+|---|---|---|
+| obbligatorie | python3, python3-pyside6.*, file | l'applicazione |
+| consigliate (installate da apt) | ffmpeg, imagemagick, poppler-utils, ghostscript, libnotify-bin | immagini, audio, video, PDF, compressione, notifiche |
+| suggerite | libreoffice-writer/calc/impress, pandoc, texlive-xetex | documenti Office, Markdown/EPUB, PDF da Markdown |
+
+Rimozione: `sudo apt remove anyfile`. Il pacchetto si costruisce con
+`packaging/deb/build.sh`. `packaging/deb/test-clean-install.sh [immagine]` lo prova in
+un container pulito: installazione, suite di test completa sul pacchetto installato,
+aggiornamento e rimozione.
+
+### Installazione per sviluppo, senza root
+
+```sh
 git clone https://github.com/pietrolama/anyfile.git && cd anyfile
 packaging/install-user.sh
 ```
 
+Crea un virtualenv in `~/.local/share/anyfile/venv` che punta ai sorgenti (le modifiche
+sono subito attive), il comando `~/.local/bin/anyfile`, la voce nel menu e l'azione di
+Dolphin nella home. Per rimuovere tutto: `packaging/install-user.sh --uninstall`. Non va
+usata insieme al pacchetto `.deb`: Dolphin mostrerebbe due voci. Lo script lo rileva e
+si ferma.
+
 I motori sono tutti facoltativi: ANYFILE usa quelli presenti e spiega cosa installare
 per sbloccare le altre conversioni (`anyfile engines`).
-
-Lo script crea un virtualenv in `~/.local/share/anyfile/venv`, il comando
-`~/.local/bin/anyfile`, la voce nel menu delle applicazioni e l'azione di Dolphin
-(`~/.local/share/kio/servicemenus/anyfile.desktop`). Per rimuovere tutto:
-`packaging/install-user.sh --uninstall`.
 
 ## Il menu radiale
 
@@ -142,6 +172,12 @@ installare.
 - LibreOffice usa un profilo dedicato, quindi funziona anche se è già aperto.
 - Ghostscript è eseguito con `-dSAFER`.
 
+ANYFILE **non è una sandbox**. I motori girano con i permessi dell'utente: un file
+costruito apposta per sfruttare una vulnerabilità di FFmpeg, ImageMagick, LibreOffice o
+Ghostscript potrebbe agire come un qualsiasi programma avviato dall'utente. Con file di
+provenienza non attendibile conviene tenere aggiornati i motori. Un isolamento vero
+(bubblewrap, Flatpak) è un possibile sviluppo futuro.
+
 ## Architettura
 
 ```
@@ -172,7 +208,7 @@ python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'
 .venv/bin/pytest
 ```
 
-I test automatici sono 99. Generano piccoli file di esempio con i motori stessi e
+I test automatici sono più di 120. Generano piccoli file di esempio con i motori stessi e
 controllano le conversioni reali. Coprono anche annullamento, conflitti di nome,
 preset, catene e il comportamento della ruota (con Qt offscreen). Un test viene
 saltato se il motore che serve non è installato.
@@ -189,7 +225,8 @@ risultato atteso per ogni caso, inclusi ruota, qualità, Comprimi, catene e casi
 ## Stato
 
 Prototipo in sviluppo attivo, usato su Debian 13 con KDE Plasma 6.3 (Wayland).
-Ancora da verificare sul desktop reale: la compressione dei PDF con Ghostscript.
+La compressione dei PDF con Ghostscript è verificata su PDF reali in Debian 13 e
+Ubuntu 26.04, nei container puliti.
 
 Prossimi passi: cronologia con ripetizione delle conversioni, pacchetto `.deb`,
 poi Flatpak.

@@ -28,6 +28,13 @@ if [[ "${1:-}" == "--uninstall" ]]; then
     exit 0
 fi
 
+if dpkg-query -W -f='${Status}' anyfile 2>/dev/null | grep -q "install ok installed"; then
+    echo "ANYFILE è già installato come pacchetto di sistema (.deb)." >&2
+    echo "Due installazioni mostrerebbero due voci nel menu di Dolphin: rimuovi prima il" >&2
+    echo "pacchetto (sudo apt remove anyfile) oppure usa solo quello." >&2
+    exit 1
+fi
+
 echo "→ Ambiente Python in $VENV"
 python3 -m venv "$VENV"
 "$VENV/bin/pip" install --quiet --upgrade pip

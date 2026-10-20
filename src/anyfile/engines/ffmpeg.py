@@ -153,8 +153,18 @@ class FFmpegEngine(Engine):
             return None
         return value if value > 0 else None
 
+    def _has_audio(self, src: Path, runner: Runner) -> bool:
+        try:
+            out = runner.run([self.binary(1), "-v", "error", "-select_streams", "a",
+                              "-show_entries", "stream=index", "-of", "csv=p=0", src])
+        except EngineError:
+            return True  # nel dubbio decide FFmpeg, con il suo messaggio
+        return bool(out.strip())
+
     def convert(self, conversion: Conversion, src: Path, dst: Path, ctx: ConversionContext) -> None:
         target, quality = conversion.target, ctx.quality
+        if target in AUDIO and not self._has_audio(src, ctx.runner):
+            raise EngineError(f"«{ctx.original.name}» non contiene una traccia audio da estrarre")
         if target in LOSSLESS_AUDIO:
             codec_args = ["-vn", *LOSSLESS_AUDIO[target]]
         elif target in AUDIO_PRESETS:

@@ -11,6 +11,11 @@ import pytest
 from anyfile.core.registry import Registry
 
 
+def pytest_configure(config):
+    # Registrato anche qui: i test girano pure sul pacchetto installato, senza pyproject.toml.
+    config.addinivalue_line("markers", "slow: conversioni reali lente (LibreOffice, video)")
+
+
 def _run(*args: str) -> None:
     subprocess.run(args, check=True, capture_output=True, timeout=120)
 
