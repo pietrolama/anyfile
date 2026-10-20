@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-import shutil
 import subprocess
 from pathlib import Path
 
-from anyfile.core import formats
+from anyfile.core import formats, system
 from anyfile.core.detector import same_family, sniff
 from anyfile.core.errors import AnyfileError
 from anyfile.models.conversion import Category, Format
@@ -54,14 +53,14 @@ def _validate_file(path: Path, target: Format) -> None:
 
 
 def _check_streams(path: Path, kind: str) -> None:
-    ffprobe = shutil.which("ffprobe")
+    ffprobe = system.which("ffprobe")
     if not ffprobe:
         return
     try:
         out = subprocess.run(
             [ffprobe, "-v", "error", "-show_entries", "stream=codec_type",
              "-of", "default=noprint_wrappers=1:nokey=1", str(path)],
-            capture_output=True, text=True, timeout=30, check=False,
+            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=30, check=False,
         )
     except (OSError, subprocess.TimeoutExpired):
         return

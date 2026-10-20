@@ -57,6 +57,10 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str]) -> int:
+    # Una console Windows con codifica limitata non deve far fallire la stampa di ✓ → …
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(errors="replace")
     args = build_parser().parse_args(argv)
     registry = Registry()
     if args.command == "engines":

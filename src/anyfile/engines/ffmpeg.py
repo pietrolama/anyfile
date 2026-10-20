@@ -130,7 +130,7 @@ class FFmpegEngine(Engine):
         try:
             out = subprocess.run(
                 [self.binary(), "-hide_banner", "-encoders"],
-                capture_output=True, text=True, timeout=15, check=False,
+                capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=15, check=False,
             ).stdout
         except (OSError, subprocess.TimeoutExpired):
             return []

@@ -6,6 +6,7 @@ import time
 import pytest
 from conftest import needs
 
+from anyfile.core import system
 from anyfile.core.detector import detect
 from anyfile.core.errors import AnyfileError
 from anyfile.core.executor import Executor
@@ -52,9 +53,11 @@ def test_office_conversion(registry, sample, source, target):
 
 @needs("magick")
 def test_awkward_file_names(registry, sample):
-    src = sample("png", "-strano [1] nome: con spazi.png")
+    # I due punti non sono ammessi nei nomi di file su Windows.
+    name = "-strano [1] nome con spazi" if system.IS_WINDOWS else "-strano [1] nome: con spazi"
+    src = sample("png", f"{name}.png")
     out = convert(registry, src, "jpg")
-    assert out.name == "-strano [1] nome: con spazi.jpg"
+    assert out.name == f"{name}.jpg"
     check(out, "jpg")
 
 

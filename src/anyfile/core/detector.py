@@ -137,7 +137,7 @@ def _mime_of(path: Path) -> str | None:
     try:
         out = subprocess.run(
             ["file", "--mime-type", "-b", "--", str(path)],
-            capture_output=True, text=True, timeout=10, check=False,
+            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=10, check=False,
         )
     except (OSError, subprocess.TimeoutExpired):
         return None

@@ -17,7 +17,8 @@ class GhostscriptEngine(Engine):
     name = "ghostscript"
     label = "Ghostscript"
     package = "ghostscript"
-    requires = (("gs",),)
+    # Su Windows l'eseguibile a riga di comando si chiama gswin64c (o gswin32c).
+    requires = (("gs", "gswin64c", "gswin32c"),)
 
     def declared(self) -> list[Conversion]:
         return compressions(self.name, ["pdf"], "Riduce soprattutto i PDF con molte immagini; "

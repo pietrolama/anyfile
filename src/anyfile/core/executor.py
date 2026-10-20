@@ -8,7 +8,7 @@ import shutil
 import tempfile
 from pathlib import Path
 
-from anyfile.core import formats
+from anyfile.core import formats, system
 from anyfile.core.detector import detect
 from anyfile.core.errors import AnyfileError, ConversionCancelled, NothingGained
 from anyfile.core.planner import plan
@@ -46,15 +46,16 @@ class Executor:
             raise AnyfileError(f"Non è possibile scrivere in {out_dir}: "
                                "scegli un'altra cartella di destinazione")
 
-        # Il motore legge un collegamento con nome neutro: i nomi arbitrari dei file
-        # (spazi, parentesi, trattini iniziali) non arrivano mai sulla riga di comando.
-        input_dir = Path(tempfile.mkdtemp(prefix="anyfile-in-"))
         # L'output si prepara nella cartella di destinazione, così lo spostamento finale
         # è un rename atomico sullo stesso filesystem.
         work_dir = Path(tempfile.mkdtemp(prefix=".anyfile-", dir=out_dir))
         try:
+            # Il motore legge un collegamento con nome neutro: i nomi arbitrari dei file
+            # (spazi, parentesi, trattini iniziali) non arrivano mai sulla riga di comando.
+            input_dir = work_dir / "ingresso"
+            input_dir.mkdir()
             link = input_dir / f"input.{info.format.ext}"
-            link.symlink_to(src.resolve())
+            system.link_or_copy(src, link)
 
             multi = route.multi_output
             produced = work_dir / ("out" if multi else f"output.{target.ext}")
@@ -117,7 +118,6 @@ class Executor:
             return output
         finally:
             shutil.rmtree(work_dir, ignore_errors=True)
-            shutil.rmtree(input_dir, ignore_errors=True)
 
 
 def _step_progress(progress: ProgressFn, n: int, total: int) -> ProgressFn:
@@ -153,10 +153,13 @@ def place(produced: Path, final: Path, *, overwrite: bool, protect: Path | None 
         candidate = final if n == 0 else final.with_name(f"{stem} ({n}){suffix}")
         if candidate.resolve() == protected:
             continue
+        if candidate.exists():
+            continue
         try:
             if is_dir:
-                candidate.mkdir()  # riserva il nome in modo atomico
-                os.replace(produced, candidate)
+                # Linux sostituirebbe al più una cartella vuota creata nel frattempo;
+                # con una cartella piena, e su Windows con qualsiasi cartella, fallisce.
+                os.rename(produced, candidate)
             else:
                 os.link(produced, candidate)  # fallisce se il nome esiste già
                 produced.unlink()
@@ -164,9 +167,11 @@ def place(produced: Path, final: Path, *, overwrite: bool, protect: Path | None 
         except FileExistsError:
             continue
         except OSError:
-            # Filesystem senza hard link (es. FAT): rename dopo un controllo.
             if candidate.exists():
                 continue
+            if is_dir:
+                raise
+            # Filesystem senza hard link (es. FAT): rename dopo il controllo.
             os.rename(produced, candidate)
             return candidate
     raise AssertionError("unreachable")

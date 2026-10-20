@@ -3,12 +3,13 @@ e conservazione di ciò che conta (trasparenza, metadati, tracce, contenuto)."""
 
 import struct
 import subprocess
+import sys
 import threading
 import time
 import zipfile
 
 import pytest
-from conftest import needs
+from conftest import ALWAYS_PRESENT, GS, needs
 
 from anyfile.core.errors import AnyfileError, NothingGained
 from anyfile.core.executor import Executor
@@ -47,7 +48,7 @@ def _leftovers(folder, *keep):
 # --- catene: errori e annullamento sul secondo passaggio ---------------------
 
 class _WritesPdf(Engine):
-    name, label, package, requires = "primo", "Primo", "primo", (("true",),)
+    name, label, package, requires = "primo", "Primo", "primo", ((ALWAYS_PRESENT,),)
 
     def declared(self):
         return [Conversion("docx", "pdf", self.name)]
@@ -57,7 +58,7 @@ class _WritesPdf(Engine):
 
 
 class _FailsOrHangs(Engine):
-    name, label, package, requires = "secondo", "Secondo", "secondo", (("true",),)
+    name, label, package, requires = "secondo", "Secondo", "secondo", ((ALWAYS_PRESENT,),)
 
     def __init__(self, hang=False):
         super().__init__()
@@ -69,7 +70,7 @@ class _FailsOrHangs(Engine):
     def convert(self, conversion, src, dst, ctx):
         ctx.progress(0.0)
         if self.hang:
-            ctx.runner.run(["sleep", "30"])
+            ctx.runner.run([sys.executable, "-c", "import time; time.sleep(30)"])
         raise EngineError("motore rotto di proposito")
 
 
@@ -261,7 +262,7 @@ def test_ghostscript_keeps_text_of_text_pdf(registry, tmp_path):
     ps.write_text("/Helvetica findfont 24 scalefont setfont 72 700 moveto "
                   "(Prima riga di testo) show showpage\n")
     src = tmp_path / "testo.pdf"
-    subprocess.run(["gs", "-q", "-dSAFER", "-dBATCH", "-dNOPAUSE", "-sDEVICE=pdfwrite",
+    subprocess.run([GS, "-q", "-dSAFER", "-dBATCH", "-dNOPAUSE", "-sDEVICE=pdfwrite",
                     "-dCompressPages=false", f"-sOutputFile={src}", str(ps)], check=True)
     try:
         out = Executor(registry).run(Job(src, "pdf", quality=Quality.SMALL))

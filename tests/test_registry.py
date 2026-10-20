@@ -1,4 +1,6 @@
 from dataclasses import replace
+
+from conftest import ALWAYS_PRESENT
 from pathlib import Path
 
 from anyfile.core.registry import Registry
@@ -9,7 +11,7 @@ class FakeEngine(Engine):
     def __init__(self, name, label, convs, available=True):
         super().__init__()
         self.name, self.label, self.package = name, label, f"pkg-{name}"
-        self.requires = (("true",),) if available else ((f"anyfile-missing-{name}",),)
+        self.requires = ((ALWAYS_PRESENT,),) if available else ((f"anyfile-missing-{name}",),)
         self._declared = convs
 
     def declared(self):

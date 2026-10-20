@@ -4,11 +4,25 @@ from __future__ import annotations
 
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
 
+from anyfile.core import system
 from anyfile.core.registry import Registry
+
+# Nomi alternativi degli strumenti (Windows, ImageMagick 6...).
+_ALIASES = {"gs": ("gs", "gswin64c", "gswin32c"), "soffice": ("soffice", "libreoffice"),
+            "magick": ("magick",)}
+
+# Un eseguibile che esiste sempre, per i motori finti dei test.
+ALWAYS_PRESENT = sys.executable
+GS = next((p for p in map(system.which, _ALIASES["gs"]) if p), "gs")
+
+
+def tool(name: str) -> str | None:
+    return next((p for p in map(system.which, _ALIASES.get(name, (name,))) if p), None)
 
 
 def pytest_configure(config):
@@ -19,7 +33,9 @@ def pytest_configure(config):
 @pytest.fixture(autouse=True)
 def _isolated_data_home(tmp_path_factory, monkeypatch):
     # La cronologia dei test non deve mai finire in quella dell'utente.
-    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path_factory.mktemp("data-home")))
+    data_home = str(tmp_path_factory.mktemp("data-home"))
+    monkeypatch.setenv("XDG_DATA_HOME", data_home)
+    monkeypatch.setenv("APPDATA", data_home)  # Windows
 
 
 def _run(*args: str) -> None:
@@ -27,7 +43,7 @@ def _run(*args: str) -> None:
 
 
 def needs(*tools: str):
-    missing = [t for t in tools if not shutil.which(t)]
+    missing = [t for t in tools if not tool(t)]
     return pytest.mark.skipif(bool(missing), reason=f"manca {', '.join(missing)}")
 
 
@@ -51,7 +67,7 @@ def samples(tmp_path_factory) -> dict[str, Path]:
     csv.write_text("nome,valore\nalfa,1\nbeta,2\n")
     out["csv"] = csv
 
-    magick = shutil.which("magick") or shutil.which("convert")
+    magick = tool("magick") or system.which("convert")
     if magick:
         png = d / "immagine.png"
         _run(magick, "-size", "64x48", "gradient:red-blue", str(png))
@@ -71,7 +87,7 @@ def samples(tmp_path_factory) -> dict[str, Path]:
         docx = d / "documento.docx"
         _run("pandoc", str(md), "-o", str(docx))
         out["docx"] = docx
-    soffice = shutil.which("soffice") or shutil.which("libreoffice")
+    soffice = tool("soffice")
     if soffice:
         pdf_dir = d / "pdf"
         pdf_dir.mkdir()

@@ -7,14 +7,15 @@ impostazioni. Un problema della cronologia non deve mai far fallire una conversi
 
 from __future__ import annotations
 
-import os
 import sqlite3
 import sys
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
+from anyfile.core import system
 from anyfile.models.conversion import Quality
 from anyfile.models.job import Job, JobStatus
 
@@ -134,8 +135,7 @@ def describe_result(entry: Entry) -> str:
 
 
 def default_path() -> Path:
-    base = os.environ.get("XDG_DATA_HOME") or Path.home() / ".local" / "share"
-    return Path(base) / "anyfile" / "cronologia.sqlite"
+    return system.data_dir() / "cronologia.sqlite"
 
 
 class History:
@@ -145,12 +145,18 @@ class History:
         with self._connect() as db:
             db.executescript(_SCHEMA)
 
-    def _connect(self) -> sqlite3.Connection:
+    @contextmanager
+    def _connect(self) -> Iterator[sqlite3.Connection]:
         # Una connessione per operazione: la cronologia è scritta dal thread dei lavori
         # e letta dall'interfaccia, anche da processi diversi (ruota e finestra).
+        # La chiusura è esplicita: su Windows un database aperto resta bloccato.
         db = sqlite3.connect(self.path, timeout=5)
-        db.execute("PRAGMA journal_mode=WAL")
-        return db
+        try:
+            db.execute("PRAGMA journal_mode=WAL")
+            with db:  # commit, oppure rollback in caso di errore
+                yield db
+        finally:
+            db.close()
 
     # --- registrazione -----------------------------------------------------
 

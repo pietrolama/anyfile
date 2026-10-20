@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import os
-import shutil
-import signal
 import subprocess
 import threading
 from abc import ABC, abstractmethod
@@ -12,6 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import ClassVar
 
+from anyfile.core import system
 from anyfile.core.errors import AnyfileError, ConversionCancelled
 from anyfile.models.conversion import Conversion, Presets, Quality
 
@@ -44,7 +43,7 @@ class Runner:
         try:
             proc = subprocess.Popen(
                 argv, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                text=True, errors="replace", cwd=cwd, start_new_session=True,
+                text=True, encoding="utf-8", errors="replace", cwd=cwd, **system.popen_options(),
             )
         except OSError as e:
             raise EngineError(f"Impossibile avviare {tool}: {e.strerror}") from e
@@ -78,7 +77,7 @@ class Runner:
                 break
             except subprocess.TimeoutExpired:
                 if self.cancel_event.is_set():
-                    self._kill(proc)
+                    system.kill_tree(proc)
                     for t in pumps:
                         t.join(timeout=2)
                     raise ConversionCancelled() from None
@@ -93,17 +92,6 @@ class Runner:
                 message += f": {last}"
             raise EngineError(message, details=details)
         return "\n".join(stdout_lines)
-
-    @staticmethod
-    def _kill(proc: subprocess.Popen) -> None:
-        try:
-            os.killpg(proc.pid, signal.SIGTERM)
-            proc.wait(timeout=3)
-        except ProcessLookupError:
-            return
-        except subprocess.TimeoutExpired:
-            os.killpg(proc.pid, signal.SIGKILL)
-            proc.wait()
 
 
 @dataclass
@@ -153,7 +141,7 @@ class Engine(ABC):
 
     def which(self, *names: str) -> str | None:
         for n in names:
-            if path := shutil.which(n):
+            if path := system.which(n):
                 return path
         return None
 

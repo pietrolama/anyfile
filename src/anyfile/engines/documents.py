@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-import os
 import tempfile
 from pathlib import Path
 
+from anyfile.core import system
 from anyfile.engines.base import ConversionContext, Engine, EngineError, pairs
 from anyfile.models.conversion import Conversion
 
@@ -30,11 +30,6 @@ def _office_notes(source: str, target: str) -> str:
     return LAYOUT_NOTE
 
 
-def _cache_dir() -> Path:
-    base = os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache"
-    return Path(base) / "anyfile"
-
-
 class LibreOfficeEngine(Engine):
     name = "libreoffice"
     label = "LibreOffice"
@@ -53,7 +48,7 @@ class LibreOfficeEngine(Engine):
         # Cartella propria: in una catena la cartella di lavoro è condivisa tra i passaggi.
         outdir = Path(tempfile.mkdtemp(prefix="lo-out-", dir=dst.parent))
         # Profilo dedicato: un LibreOffice già aperto dall'utente non blocca la conversione.
-        profile = _cache_dir() / "libreoffice-profile"
+        profile = system.cache_dir() / "libreoffice-profile"
         profile.mkdir(parents=True, exist_ok=True)
         args = [
             self.binary(), f"-env:UserInstallation={profile.as_uri()}",
