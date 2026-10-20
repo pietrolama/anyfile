@@ -12,6 +12,7 @@ from typing import ClassVar
 
 from anyfile.core import system
 from anyfile.core.errors import AnyfileError, ConversionCancelled
+from anyfile.i18n import N_, _
 from anyfile.models.conversion import Conversion, Presets, Quality
 
 ProgressFn = Callable[[float | None], None]
@@ -22,8 +23,8 @@ class EngineError(AnyfileError):
 
 
 class Runner:
-    """Esegue processi esterni con argomenti separati (mai una shell),
-    con supporto all'annullamento e raccolta delle ultime righe di stderr."""
+    """Runs external processes with separate arguments (never through a shell),
+    with cancellation support and the last lines of stderr kept for errors."""
 
     def __init__(self, cancel_event: threading.Event | None = None) -> None:
         self.cancel_event = cancel_event or threading.Event()
@@ -46,7 +47,7 @@ class Runner:
                 text=True, encoding="utf-8", errors="replace", cwd=cwd, **system.popen_options(),
             )
         except OSError as e:
-            raise EngineError(f"Impossibile avviare {tool}: {e.strerror}") from e
+            raise EngineError(_("Cannot start {tool}: {error}").format(tool=tool, error=e.strerror)) from e
 
         stdout_lines: list[str] = []
         stderr_tail: deque[str] = deque(maxlen=40)
@@ -87,7 +88,8 @@ class Runner:
         if proc.returncode != 0:
             details = "\n".join(stderr_tail)
             last = stderr_tail[-1] if stderr_tail else ""
-            message = f"{tool} non è riuscito a convertire il file (codice {proc.returncode})"
+            message = _("{tool} could not convert the file (code {code})").format(
+                tool=tool, code=proc.returncode)
             if last:
                 message += f": {last}"
             raise EngineError(message, details=details)
@@ -98,16 +100,16 @@ class Runner:
 class ConversionContext:
     runner: Runner
     progress: ProgressFn
-    # Il file scelto dall'utente; i motori lavorano su un collegamento con nome sicuro.
+    # The file chosen by the user; engines work on a link with a safe name.
     original: Path
     quality: Quality = Quality.BALANCED
 
 
-COMPRESS_NOTE = "Stesso formato, file più leggero; l'originale resta intatto"
+COMPRESS_NOTE = N_("Same format, smaller file; the original stays untouched")
 
 
 def compressions(engine: str, formats: Iterable[str], notes: str = COMPRESS_NOTE) -> list[Conversion]:
-    """Ricompressione nello stesso formato, per i soli formati con perdita."""
+    """Re-encoding into the same format, only for lossy formats."""
     return [Conversion(f, f, engine, notes) for f in formats]
 
 
@@ -131,9 +133,9 @@ def pairs(
 class Engine(ABC):
     name: ClassVar[str]
     label: ClassVar[str]
-    # Pacchetto Debian/Ubuntu che fornisce il motore.
+    # Debian/Ubuntu package that provides the engine.
     package: ClassVar[str]
-    # Ogni voce è un elenco di eseguibili alternativi, ne basta uno.
+    # Each entry lists alternative executables; one of them is enough.
     requires: ClassVar[tuple[tuple[str, ...], ...]]
 
     def __init__(self) -> None:
@@ -148,7 +150,8 @@ class Engine(ABC):
     def binary(self, index: int = 0) -> str:
         path = self.which(*self.requires[index])
         if not path:
-            raise EngineError(f"{self.label} non è installato (sudo apt install {self.package})")
+            raise EngineError(_("{engine} is not installed (sudo apt install {package})").format(
+                engine=self.label, package=self.package))
         return path
 
     def missing(self) -> list[str]:
@@ -159,7 +162,7 @@ class Engine(ABC):
         return not self.missing()
 
     def conversions(self) -> list[Conversion]:
-        """Conversioni realmente eseguibili su questo sistema."""
+        """Conversions that can really be carried out on this system."""
         if self._conversions is None:
             self._conversions = self.probe() if self.available else []
         return self._conversions
@@ -168,18 +171,18 @@ class Engine(ABC):
         self._conversions = None
 
     def probe(self) -> list[Conversion]:
-        """Filtra le conversioni dichiarate in base alle capacità della build installata."""
+        """Filters the declared conversions by what the installed build can do."""
         return self.declared()
 
     def presets(self, target: str) -> Presets:
-        """Preset di qualità per la destinazione, con la descrizione dei parametri.
-        Vuoto per i formati senza perdita: lì un preset non cambierebbe nulla."""
+        """Quality presets for the target, with a description of the parameters.
+        Empty for lossless formats: there a preset would change nothing."""
         return {}
 
     @abstractmethod
     def declared(self) -> list[Conversion]:
-        """Tutte le conversioni che il motore offre quando è installato."""
+        """All the conversions the engine offers when it is installed."""
 
     @abstractmethod
     def convert(self, conversion: Conversion, src: Path, dst: Path, ctx: ConversionContext) -> None:
-        """Converte src in dst. Per le conversioni multi_output dst è una cartella."""
+        """Converts src into dst. For multi_output conversions dst is a folder."""

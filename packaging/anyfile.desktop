@@ -1,16 +1,20 @@
 [Desktop Entry]
 Type=Application
 Name=ANYFILE
-GenericName=Convertitore di file
-Comment=Converte immagini, audio, video e documenti
+GenericName=File converter
+GenericName[it]=Convertitore di file
+Comment=Convert images, audio, video and documents
+Comment[it]=Converte immagini, audio, video e documenti
 Exec=anyfile %F
 Icon=document-export
 Terminal=false
 Categories=Utility;
-Keywords=convert;converter;converti;formato;
-Actions=cronologia;
+Keywords=convert;converter;compress;format;
+Keywords[it]=convert;converter;converti;comprimi;formato;
+Actions=history;
 
-[Desktop Action cronologia]
-Name=Cronologia delle conversioni
+[Desktop Action history]
+Name=Conversion history
+Name[it]=Cronologia delle conversioni
 Icon=view-history
 Exec=anyfile --history

@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
 from anyfile.core.executor import Executor
 from anyfile.core.history import History
 from anyfile.core.registry import Registry
+from anyfile.i18n import _, ngettext
 from anyfile.models.conversion import Quality
 from anyfile.models.job import Job, JobStatus
 from anyfile.ui.conversion_view import ConversionView, Row
@@ -44,7 +45,7 @@ class MainWindow(QMainWindow):
         self.view.selection_changed.connect(self._update_buttons)
         self.view.row_activated.connect(self._show_row_output)
 
-        drop_hint = QLabel("Trascina qui i file da convertire\noppure usa «Aggiungi file…»")
+        drop_hint = QLabel(_("Drop the files to convert here\nor use “Add files…”"))
         drop_hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
         drop_hint.setStyleSheet("font-size: 15pt; color: palette(placeholder-text);")
         self.stack = QStackedWidget()
@@ -61,25 +62,25 @@ class MainWindow(QMainWindow):
         self._update_engine_summary()
         self._update_buttons()
 
-    # --- costruzione -------------------------------------------------------
+    # --- building --------------------------------------------------------
 
     def _build_toolbar(self) -> None:
-        bar = QToolBar("Principale")
+        bar = QToolBar(_("Main"))
         bar.setMovable(False)
         bar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
         self.addToolBar(bar)
 
-        add = QAction(QIcon.fromTheme("list-add"), "Aggiungi file…", self)
+        add = QAction(QIcon.fromTheme("list-add"), _("Add files…"), self)
         add.setShortcut(QKeySequence.StandardKey.Open)
         add.triggered.connect(self._choose_files)
-        remove = QAction(QIcon.fromTheme("list-remove"), "Rimuovi", self)
+        remove = QAction(QIcon.fromTheme("list-remove"), _("Remove"), self)
         remove.setShortcut(QKeySequence.StandardKey.Delete)
         remove.triggered.connect(lambda: self.view.remove_selected())
-        clear = QAction(QIcon.fromTheme("edit-clear-all"), "Svuota elenco", self)
+        clear = QAction(QIcon.fromTheme("edit-clear-all"), _("Clear list"), self)
         clear.triggered.connect(lambda: self.view.clear())
-        engines = QAction(QIcon.fromTheme("configure"), "Motori…", self)
+        engines = QAction(QIcon.fromTheme("configure"), _("Engines…"), self)
         engines.triggered.connect(self._show_engines)
-        history = QAction(QIcon.fromTheme("view-history"), "Cronologia", self)
+        history = QAction(QIcon.fromTheme("view-history"), _("History"), self)
         history.setShortcut(QKeySequence("Ctrl+H"))
         history.triggered.connect(self.show_history)
         history.setEnabled(self.history is not None)
@@ -93,21 +94,21 @@ class MainWindow(QMainWindow):
         bar.addAction(engines)
 
     def _build_output_options(self) -> QVBoxLayout:
-        self.same_dir = QRadioButton("Salva accanto al file originale")
-        self.custom_dir = QRadioButton("Salva in:")
+        self.same_dir = QRadioButton(_("Save next to the original file"))
+        self.custom_dir = QRadioButton(_("Save in:"))
         group = QButtonGroup(self)
         group.addButton(self.same_dir)
         group.addButton(self.custom_dir)
         self.dir_edit = QLineEdit(str(self.settings.custom_dir or Path.home()))
-        browse = QPushButton(QIcon.fromTheme("document-open-folder"), "Sfoglia…")
+        browse = QPushButton(QIcon.fromTheme("document-open-folder"), _("Browse…"))
         browse.clicked.connect(self._choose_dir)
-        self.overwrite = QCheckBox("Sovrascrivi i file esistenti (altrimenti: «nome (1).ext»)")
+        self.overwrite = QCheckBox(_("Overwrite existing files (otherwise: “name (1).ext”)"))
         self.quality = QComboBox()
         for q in Quality:
             self.quality.addItem(q.label, q)
         self.quality.setCurrentIndex(self.quality.findData(self.settings.quality))
-        self.quality.setToolTip("Vale per i formati con perdita (JPEG, WebP, MP3, Opus, video, GIF).\n"
-                                "Per PNG, WAV, FLAC e documenti non cambia nulla.")
+        self.quality.setToolTip(_("Applies to lossy formats (JPEG, WebP, MP3, Opus, video, GIF).\n"
+                                  "For PNG, WAV, FLAC and documents it changes nothing."))
         self.quality.currentIndexChanged.connect(self._save_output_settings)
 
         self.custom_dir.setChecked(self.settings.use_custom_dir)
@@ -128,7 +129,7 @@ class MainWindow(QMainWindow):
         second = QHBoxLayout()
         second.addWidget(self.overwrite)
         second.addStretch()
-        second.addWidget(QLabel("Qualità:"))
+        second.addWidget(QLabel(_("Quality:")))
         second.addWidget(self.quality)
         box = QVBoxLayout()
         box.addLayout(row)
@@ -137,12 +138,12 @@ class MainWindow(QMainWindow):
 
     def _build_actions(self) -> QHBoxLayout:
         self.engine_summary = QLabel()
-        self.engine_summary.linkActivated.connect(lambda _: self._show_engines())
-        self.open_folder = QPushButton(QIcon.fromTheme("folder-open"), "Mostra risultati")
+        self.engine_summary.linkActivated.connect(lambda _link: self._show_engines())
+        self.open_folder = QPushButton(QIcon.fromTheme("folder-open"), _("Show results"))
         self.open_folder.clicked.connect(lambda: self._reveal(self._last_output))
-        self.cancel = QPushButton(QIcon.fromTheme("process-stop"), "Annulla")
+        self.cancel = QPushButton(QIcon.fromTheme("process-stop"), _("Cancel"))
         self.cancel.clicked.connect(self.jobs.cancel_all)
-        self.convert = QPushButton(QIcon.fromTheme("media-playback-start"), "Converti")
+        self.convert = QPushButton(QIcon.fromTheme("media-playback-start"), _("Convert"))
         self.convert.setDefault(True)
         self.convert.clicked.connect(self._start)
 
@@ -153,7 +154,7 @@ class MainWindow(QMainWindow):
         row.addWidget(self.convert)
         return row
 
-    # --- file in ingresso --------------------------------------------------
+    # --- incoming files --------------------------------------------------
 
     def add_files(self, paths: list[Path]) -> None:
         skipped = self.view.add_files(paths)
@@ -163,7 +164,7 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage("; ".join(skipped), 8000)
 
     def _choose_files(self) -> None:
-        names, _ = QFileDialog.getOpenFileNames(self, "Scegli i file da convertire", str(Path.home()))
+        names, _filter = QFileDialog.getOpenFileNames(self, _("Choose the files to convert"), str(Path.home()))
         self.add_files([Path(n) for n in names])
 
     def dragEnterEvent(self, event: QDragEnterEvent) -> None:
@@ -175,11 +176,11 @@ class MainWindow(QMainWindow):
         self.add_files(paths)
         event.acceptProposedAction()
 
-    # --- destinazione ------------------------------------------------------
+    # --- destination ----------------------------------------------------
 
     def _choose_dir(self) -> None:
         start = self.dir_edit.text() or str(Path.home())
-        chosen = QFileDialog.getExistingDirectory(self, "Cartella di destinazione", start)
+        chosen = QFileDialog.getExistingDirectory(self, _("Destination folder"), start)
         if chosen:
             self.dir_edit.setText(chosen)
             self.custom_dir.setChecked(True)
@@ -196,7 +197,7 @@ class MainWindow(QMainWindow):
             return Path(self.dir_edit.text().strip()).expanduser()
         return None
 
-    # --- conversione -------------------------------------------------------
+    # --- converting -----------------------------------------------------
 
     def _start(self) -> None:
         rows = self.view.pending()
@@ -226,12 +227,15 @@ class MainWindow(QMainWindow):
         done = sum(s is JobStatus.DONE for s in self._batch.values())
         failed = sum(s is JobStatus.FAILED for s in self._batch.values())
         unchanged = sum(s is JobStatus.UNCHANGED for s in self._batch.values())
-        summary = (f"{done} file convertiti"
-                   + (f", {unchanged} già compatti" if unchanged else "")
-                   + (f", {failed} con errori" if failed else ""))
+        summary = ngettext("{n} file converted", "{n} files converted", done).format(n=done)
+        if unchanged:
+            summary += ", " + ngettext("{n} already compact", "{n} already compact",
+                                       unchanged).format(n=unchanged)
+        if failed:
+            summary += ", " + ngettext("{n} with errors", "{n} with errors", failed).format(n=failed)
         self.statusBar().showMessage(summary, 10000)
         if not self.isActiveWindow():
-            notify("Conversione completata" if not failed else "Conversione terminata con errori",
+            notify(_("Conversion complete") if not failed else _("Conversion finished with errors"),
                    summary)
         self._batch.clear()
 
@@ -240,7 +244,7 @@ class MainWindow(QMainWindow):
         self.cancel.setEnabled(self.jobs.has_pending())
         self.open_folder.setEnabled(self._last_output is not None)
 
-    # --- risultati e motori ------------------------------------------------
+    # --- results and engines ------------------------------------------------
 
     def _show_row_output(self, row: Row) -> None:
         if row.output:
@@ -271,16 +275,16 @@ class MainWindow(QMainWindow):
         status = self.registry.status()
         missing = [s.label for s in status if not s.available]
         if missing:
-            text = f"Motori mancanti: {', '.join(missing)} — <a href='#'>dettagli</a>"
+            text = _("Missing engines: {engines}").format(engines=", ".join(missing))
         else:
-            text = f"{len(status)} motori disponibili — <a href='#'>dettagli</a>"
-        self.engine_summary.setText(text)
+            text = _("{n} engines available").format(n=len(status))
+        self.engine_summary.setText(f"{text} — <a href='#'>{_('details')}</a>")
 
     def closeEvent(self, event) -> None:  # noqa: N802
         if self.jobs.has_pending():
             answer = QMessageBox.question(
-                self, "Conversioni in corso",
-                "Ci sono conversioni in corso. Vuoi annullarle e uscire?",
+                self, _("Conversions in progress"),
+                _("Some conversions are still running. Cancel them and quit?"),
             )
             if answer != QMessageBox.StandardButton.Yes:
                 event.ignore()

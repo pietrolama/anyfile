@@ -4,6 +4,7 @@ import subprocess
 from pathlib import Path
 
 from anyfile.engines.base import ConversionContext, Engine, EngineError, Runner, compressions, pairs
+from anyfile.i18n import N_, _
 from anyfile.models.conversion import Conversion, Presets, Quality
 
 AUDIO = ("mp3", "wav", "flac", "ogg", "opus", "m4a", "aac")
@@ -11,7 +12,7 @@ VIDEO = ("mp4", "mkv", "webm", "mov", "avi")
 
 Q = Quality
 
-# Encoder che la build di FFmpeg deve offrire per ciascuna destinazione.
+# Encoders the FFmpeg build must offer for each target.
 ENCODERS: dict[str, tuple[str, ...]] = {
     "mp3": ("libmp3lame",), "wav": ("pcm_s16le",), "flac": ("flac",), "ogg": ("libvorbis",),
     "opus": ("libopus",), "m4a": ("aac",), "aac": ("aac",),
@@ -19,13 +20,13 @@ ENCODERS: dict[str, tuple[str, ...]] = {
     "webm": ("libvpx-vp9", "libopus"), "avi": ("mpeg4", "libmp3lame"), "gif": ("gif",),
 }
 
-# Formati senza perdita: un preset di qualità non cambierebbe il risultato.
+# Lossless formats: a quality preset would not change the result.
 LOSSLESS_AUDIO: dict[str, list[str]] = {
     "wav": ["-c:a", "pcm_s16le"],
     "flac": ["-c:a", "flac"],
 }
 
-Preset = tuple[list[str], str]  # (argomenti, descrizione per l'utente)
+Preset = tuple[list[str], str]  # (arguments, description for the user)
 
 
 def _audio(codec: str, flag: str, values: tuple[str, str, str], descr: tuple[str, str, str]) -> dict:
@@ -45,7 +46,7 @@ AUDIO_PRESETS: dict[str, dict[Quality, Preset]] = {
 
 
 def _scale(max_height: int | None) -> list[str]:
-    # H.264 e VP9 in yuv420p richiedono dimensioni pari.
+    # H.264 and VP9 in yuv420p need even dimensions.
     if max_height is None:
         return ["-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2", "-pix_fmt", "yuv420p"]
     return ["-vf", f"scale=-2:'trunc(min({max_height},ih)/2)*2'", "-pix_fmt", "yuv420p"]
@@ -69,9 +70,9 @@ def _gif(fps: int, width: int, colors: int) -> list[str]:
 
 
 _H264_PRESETS: dict[Quality, Preset] = {
-    Q.MAX: (_h264(18, "slow", "192k"), "H.264 CRF 18, codifica più lenta"),
+    Q.MAX: (_h264(18, "slow", "192k"), N_("H.264 CRF 18, slower encoding")),
     Q.BALANCED: (_h264(23, "medium", "160k"), "H.264 CRF 23"),
-    Q.SMALL: (_h264(28, "medium", "96k", 720), "H.264 CRF 28, al massimo 720p"),
+    Q.SMALL: (_h264(28, "medium", "96k", 720), N_("H.264 CRF 28, at most 720p")),
 }
 
 VIDEO_PRESETS: dict[str, dict[Quality, Preset]] = {
@@ -81,7 +82,7 @@ VIDEO_PRESETS: dict[str, dict[Quality, Preset]] = {
     "webm": {
         Q.MAX: (_vp9(24, "160k"), "VP9 CRF 24"),
         Q.BALANCED: (_vp9(32, "128k"), "VP9 CRF 32"),
-        Q.SMALL: (_vp9(40, "80k", 720), "VP9 CRF 40, al massimo 720p"),
+        Q.SMALL: (_vp9(40, "80k", 720), N_("VP9 CRF 40, at most 720p")),
     },
     "avi": {
         Q.MAX: ([*_scale(None), "-c:v", "mpeg4", "-q:v", "2", "-c:a", "libmp3lame", "-q:a", "2"],
@@ -89,12 +90,12 @@ VIDEO_PRESETS: dict[str, dict[Quality, Preset]] = {
         Q.BALANCED: ([*_scale(None), "-c:v", "mpeg4", "-q:v", "3", "-c:a", "libmp3lame", "-q:a", "3"],
                      "MPEG-4 q3"),
         Q.SMALL: ([*_scale(720), "-c:v", "mpeg4", "-q:v", "6", "-c:a", "libmp3lame", "-q:a", "5"],
-                  "MPEG-4 q6, al massimo 720p"),
+                  N_("MPEG-4 q6, at most 720p")),
     },
     "gif": {
-        Q.MAX: (_gif(15, 960, 256), "15 fotogrammi/s, larghezza fino a 960 px"),
-        Q.BALANCED: (_gif(12, 640, 256), "12 fotogrammi/s, larghezza fino a 640 px"),
-        Q.SMALL: (_gif(8, 400, 64), "8 fotogrammi/s, 400 px, 64 colori"),
+        Q.MAX: (_gif(15, 960, 256), N_("15 frames/s, up to 960 px wide")),
+        Q.BALANCED: (_gif(12, 640, 256), N_("12 frames/s, up to 640 px wide")),
+        Q.SMALL: (_gif(8, 400, 64), N_("8 frames/s, 400 px, 64 colours")),
     },
 }
 
@@ -103,11 +104,11 @@ LOSSY = {"mp3", "ogg", "opus", "m4a", "aac", "mp4", "mkv", "webm", "mov", "avi"}
 
 def _notes(source: str, target: str) -> str:
     if source in VIDEO and target in AUDIO:
-        return "Estrae solo la traccia audio"
+        return N_("Extracts only the audio track")
     if target == "gif":
-        return "Animazione senza audio: adatta a clip brevi"
+        return N_("Animation without audio: suited to short clips")
     if target in LOSSY:
-        return "Compressione con perdita"
+        return N_("Lossy compression")
     return ""
 
 
@@ -140,7 +141,7 @@ class FFmpegEngine(Engine):
 
     def presets(self, target: str) -> Presets:
         table = AUDIO_PRESETS.get(target) or VIDEO_PRESETS.get(target) or {}
-        return {q: descr for q, (_args, descr) in table.items()}
+        return {q: _(descr) for q, (_args, descr) in table.items()}
 
     def _duration(self, src: Path, runner: Runner) -> float | None:
         try:
@@ -158,13 +159,13 @@ class FFmpegEngine(Engine):
             out = runner.run([self.binary(1), "-v", "error", "-select_streams", "a",
                               "-show_entries", "stream=index", "-of", "csv=p=0", src])
         except EngineError:
-            return True  # nel dubbio decide FFmpeg, con il suo messaggio
+            return True  # when in doubt FFmpeg decides, with its own message
         return bool(out.strip())
 
     def convert(self, conversion: Conversion, src: Path, dst: Path, ctx: ConversionContext) -> None:
         target, quality = conversion.target, ctx.quality
         if target in AUDIO and not self._has_audio(src, ctx.runner):
-            raise EngineError(f"«{ctx.original.name}» non contiene una traccia audio da estrarre")
+            raise EngineError(_("“{name}” has no audio track to extract").format(name=ctx.original.name))
         if target in LOSSLESS_AUDIO:
             codec_args = ["-vn", *LOSSLESS_AUDIO[target]]
         elif target in AUDIO_PRESETS:

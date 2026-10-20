@@ -3,13 +3,14 @@ from __future__ import annotations
 from pathlib import Path
 
 from anyfile.engines.base import ConversionContext, Engine, compressions
+from anyfile.i18n import N_, _
 from anyfile.models.conversion import Conversion, Presets, Quality
 
-# qualità → (impostazione di pdfwrite, descrizione)
+# quality → (pdfwrite setting, description)
 PDF_SETTINGS: dict[Quality, tuple[str, str]] = {
-    Quality.MAX: ("/printer", "Immagini a 300 dpi, per la stampa"),
-    Quality.BALANCED: ("/ebook", "Immagini a 150 dpi, testo invariato"),
-    Quality.SMALL: ("/screen", "Immagini a 72 dpi, per lo schermo"),
+    Quality.MAX: ("/printer", N_("Images at 300 dpi, for printing")),
+    Quality.BALANCED: ("/ebook", N_("Images at 150 dpi, text unchanged")),
+    Quality.SMALL: ("/screen", N_("Images at 72 dpi, for screens")),
 }
 
 
@@ -17,20 +18,20 @@ class GhostscriptEngine(Engine):
     name = "ghostscript"
     label = "Ghostscript"
     package = "ghostscript"
-    # Su Windows l'eseguibile a riga di comando si chiama gswin64c (o gswin32c).
+    # On Windows the command-line executable is called gswin64c (or gswin32c).
     requires = (("gs", "gswin64c", "gswin32c"),)
 
     def declared(self) -> list[Conversion]:
-        return compressions(self.name, ["pdf"], "Riduce soprattutto i PDF con molte immagini; "
-                                                "l'originale resta intatto")
+        return compressions(self.name, ["pdf"], N_("Mostly shrinks PDFs with many images; "
+                                                   "the original stays untouched"))
 
     def presets(self, target: str) -> Presets:
-        return {q: descr for q, (_setting, descr) in PDF_SETTINGS.items()} if target == "pdf" else {}
+        return {q: _(descr) for q, (_setting, descr) in PDF_SETTINGS.items()} if target == "pdf" else {}
 
     def convert(self, conversion: Conversion, src: Path, dst: Path, ctx: ConversionContext) -> None:
         ctx.progress(None)
         setting = PDF_SETTINGS[ctx.quality][0]
-        # -dSAFER: il PDF non può leggere o scrivere file fuori da quelli indicati.
+        # -dSAFER: the PDF cannot read or write files other than the ones given.
         ctx.runner.run([
             self.binary(), "-sDEVICE=pdfwrite", "-dCompatibilityLevel=1.5",
             f"-dPDFSETTINGS={setting}", "-dSAFER", "-dNOPAUSE", "-dBATCH", "-dQUIET",

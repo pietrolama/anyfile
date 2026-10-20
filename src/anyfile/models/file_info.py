@@ -11,10 +11,10 @@ class FileInfo:
     path: Path
     format: Format | None
     size: int
-    # "firma", "testo", "mime", "estensione" o "" se non riconosciuto.
+    # "signature", "text", "mime", "extension", or "" when not recognized.
     detected_by: str
     mime: str | None = None
-    # L'estensione indica un formato diverso da quello rilevato nel contenuto.
+    # The extension names a different format than the one found in the content.
     extension_mismatch: bool = False
     reason: str = ""
 

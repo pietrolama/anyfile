@@ -1,4 +1,4 @@
-"""Verifica del risultato: il codice di uscita di un motore non basta."""
+"""Checking the result: an engine's exit code is not enough."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ from pathlib import Path
 from anyfile.core import formats, system
 from anyfile.core.detector import same_family, sniff
 from anyfile.core.errors import AnyfileError
+from anyfile.i18n import _
 from anyfile.models.conversion import Category, Format
 
 
@@ -19,7 +20,7 @@ def validate_output(path: Path, target: Format) -> None:
     if path.is_dir():
         files = [p for p in path.iterdir() if p.is_file()]
         if not files:
-            raise ValidationError("Il motore non ha prodotto alcun file")
+            raise ValidationError(_("The engine produced no file"))
         for f in files:
             _validate_file(f, target)
     else:
@@ -28,24 +29,27 @@ def validate_output(path: Path, target: Format) -> None:
 
 def _validate_file(path: Path, target: Format) -> None:
     if not path.is_file():
-        raise ValidationError("Il motore non ha prodotto alcun file")
+        raise ValidationError(_("The engine produced no file"))
     if path.stat().st_size == 0:
-        raise ValidationError("Il file prodotto è vuoto")
+        raise ValidationError(_("The produced file is empty"))
 
     if target.id in formats.TEXT_FORMATS:
         data = path.read_bytes()[:65536]
         if b"\x00" in data:
-            raise ValidationError(f"Il file prodotto non è un file di testo {target.label} valido")
+            raise ValidationError(_("The produced file is not a valid {format} text file").format(
+                format=target.label))
         if not data.strip():
-            raise ValidationError("Il file prodotto non contiene testo")
+            raise ValidationError(_("The produced file contains no text"))
         return
 
     found = sniff(path, target)
     if found is None:
-        raise ValidationError(f"Il file prodotto non è un {target.label} riconoscibile")
+        raise ValidationError(_("The produced file is not a recognizable {format}").format(
+            format=target.label))
     if not same_family(found, target.id):
         raise ValidationError(
-            f"Il file prodotto non è un {target.label} valido (contiene {formats.get(found).label})"
+            _("The produced file is not a valid {format} (it contains {found})").format(
+                format=target.label, found=formats.get(found).label)
         )
 
     if target.category in (Category.AUDIO, Category.VIDEO):
@@ -65,5 +69,7 @@ def _check_streams(path: Path, kind: str) -> None:
     except (OSError, subprocess.TimeoutExpired):
         return
     if out.returncode != 0 or kind not in out.stdout.split():
-        raise ValidationError(f"Il file prodotto non contiene una traccia {kind} leggibile",
+        message = (_("The produced file has no readable video track") if kind == "video"
+                   else _("The produced file has no readable audio track"))
+        raise ValidationError(message,
                               details=out.stderr)

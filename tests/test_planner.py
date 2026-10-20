@@ -23,26 +23,26 @@ def reg():
 
 
 def test_direct_plan(reg):
-    p = plan(info("png"), "jpeg", reg)  # alias dell'estensione
+    p = plan(info("png"), "jpeg", reg)  # extension alias
     assert p.route.target == "jpg" and not p.route.is_chain
     assert p.target_format.ext == "jpg"
 
 
 def test_unknown_source(reg):
-    with pytest.raises(PlanError, match="non riconosciuto"):
+    with pytest.raises(PlanError, match="Unrecognized format"):
         plan(info(None, "x.bin"), "jpg", reg)
 
 
 def test_same_format(reg):
-    with pytest.raises(PlanError, match="già in formato"):
+    with pytest.raises(PlanError, match="is already PNG"):
         plan(info("png"), "png", reg)
 
 
 def test_missing_engine_is_explained(reg):
-    with pytest.raises(PlanError, match=r"richiede LibreOffice.*apt install pkg-office"):
+    with pytest.raises(PlanError, match=r"requires LibreOffice.*apt install pkg-office"):
         plan(info("docx"), "pdf", reg)
 
 
 def test_unsupported(reg):
-    with pytest.raises(PlanError, match="non è supportata"):
+    with pytest.raises(PlanError, match="is not supported"):
         plan(info("png"), "mp3", reg)

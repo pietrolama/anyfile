@@ -1,4 +1,4 @@
-"""Motori documentali: LibreOffice per i formati office, Pandoc per i formati di markup."""
+"""Document engines: LibreOffice for office formats, Pandoc for markup formats."""
 
 from __future__ import annotations
 
@@ -6,16 +6,17 @@ import tempfile
 from pathlib import Path
 
 from anyfile.core import system
+from anyfile.i18n import N_, _
 from anyfile.engines.base import ConversionContext, Engine, EngineError, pairs
 from anyfile.models.conversion import Conversion
 
-LAYOUT_NOTE = "Il layout può differire leggermente dall'originale"
+LAYOUT_NOTE = N_("The layout may differ slightly from the original")
 
 TEXT_DOCS = ("docx", "doc", "odt", "rtf", "txt")
 SHEETS = ("xlsx", "xls", "ods", "csv")
 SLIDES = ("pptx", "ppt", "odp")
 
-# Filtri di esportazione espliciti dove l'estensione non basta.
+# Explicit export filters where the extension is not enough.
 LO_FILTERS = {
     "csv": "csv:Text - txt - csv (StarCalc):44,34,76,1",
     "txt": "txt:Text",
@@ -24,7 +25,7 @@ LO_FILTERS = {
 
 def _office_notes(source: str, target: str) -> str:
     if target == "csv":
-        return "Viene esportato solo il primo foglio, senza formattazione"
+        return N_("Only the first sheet is exported, without formatting")
     if target == "pdf":
         return ""
     return LAYOUT_NOTE
@@ -45,9 +46,9 @@ class LibreOfficeEngine(Engine):
 
     def convert(self, conversion: Conversion, src: Path, dst: Path, ctx: ConversionContext) -> None:
         ctx.progress(None)
-        # Cartella propria: in una catena la cartella di lavoro è condivisa tra i passaggi.
+        # Own folder: in a chain the work folder is shared between steps.
         outdir = Path(tempfile.mkdtemp(prefix="lo-out-", dir=dst.parent))
-        # Profilo dedicato: un LibreOffice già aperto dall'utente non blocca la conversione.
+        # Dedicated profile: a LibreOffice already open for the user does not block conversion.
         profile = system.cache_dir() / "libreoffice-profile"
         profile.mkdir(parents=True, exist_ok=True)
         args = [
@@ -62,20 +63,20 @@ class LibreOfficeEngine(Engine):
         ]
         ctx.runner.run(args, tool="LibreOffice")
 
-        # LibreOffice può restituire 0 senza produrre nulla: si verifica il risultato.
+        # LibreOffice may exit with 0 without producing anything: the result is checked.
         produced = [p for p in outdir.iterdir() if p.is_file()]
         if len(produced) != 1:
-            raise EngineError("LibreOffice non ha prodotto il file convertito: "
-                              "il documento potrebbe essere danneggiato o protetto da password")
+            raise EngineError(_("LibreOffice did not produce the converted file: the document "
+                                "may be damaged or password-protected"))
         produced[0].replace(dst)
 
 
-# formato → nome del lettore/scrittore Pandoc
+# format → Pandoc reader/writer name
 PANDOC_READ = {"md": "markdown", "html": "html", "docx": "docx", "odt": "odt",
                "epub": "epub", "rst": "rst", "tex": "latex"}
 PANDOC_WRITE = {"md": "markdown", "html": "html", "docx": "docx", "odt": "odt",
                 "epub": "epub", "rst": "rst", "txt": "plain", "tex": "latex"}
-# Pandoc gestisce le coppie in cui almeno un lato è markup; office↔office resta a LibreOffice.
+# Pandoc handles pairs where at least one side is markup; office↔office stays with LibreOffice.
 MARKUP = {"md", "html", "epub", "rst", "tex", "txt"}
 PDF_SOURCES = ("md", "rst", "tex")
 LATEX_ENGINES = ("xelatex", "lualatex", "pdflatex")
@@ -83,11 +84,11 @@ LATEX_ENGINES = ("xelatex", "lualatex", "pdflatex")
 
 def _pandoc_notes(source: str, target: str) -> str:
     if source in ("docx", "odt", "epub", "html") and target in ("md", "rst", "txt", "tex"):
-        return "Immagini e formattazione complessa non vengono conservate"
+        return N_("Images and complex formatting are not kept")
     if target == "html":
-        return "Pagina HTML autonoma"
+        return N_("Self-contained HTML page")
     if target == "pdf":
-        return "Impaginazione LaTeX"
+        return N_("Typeset with LaTeX")
     return ""
 
 
@@ -119,6 +120,6 @@ class PandocEngine(Engine):
             args += ["-s"]
         if target == "html":
             args += ["--metadata", f"pagetitle={ctx.original.stem}"]
-        # Le risorse relative (es. immagini nel Markdown) si cercano accanto all'originale.
+        # Relative resources (e.g. images in Markdown) are looked up next to the original.
         args += [f"--resource-path={ctx.original.parent}", "-o", dst, src]
         ctx.runner.run(args, cwd=ctx.original.parent, tool="Pandoc")

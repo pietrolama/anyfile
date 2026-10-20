@@ -1,4 +1,4 @@
-"""Ponte tra la coda dei lavori (thread di lavoro) e l'interfaccia Qt."""
+"""Bridge between the job queue (worker thread) and the Qt interface."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ from anyfile.models.job import Job
 
 
 class QtJobQueue(QObject):
-    # Emesso nel thread dell'interfaccia (connessione in coda) con una copia del job.
+    # Emitted in the interface thread (queued connection) with a copy of the job.
     job_updated = Signal(object)
 
     def __init__(self, executor: Executor, parent: QObject | None = None,

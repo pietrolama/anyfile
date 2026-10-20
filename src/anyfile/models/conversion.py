@@ -3,20 +3,22 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
+from anyfile.i18n import N_, _
+
 
 class Category(Enum):
-    IMAGE = "Immagine"
-    AUDIO = "Audio"
-    VIDEO = "Video"
-    DOCUMENT = "Documento"
-    TEXT = "Testo"
-    SPREADSHEET = "Foglio di calcolo"
-    PRESENTATION = "Presentazione"
-    PDF = "PDF"
+    IMAGE = N_("Image")
+    AUDIO = N_("Audio")
+    VIDEO = N_("Video")
+    DOCUMENT = N_("Document")
+    TEXT = N_("Text")
+    SPREADSHEET = N_("Spreadsheet")
+    PRESENTATION = N_("Presentation")
+    PDF = N_("PDF")
 
     @property
     def label(self) -> str:
-        return self.value
+        return _(self.value)
 
     @property
     def order(self) -> int:
@@ -26,37 +28,42 @@ class Category(Enum):
 @dataclass(frozen=True)
 class Format:
     id: str
-    label: str
+    # English name; `label` gives the translated one.
+    name: str
     category: Category
     extensions: tuple[str, ...]
     mimes: tuple[str, ...] = ()
 
     @property
+    def label(self) -> str:
+        return _(self.name)
+
+    @property
     def ext(self) -> str:
-        """Estensione canonica, usata per i file prodotti."""
+        """Canonical extension, used for the files ANYFILE produces."""
         return self.extensions[0]
 
 
 @dataclass(frozen=True)
 class Conversion:
-    """Un arco del grafo delle conversioni: source → target eseguito da un motore."""
+    """An edge of the conversion graph: source → target, carried out by an engine."""
 
     source: str
     target: str
     engine: str
     notes: str = ""
-    # Il motore produce più file (es. una immagine per pagina di un PDF).
+    # The engine produces several files (e.g. one image per PDF page).
     multi_output: bool = False
 
     @property
     def is_compression(self) -> bool:
-        """Stesso formato in uscita: si ricomprime il file per renderlo più leggero."""
+        """Same format out: the file is re-encoded to make it smaller."""
         return self.source == self.target
 
 
 @dataclass(frozen=True)
 class Route:
-    """Percorso nel grafo: una conversione diretta o una catena di passaggi."""
+    """A path through the graph: a direct conversion or a chain of steps."""
 
     steps: tuple[Conversion, ...]
 
@@ -70,7 +77,7 @@ class Route:
 
     @property
     def last(self) -> Conversion:
-        """Il passaggio che produce il risultato: è lì che contano i preset di qualità."""
+        """The step that produces the result: that is where quality presets matter."""
         return self.steps[-1]
 
     @property
@@ -91,16 +98,17 @@ class Route:
 
     @property
     def notes(self) -> str:
-        # Le perdite di ogni passaggio si sommano: si dichiarano tutte, senza ripetizioni.
+        # The losses of each step add up: all of them are declared, without repetitions.
+        # Notes are stored in English and translated only when shown.
         seen: list[str] = []
         for step in self.steps:
             if step.notes and step.notes not in seen:
                 seen.append(step.notes)
-        return "; ".join(seen)
+        return "; ".join(_(note) for note in seen)
 
 
 class Quality(Enum):
-    """Preset di qualità, offerti solo dove cambiano davvero il risultato (formati con perdita)."""
+    """Quality presets, offered only where they really change the result (lossy formats)."""
 
     MAX = "max"
     BALANCED = "balanced"
@@ -108,21 +116,24 @@ class Quality(Enum):
 
     @property
     def label(self) -> str:
-        return {"max": "Massima qualità", "balanced": "Bilanciata", "small": "File più leggero"}[self.value]
+        return {"max": _("Maximum quality"), "balanced": _("Balanced"),
+                "small": _("Smallest file")}[self.value]
 
     @property
     def short(self) -> str:
-        return {"max": "Massima", "balanced": "Bilanciata", "small": "Leggera"}[self.value]
+        return {"max": _("Maximum"), "balanced": _("Balanced"), "small": _("Small")}[self.value]
 
     @classmethod
     def parse(cls, text: str) -> Quality | None:
+        # English names, plus the Italian ones accepted since the first versions.
         aliases = {
-            "max": cls.MAX, "massima": cls.MAX, "alta": cls.MAX,
+            "max": cls.MAX, "maximum": cls.MAX, "high": cls.MAX, "massima": cls.MAX,
             "balanced": cls.BALANCED, "bilanciata": cls.BALANCED, "bilanciato": cls.BALANCED,
-            "small": cls.SMALL, "leggera": cls.SMALL, "leggero": cls.SMALL, "piccolo": cls.SMALL,
+            "small": cls.SMALL, "smallest": cls.SMALL, "light": cls.SMALL,
+            "leggera": cls.SMALL, "leggero": cls.SMALL,
         }
         return aliases.get(text.strip().lower())
 
 
-# Descrizione del preset per una destinazione, mostrata all'utente.
+# Description of each preset for a target format, shown to the user.
 Presets = dict[Quality, str]

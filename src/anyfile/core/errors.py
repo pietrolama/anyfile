@@ -2,7 +2,7 @@ from __future__ import annotations
 
 
 class AnyfileError(Exception):
-    """Errore con un messaggio leggibile dall'utente e dettagli tecnici opzionali."""
+    """Error with a message readable by the user, plus optional technical details."""
 
     def __init__(self, message: str, details: str = "") -> None:
         super().__init__(message)
@@ -10,12 +10,12 @@ class AnyfileError(Exception):
         self.details = details
 
     def __str__(self) -> str:
-        # Il messaggio può essere arricchito dopo la creazione (es. il passaggio della catena).
+        # The message may be enriched after creation (e.g. with the step of a chain).
         return self.message
 
 
 class NothingGained(AnyfileError):
-    """La compressione non ha ridotto il file: non è un errore, il risultato si scarta."""
+    """Compression did not make the file smaller: not an error, the result is discarded."""
 
 
 class ConversionCancelled(Exception):

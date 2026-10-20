@@ -1,4 +1,4 @@
-"""Preferenze persistenti e finestra di stato dei motori."""
+"""Persistent preferences and the engine status dialog."""
 
 from __future__ import annotations
 
@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
 )
 
 from anyfile.core.registry import Registry
+from anyfile.i18n import _
 from anyfile.models.conversion import Quality
 
 
@@ -57,24 +58,24 @@ class Settings:
 
 
 class EnginesDialog(QDialog):
-    """Mostra i motori disponibili e come installare quelli mancanti."""
+    """Shows the available engines and how to install the missing ones."""
 
     def __init__(self, registry: Registry, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.registry = registry
-        self.setWindowTitle("Motori di conversione")
+        self.setWindowTitle(_("Conversion engines"))
         self.resize(560, 320)
 
         self.tree = QTreeWidget()
-        self.tree.setHeaderLabels(["Motore", "Stato", "Conversioni"])
+        self.tree.setHeaderLabels([_("Engine"), _("Status"), _("Conversions")])
         self.tree.setRootIsDecorated(False)
         self.hint = QLabel()
         self.hint.setWordWrap(True)
-        self.copy_button = QPushButton("Copia comando di installazione")
+        self.copy_button = QPushButton(_("Copy install command"))
         self.copy_button.clicked.connect(self._copy_command)
 
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
-        recheck = buttons.addButton("Ricontrolla", QDialogButtonBox.ButtonRole.ActionRole)
+        recheck = buttons.addButton(_("Check again"), QDialogButtonBox.ButtonRole.ActionRole)
         recheck.clicked.connect(self._recheck)
         buttons.rejected.connect(self.reject)
 
@@ -92,15 +93,16 @@ class EnginesDialog(QDialog):
     def _populate(self) -> None:
         self.tree.clear()
         for s in self.registry.status():
-            state = "✓ Installato" if s.available else f"✗ Manca {', '.join(s.missing)}"
+            state = ("✓ " + _("Installed") if s.available
+                     else "✗ " + _("Missing {programs}").format(programs=", ".join(s.missing)))
             QTreeWidgetItem(self.tree, [s.label, state, str(s.conversions) if s.available else "—"])
         for col in range(3):
             self.tree.resizeColumnToContents(col)
         command = self._install_command()
         if command:
-            self.hint.setText(f"Per abilitare altre conversioni installa i motori mancanti:\n{command}")
+            self.hint.setText(_("To enable more conversions, install the missing engines:") + f"\n{command}")
         else:
-            self.hint.setText("Tutti i motori sono installati.")
+            self.hint.setText(_("All the engines are installed."))
         self.copy_button.setVisible(bool(command))
 
     def _copy_command(self) -> None:

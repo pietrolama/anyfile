@@ -17,12 +17,12 @@ def test_polar_roundtrip():
 def test_hit():
     ring = Ring(inner=50, outer=150, count=4, reach=20)
     assert ring.hit(0, 0) == CENTER
-    assert ring.hit(10, -100) == 0      # in alto, appena a destra delle 12
-    assert ring.hit(100, 10) == 1       # a destra
-    assert ring.hit(-10, 100) == 2      # in basso
-    assert ring.hit(-100, -10) == 3     # a sinistra
-    assert ring.hit(0, -165) == 0       # oltre l'anello ma entro la tolleranza
-    assert ring.hit(0, -200) is None    # fuori: chiude il menu
+    assert ring.hit(10, -100) == 0      # top, just right of 12 o'clock
+    assert ring.hit(100, 10) == 1       # right
+    assert ring.hit(-10, 100) == 2      # bottom
+    assert ring.hit(-100, -10) == 3     # left
+    assert ring.hit(0, -165) == 0       # beyond the ring but within the tolerance
+    assert ring.hit(0, -200) is None    # outside: closes the menu
     assert Ring(50, 150, 0).hit(0, -100) is None
 
 

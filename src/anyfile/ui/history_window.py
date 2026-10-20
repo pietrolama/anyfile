@@ -1,4 +1,4 @@
-"""Finestra della cronologia: cosa è stato fatto, con quale esito, e come ripeterlo."""
+"""History window: what was done, with what outcome, and how to repeat it."""
 
 from __future__ import annotations
 
@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
 from anyfile.core import history as hist
 from anyfile.core.executor import Executor
 from anyfile.core.registry import Registry
+from anyfile.i18n import _, ngettext
 from anyfile.models.job import Job, JobStatus
 from anyfile.ui.desktop import APP_ICON, reveal
 from anyfile.ui.job_queue import QtJobQueue
@@ -31,15 +32,15 @@ class HistoryWindow(QWidget):
         self.jobs = QtJobQueue(Executor(registry), self, history=history)
         self.jobs.job_updated.connect(self._on_job)
 
-        self.setWindowTitle("Cronologia — ANYFILE")
+        self.setWindowTitle(_("History — ANYFILE"))
         self.setWindowIcon(QIcon.fromTheme("view-history", QIcon.fromTheme(APP_ICON)))
         self.resize(980, 540)
 
-        self.search = QLineEdit(placeholderText="Cerca per nome del file…", clearButtonEnabled=True)
+        self.search = QLineEdit(placeholderText=_("Search by file name…"), clearButtonEnabled=True)
         self.search.textChanged.connect(self.refresh)
-        self.failed_only = QCheckBox("Solo errori")
+        self.failed_only = QCheckBox(_("Errors only"))
         self.failed_only.toggled.connect(self.refresh)
-        self.enabled = QCheckBox("Registra le nuove conversioni")
+        self.enabled = QCheckBox(_("Record new conversions"))
         self.enabled.setChecked(history.enabled)
         self.enabled.toggled.connect(self._set_enabled)
         top = QHBoxLayout()
@@ -49,7 +50,7 @@ class HistoryWindow(QWidget):
         top.addWidget(self.enabled)
 
         self.table = QTableWidget(0, 4)
-        self.table.setHorizontalHeaderLabels(["Quando", "File", "Operazione", "Esito"])
+        self.table.setHorizontalHeaderLabels([_("When"), _("File"), _("Operation"), _("Result")])
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.table.verticalHeader().hide()
@@ -67,15 +68,15 @@ class HistoryWindow(QWidget):
         self.empty.setStyleSheet("color: palette(placeholder-text);")
         self.status = QLabel()
 
-        self.reveal_button = QPushButton(QIcon.fromTheme("folder-open"), "Mostra risultato")
+        self.reveal_button = QPushButton(QIcon.fromTheme("folder-open"), _("Show result"))
         self.reveal_button.clicked.connect(self._reveal)
-        self.other_files = QPushButton(QIcon.fromTheme("document-open"), "Ripeti su altri file…")
+        self.other_files = QPushButton(QIcon.fromTheme("document-open"), _("Repeat on other files…"))
         self.other_files.clicked.connect(self._repeat_on_other_files)
-        self.remove = QPushButton(QIcon.fromTheme("edit-delete"), "Rimuovi")
+        self.remove = QPushButton(QIcon.fromTheme("edit-delete"), _("Remove"))
         self.remove.clicked.connect(self._remove)
-        self.clear = QPushButton(QIcon.fromTheme("edit-clear-history"), "Svuota cronologia…")
+        self.clear = QPushButton(QIcon.fromTheme("edit-clear-history"), _("Clear history…"))
         self.clear.clicked.connect(self._clear)
-        self.repeat = QPushButton(QIcon.fromTheme("view-refresh"), "Ripeti")
+        self.repeat = QPushButton(QIcon.fromTheme("view-refresh"), _("Repeat"))
         self.repeat.setDefault(True)
         self.repeat.clicked.connect(self._repeat)
         bottom = QHBoxLayout()
@@ -90,7 +91,7 @@ class HistoryWindow(QWidget):
         layout.addLayout(bottom)
         self.refresh()
 
-    # --- dati --------------------------------------------------------------
+    # --- data ---------------------------------------------------------------
 
     def refresh(self) -> None:
         selected = {e.id for e in self.selected()}
@@ -106,29 +107,29 @@ class HistoryWindow(QWidget):
         self.empty.setVisible(not has_rows)
         if not has_rows:
             if not self.history.enabled:
-                self.empty.setText("La cronologia è disattivata.")
+                self.empty.setText(_("The history is turned off."))
             elif self.search.text() or self.failed_only.isChecked():
-                self.empty.setText("Nessuna conversione corrisponde ai filtri.")
+                self.empty.setText(_("No conversion matches the filters."))
             else:
-                self.empty.setText("Ancora nessuna conversione.\nLe conversioni fatte con la ruota, "
-                                   "la finestra o il terminale compariranno qui.")
+                self.empty.setText(_("No conversions yet.\nConversions made with the radial menu, "
+                                     "the window or the command line will appear here."))
         self._update_buttons()
 
     def _append(self, entry: hist.Entry) -> None:
         r = self.table.rowCount()
         self.table.insertRow(r)
         when = QTableWidgetItem(hist.format_when(entry.when))
-        when.setToolTip(entry.when.astimezone().strftime("%d/%m/%Y %H:%M:%S"))
+        when.setToolTip(entry.when.astimezone().strftime(_("%Y-%m-%d %H:%M:%S")))
         name = QTableWidgetItem(entry.source.name)
         name.setToolTip(str(entry.source))
         if not entry.source.exists():
             name.setForeground(self.palette().color(self.palette().ColorRole.PlaceholderText))
-            name.setToolTip(f"{entry.source}\nIl file originale non esiste più")
+            name.setToolTip(f"{entry.source}\n" + _("The original file no longer exists"))
         operation = QTableWidgetItem(hist.describe(entry))
         result = QTableWidgetItem(f"{MARKS[entry.status]} {hist.describe_result(entry)}")
         tooltip = [hist.describe_result(entry)]
         if entry.output:
-            tooltip.append(f"Risultato: {entry.output}")
+            tooltip.append(_("Result: {path}").format(path=entry.output))
         if entry.details:
             tooltip.append(entry.details)
         result.setToolTip("\n\n".join(tooltip))
@@ -147,15 +148,15 @@ class HistoryWindow(QWidget):
         entries = self.selected()
         self.repeat.setEnabled(bool(entries))
         retry = bool(entries) and all(e.status is JobStatus.FAILED for e in entries)
-        self.repeat.setText("Riprova" if retry else "Ripeti")
-        self.repeat.setToolTip("Riesegue con le stesse impostazioni (formato, qualità, cartella)")
+        self.repeat.setText(_("Retry") if retry else _("Repeat"))
+        self.repeat.setToolTip(_("Runs again with the same settings (format, quality, folder)"))
         self.other_files.setEnabled(len(entries) == 1)
         self.remove.setEnabled(bool(entries))
         self.clear.setEnabled(bool(self.entries))
         single = entries[0] if len(entries) == 1 else None
         self.reveal_button.setEnabled(bool(single and single.output and single.output.exists()))
 
-    # --- azioni -------------------------------------------------------------
+    # --- actions -----------------------------------------------------------
 
     def _set_enabled(self, value: bool) -> None:
         self.history.enabled = value
@@ -169,8 +170,9 @@ class HistoryWindow(QWidget):
                 self.running[job.id] = job
         if missing:
             names = "\n".join(f"• {m}" for m in missing)
-            QMessageBox.warning(self, "File non trovati",
-                                f"Questi file non esistono più e non sono stati riconvertiti:\n{names}")
+            QMessageBox.warning(self, _("Files not found"),
+                                _("These files no longer exist and were not converted again:")
+                                + f"\n{names}")
         self._update_status()
 
     def _repeat(self) -> None:
@@ -182,8 +184,9 @@ class HistoryWindow(QWidget):
         if len(entries) != 1:
             return
         entry = entries[0]
-        names, _ = QFileDialog.getOpenFileNames(
-            self, f"Ripeti «{hist.describe(entry)}» su altri file", str(entry.source.parent))
+        names, _filter = QFileDialog.getOpenFileNames(
+            self, _("Repeat “{operation}” on other files").format(operation=hist.describe(entry)),
+            str(entry.source.parent))
         if names:
             self._submit([Path(n) for n in names], entry)
 
@@ -205,13 +208,13 @@ class HistoryWindow(QWidget):
 
     def _clear(self) -> None:
         answer = QMessageBox.question(
-            self, "Svuota cronologia",
-            "Cancellare tutta la cronologia delle conversioni?\nI file convertiti non vengono toccati.")
+            self, _("Clear history"),
+            _("Delete the whole conversion history?\nConverted files are not touched."))
         if answer == QMessageBox.StandardButton.Yes:
             self.history.clear()
             self.refresh()
 
-    # --- avanzamento delle ripetizioni ---------------------------------------
+    # --- progress of repetitions ------------------------------------------
 
     def _on_job(self, job: Job) -> None:
         if job.id not in self.running:
@@ -224,17 +227,20 @@ class HistoryWindow(QWidget):
     def _update_status(self) -> None:
         active = [j for j in self.running.values() if not j.finished]
         if active:
-            self.status.setText(f"Conversione in corso: {len(self.running) - len(active) + 1} "
-                                f"di {len(self.running)}…")
+            self.status.setText(_("Converting: {n} of {total}…").format(
+                n=len(self.running) - len(active) + 1, total=len(self.running)))
             return
         failed = sum(j.status is JobStatus.FAILED for j in self.running.values())
         if self.running:
             done = len(self.running) - failed
-            self.status.setText(f"Ripetute {done} conversioni" + (f", {failed} con errori" if failed else ""))
+            text = ngettext("{n} conversion repeated", "{n} conversions repeated", done).format(n=done)
+            if failed:
+                text += ", " + ngettext("{n} with errors", "{n} with errors", failed).format(n=failed)
+            self.status.setText(text)
         self.running.clear()
 
     def changeEvent(self, event: QEvent) -> None:  # noqa: N802
-        # Al ritorno sulla finestra si mostrano anche le conversioni fatte altrove (es. dalla ruota).
+        # Back on the window, conversions made elsewhere (e.g. from the menu) show up too.
         if event.type() == QEvent.Type.ActivationChange and self.isActiveWindow():
             self.refresh()
         super().changeEvent(event)

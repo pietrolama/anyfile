@@ -1,4 +1,4 @@
-"""Elenco dei file: formato rilevato, destinazione scelta e stato della conversione."""
+"""File list: detected format, chosen target and conversion status."""
 
 from __future__ import annotations
 
@@ -15,13 +15,14 @@ from anyfile.core import formats
 from anyfile.core.detector import detect
 from anyfile.core.planner import available_targets
 from anyfile.core.registry import Registry
+from anyfile.i18n import N_, _
 from anyfile.models.conversion import Route
 from anyfile.models.file_info import FileInfo
 from anyfile.models.job import Job, JobStatus
 
 COL_FILE, COL_FORMAT, COL_TARGET, COL_STATUS = range(4)
-PLACEHOLDER = "Scegli formato…"
-# Valore della voce «Comprimi»: la destinazione è il formato stesso di ciascun file.
+PLACEHOLDER = N_("Choose format…")
+# Value of the “Compress” entry: the target is each file's own format.
 COMPRESS = "="
 
 
@@ -48,9 +49,9 @@ class Row:
 
 
 def fill_target_combo(combo: QComboBox, targets: list[Route]) -> None:
-    """Popola il menu delle destinazioni raggruppando i formati per categoria."""
+    """Fills the target menu, grouping formats by category."""
     combo.clear()
-    combo.addItem(PLACEHOLDER, None)
+    combo.addItem(_(PLACEHOLDER), None)
     last_group = None
     for conv in targets:
         fmt = formats.get(conv.target)
@@ -59,10 +60,10 @@ def fill_target_combo(combo: QComboBox, targets: list[Route]) -> None:
             combo.insertSeparator(combo.count())
         last_group = group
         if conv.is_compression:
-            combo.addItem("Comprimi  (stesso formato)", COMPRESS)
+            combo.addItem(_("Compress  (same format)"), COMPRESS)
         elif conv.is_chain:
             via = ", ".join(formats.get(v).label for v in conv.via)
-            combo.addItem(f"{fmt.label}  (.{fmt.ext})  · via {via}", fmt.id)
+            combo.addItem(f"{fmt.label}  (.{fmt.ext})  · " + _("via {formats}").format(formats=via), fmt.id)
         else:
             combo.addItem(f"{fmt.label}  (.{fmt.ext})", fmt.id)
         if conv.notes:
@@ -82,12 +83,12 @@ class ConversionView(QWidget):
         self.bulk_combo.setMinimumWidth(220)
         self.bulk_combo.activated.connect(self._apply_bulk)
         bulk_bar = QHBoxLayout()
-        bulk_bar.addWidget(QLabel("Converti tutti in:"))
+        bulk_bar.addWidget(QLabel(_("Convert all to:")))
         bulk_bar.addWidget(self.bulk_combo)
         bulk_bar.addStretch()
 
         self.table = QTableWidget(0, 4)
-        self.table.setHorizontalHeaderLabels(["File", "Formato rilevato", "Converti in", "Stato"])
+        self.table.setHorizontalHeaderLabels([_("File"), _("Detected format"), _("Convert to"), _("Status")])
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.table.verticalHeader().hide()
@@ -105,15 +106,15 @@ class ConversionView(QWidget):
         layout.addWidget(self.table)
         self._refresh_bulk()
 
-    # --- gestione dei file -------------------------------------------------
+    # --- managing files --------------------------------------------------
 
     def add_files(self, paths: list[Path]) -> list[str]:
-        """Aggiunge i file all'elenco. Restituisce i messaggi per quelli scartati."""
+        """Adds files to the list. Returns the messages for the ones skipped."""
         known = {r.info.path.resolve() for r in self.rows}
         skipped = []
         for path in paths:
             if path.is_dir():
-                skipped.append(f"{path.name}: le cartelle non sono supportate")
+                skipped.append(_("{name}: folders are not supported").format(name=path.name))
                 continue
             if path.resolve() in known:
                 continue
@@ -140,11 +141,11 @@ class ConversionView(QWidget):
 
     def _fill_row(self, r: int, row: Row) -> None:
         info = row.info
-        fmt_item = QTableWidgetItem(info.format.label if info.format else "Sconosciuto")
+        fmt_item = QTableWidgetItem(info.format.label if info.format else _("Unknown"))
         if info.extension_mismatch:
             fmt_item.setText(f"{fmt_item.text()} ⚠")
-            fmt_item.setToolTip("L'estensione del file non corrisponde al contenuto: "
-                                "ANYFILE usa il formato rilevato nel contenuto.")
+            fmt_item.setToolTip(_("The file extension does not match the content: "
+                                  "ANYFILE uses the format found in the content."))
         self.table.setItem(r, COL_FORMAT, fmt_item)
 
         previous = row.combo.currentData()
@@ -160,15 +161,16 @@ class ConversionView(QWidget):
 
     def _why_unavailable(self, info: FileInfo) -> str:
         if info.format is None:
-            return info.reason or "Formato non riconosciuto"
+            return info.reason or _("Unrecognized format")
         unlock = self.registry.unlockable_targets(info.format.id)
         if unlock:
             engine = next(iter(unlock))
-            return f"Nessun motore installato per {info.format.label}: serve {engine}"
-        return f"Nessuna conversione disponibile per {info.format.label}"
+            return _("No engine installed for {format}: {engine} is needed").format(
+                format=info.format.label, engine=engine)
+        return _("No conversion available for {format}").format(format=info.format.label)
 
     def refresh_capabilities(self) -> None:
-        """Ricalcola le destinazioni dopo un nuovo controllo dei motori."""
+        """Recomputes the targets after the engines were checked again."""
         for r, row in enumerate(self.rows):
             row.targets = available_targets(row.info, self.registry)
             self._fill_row(r, row)
@@ -190,7 +192,7 @@ class ConversionView(QWidget):
         self._refresh_bulk()
         self.selection_changed.emit()
 
-    # --- selezione multipla della destinazione ------------------------------
+    # --- choosing a target for several files ----------------------------
 
     def _refresh_bulk(self) -> None:
         union: dict[str, Route] = {}
@@ -210,10 +212,10 @@ class ConversionView(QWidget):
             if not row.busy and (i := row.combo.findData(target)) >= 0:
                 row.combo.setCurrentIndex(i)
 
-    # --- lavori ------------------------------------------------------------
+    # --- jobs ---------------------------------------------------------------
 
     def pending(self) -> list[Row]:
-        """Righe pronte da convertire: destinazione scelta e non già prodotta."""
+        """Rows ready to convert: a target is chosen and not produced already."""
         return [row for row in self.rows
                 if row.target and not row.busy
                 and not (row.status is JobStatus.DONE and row.converted_to == row.target)]
@@ -235,15 +237,15 @@ class ConversionView(QWidget):
         elif job.status is JobStatus.DONE:
             row.output = job.output
             self._set_status_text(r, f"✓ {job.output.name if job.output else ''}",
-                                  tooltip=f"{job.output}\nDoppio clic per mostrarlo nella cartella")
+                                  tooltip=f"{job.output}\n" + _("Double-click to show it in its folder"))
         elif job.status is JobStatus.UNCHANGED:
-            self._set_status_text(r, "＝ Già compatto: l'originale resta", muted=True,
+            self._set_status_text(r, "＝ " + _("Already compact: the original stays"), muted=True,
                                   tooltip=job.message)
         elif job.status is JobStatus.FAILED:
             self._set_status_text(r, f"✗ {job.message}", error=True,
                                   tooltip=f"{job.message}\n\n{job.details}".strip())
         else:
-            self._set_status_text(r, job.status.value)
+            self._set_status_text(r, job.status.label)
         self.selection_changed.emit()
 
     def _set_progress(self, r: int, value: float | None) -> None:
@@ -253,7 +255,7 @@ class ConversionView(QWidget):
             bar.setTextVisible(True)
             self.table.setCellWidget(r, COL_STATUS, bar)
         if value is None:
-            bar.setRange(0, 0)  # avanzamento indeterminato
+            bar.setRange(0, 0)  # unknown progress
         else:
             bar.setRange(0, 100)
             bar.setValue(int(value * 100))

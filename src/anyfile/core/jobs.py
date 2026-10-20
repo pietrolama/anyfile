@@ -1,4 +1,4 @@
-"""Coda dei lavori: esegue le conversioni in sequenza su un thread dedicato."""
+"""Job queue: runs the conversions one after another on a dedicated thread."""
 
 from __future__ import annotations
 
@@ -11,6 +11,7 @@ from pathlib import Path
 from anyfile.core.errors import AnyfileError, ConversionCancelled, NothingGained
 from anyfile.core.executor import Executor
 from anyfile.core.history import History
+from anyfile.i18n import _
 from anyfile.models.conversion import Quality
 from anyfile.models.job import Job, JobStatus
 
@@ -39,7 +40,7 @@ class JobQueue:
     def cancel(self, job: Job) -> None:
         job.cancel_event.set()
         if job.status is JobStatus.QUEUED:
-            job.status, job.message = JobStatus.CANCELLED, "Annullato"
+            job.status, job.message = JobStatus.CANCELLED, _("Cancelled")
             self._notify(job)
 
     def cancel_all(self) -> None:
@@ -79,15 +80,15 @@ class JobQueue:
             job.output = self.executor.run(job, progress)
             job.status, job.progress, job.message = JobStatus.DONE, 1.0, ""
         except ConversionCancelled:
-            job.status, job.message = JobStatus.CANCELLED, "Annullato"
+            job.status, job.message = JobStatus.CANCELLED, _("Cancelled")
         except NothingGained as e:
             job.status, job.message = JobStatus.UNCHANGED, e.message
         except AnyfileError as e:
             job.status, job.message, job.details = JobStatus.FAILED, e.message, e.details
-        except Exception as e:  # noqa: BLE001 — un errore imprevisto non deve fermare la coda
-            job.status, job.message = JobStatus.FAILED, f"Errore imprevisto: {e}"
+        except Exception as e:  # noqa: BLE001 — an unexpected error must not stop the queue
+            job.status, job.message = JobStatus.FAILED, _("Unexpected error: {error}").format(error=e)
             job.details = traceback.format_exc()
         if self.history:
-            # Prima della notifica: chi la riceve trova già l'operazione in cronologia.
+            # Before notifying: whoever receives the update already finds it in the history.
             self.history.safe_record(job)
         self._notify(job)

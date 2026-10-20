@@ -1,4 +1,4 @@
-"""Integrazione con il desktop: notifiche e apertura del file manager."""
+"""Desktop integration: notifications and opening the file manager."""
 
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ def notify(title: str, body: str) -> None:
         subprocess.Popen(["notify-send", "-a", "ANYFILE", "-i", APP_ICON, title, body],
                          **system.detached_options())
         return
-    # Windows (e desktop senza notify-send): notifica tramite l'area di notifica di Qt.
+    # Windows (and desktops without notify-send): notify through Qt's system tray.
     global _tray
     if QApplication.instance() is None or not QSystemTrayIcon.isSystemTrayAvailable():
         return
@@ -35,7 +35,7 @@ def notify(title: str, body: str) -> None:
 
 
 def reveal(path: Path) -> None:
-    """Mostra il file selezionato nel file manager."""
+    """Shows the file, selected, in the file manager."""
     if system.IS_WINDOWS:
         subprocess.Popen(["explorer", f"/select,{path}"], **system.detached_options())
     elif shutil.which("dolphin"):

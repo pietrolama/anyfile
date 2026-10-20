@@ -1,4 +1,4 @@
-"""Comportamento del menu radiale, eseguito senza display (piattaforma Qt offscreen)."""
+"""Behaviour of the radial menu, run without a display (offscreen Qt platform)."""
 
 import os
 import time
@@ -30,14 +30,14 @@ def make_menu(app, registry):
 
     def make(*paths):
         menu = RadialMenu(registry, list(paths))
-        # Preferenze isolate: i test non devono leggere quelle dell'utente.
+        # Isolated preferences: tests must not read the user's ones.
         menu.settings = SimpleNamespace(use_custom_dir=False, custom_dir=None, overwrite=False)
         menu.default_quality = Quality.BALANCED
         menu.resize(800, 700)
         menu.show()
         menu._place(QPointF(400, 350))
         menu._anim.stop()
-        menu.t = 1.0  # animazione di apertura completata: geometria a scala piena
+        menu.t = 1.0  # opening animation finished: geometry at full scale
         menus.append(menu)
         return menu
 
@@ -59,7 +59,7 @@ def wait_until(app, condition, timeout=60):
 
 
 def click(menu, hit):
-    """Clic sulla fetta `hit` (o al centro) passando dalla geometria reale del menu."""
+    """Clicks slice `hit` (or the centre) through the real geometry of the menu."""
     if hit == CENTER:
         pos = menu.origin
     elif hit is None:
@@ -73,7 +73,7 @@ def click(menu, hit):
 
 def test_too_many_targets_collapse_into_more(tmp_path):
     a, b = tmp_path / "a", tmp_path / "b"
-    # Le destinazioni che valgono per più file hanno la precedenza sul resto.
+    # Targets that apply to more files take precedence over the rest.
     options = [(Route((Conversion("x", f.id, "e"),)), (a, b) if f.id in ("pdf", "zzz") else (a,))
                for f in formats.FORMATS[:20]]
     options.append((Route((Conversion("x", "pdf", "e"),)), (a, b)))
@@ -93,7 +93,7 @@ def test_mixed_selection_offers_partial_targets(make_menu, sample):
     png, wav = sample("png"), sample("wav")
     menu = make_menu(png, wav)
     by_target = {e.conversion.target: e.paths for e in menu.entries if e.conversion}
-    # Nessun formato è comune a immagini e audio, ma la ruota non resta vuota.
+    # No format is common to images and audio, but the menu does not stay empty.
     assert by_target["jpg"] == (png,)
     assert by_target["mp3"] == (wav,)
 
@@ -159,7 +159,7 @@ def test_keyboard_navigation(make_menu, sample):
 @needs("ffmpeg")
 def test_escape_while_running_continues_in_background(app, make_menu, tmp_path, monkeypatch):
     import subprocess
-    wav = tmp_path / "lungo.wav"
+    wav = tmp_path / "long.wav"
     subprocess.run(["ffmpeg", "-v", "error", "-f", "lavfi", "-i", "sine=d=120", str(wav)], check=True)
     notifications = []
     monkeypatch.setattr(radial, "notify", lambda title, body: notifications.append(title))
@@ -172,14 +172,14 @@ def test_escape_while_running_continues_in_background(app, make_menu, tmp_path, 
                                  Qt.KeyboardModifier.NoModifier))
     assert menu.in_background and menu.phase is Phase.RUNNING
     assert wait_until(app, lambda: finished)
-    assert notifications == ["Conversione completata"]
-    assert (tmp_path / "lungo.mp3").is_file()
+    assert notifications == ["Conversion complete"]
+    assert (tmp_path / "long.mp3").is_file()
 
 
 @needs("ffmpeg")
 def test_center_click_while_running_cancels(app, make_menu, tmp_path):
     import subprocess
-    wav = tmp_path / "lungo.wav"
+    wav = tmp_path / "long.wav"
     subprocess.run(["ffmpeg", "-v", "error", "-f", "lavfi", "-i", "sine=d=900", str(wav)], check=True)
     menu = make_menu(wav)
     finished = []
@@ -188,7 +188,7 @@ def test_center_click_while_running_cancels(app, make_menu, tmp_path):
     assert wait_until(app, lambda: any(j.status.name == "RUNNING" for j in menu.jobs.values()))
     click(menu, CENTER)
     assert wait_until(app, lambda: finished, timeout=15)
-    assert sorted(p.name for p in tmp_path.iterdir()) == ["lungo.wav"]
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["long.wav"]
 
 
 def _preset_point(menu, index, quality):
@@ -226,7 +226,7 @@ def test_max_quality_is_always_left_or_top(make_menu, sample):
         a = menu.ring.mid_angle(i)
         first, last = _preset_point(menu, i, Quality.MAX), _preset_point(menu, i, Quality.SMALL)
         if any(abs(a - d) < 1 for d in (45, 135, 225, 315)):
-            # Diagonale esatta: sinistra e alto non coincidono, basta una delle due.
+            # Exact diagonal: left and top disagree, either one is enough.
             assert first.x() < last.x() or first.y() < last.y(), (i, a)
         elif a < 45 or a > 315 or 135 < a < 225:
             assert first.x() < last.x(), (i, a)
@@ -251,13 +251,13 @@ def test_clicking_a_preset_converts_with_that_quality(app, make_menu, sample):
 
 def test_compress_is_first_and_merged_for_mixed_selection(make_menu, sample, tmp_path):
     import subprocess
-    jpg = tmp_path / "foto.jpg"
+    jpg = tmp_path / "photo.jpg"
     subprocess.run(["magick", "-size", "200x100", "plasma:", str(jpg)], check=True)
     mp4 = sample("mp4")
     menu = make_menu(jpg, mp4, sample("png"))
     first = menu.entries[0]
-    assert first.conversion.is_compression and first.label == "Comprimi"
-    # PNG non si comprime senza cambiare formato: la fetta copre solo JPEG e MP4.
+    assert first.conversion.is_compression and first.label == "Compress"
+    # PNG cannot be compressed without changing format: the slice covers only JPEG and MP4.
     assert set(first.paths) == {jpg, mp4}
     assert sum(e.conversion is not None and e.conversion.is_compression for e in menu.entries) == 1
 
@@ -265,12 +265,12 @@ def test_compress_is_first_and_merged_for_mixed_selection(make_menu, sample, tmp
 @needs("magick", "ffmpeg")
 def test_compress_slice_keeps_each_file_format(app, make_menu, sample, tmp_path):
     import subprocess
-    jpg = tmp_path / "foto.jpg"
+    jpg = tmp_path / "photo.jpg"
     subprocess.run(["magick", "-size", "600x400", "plasma:", "-quality", "98", str(jpg)], check=True)
     mp4 = sample("mp4")
     menu = make_menu(jpg, mp4)
-    menu._activate(0)  # clic su «Comprimi»
+    menu._activate(0)  # click “Compress”
     assert sorted(j.target for j in menu.jobs.values()) == ["jpg", "mp4"]
     assert all(j.quality is Quality.BALANCED for j in menu.jobs.values())
     assert wait_until(app, lambda: menu.phase in (Phase.DONE, Phase.FAILED))
-    assert (tmp_path / "foto-compresso.jpg").is_file()
+    assert (tmp_path / "photo-compressed.jpg").is_file()

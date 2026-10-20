@@ -1,4 +1,4 @@
-"""Parti dipendenti dal sistema: qui si simula Windows anche su Linux, e viceversa."""
+"""System-dependent parts: Windows is simulated here on Linux too, and vice versa."""
 
 import os
 import shutil
@@ -46,7 +46,7 @@ def test_windows_folders(windows, monkeypatch, tmp_path):
     assert system.cache_dir() == tmp_path / "Local" / "anyfile"
 
 
-@pytest.mark.skipif(system.IS_WINDOWS, reason="cartelle XDG solo su Linux")
+@pytest.mark.skipif(system.IS_WINDOWS, reason="XDG folders only on Linux")
 def test_linux_folders(monkeypatch, tmp_path):
     monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "data"))
     monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))
@@ -55,41 +55,41 @@ def test_linux_folders(monkeypatch, tmp_path):
 
 
 def test_link_falls_back_to_hard_link_then_copy(tmp_path, monkeypatch):
-    src = tmp_path / "originale.bin"
-    src.write_bytes(b"contenuto")
+    src = tmp_path / "original.bin"
+    src.write_bytes(b"content")
 
     def no_symlink(self, target):
-        raise OSError("symlink non permessi")
+        raise OSError("symlinks not allowed")
 
     monkeypatch.setattr(Path, "symlink_to", no_symlink)
     hard = tmp_path / "hard.bin"
     system.link_or_copy(src, hard)
-    assert hard.read_bytes() == b"contenuto" and os.path.samefile(src, hard)
+    assert hard.read_bytes() == b"content" and os.path.samefile(src, hard)
 
     def no_link(*args):
-        raise OSError("hard link non permessi")
+        raise OSError("hard links not allowed")
 
     monkeypatch.setattr(os, "link", no_link)
-    copy = tmp_path / "copia.bin"
+    copy = tmp_path / "copy.bin"
     system.link_or_copy(src, copy)
-    assert copy.read_bytes() == b"contenuto" and not os.path.samefile(src, copy)
+    assert copy.read_bytes() == b"content" and not os.path.samefile(src, copy)
 
 
 def test_windows_never_uses_symlinks(windows, tmp_path, monkeypatch):
-    src = tmp_path / "originale.bin"
-    src.write_bytes(b"contenuto")
+    src = tmp_path / "original.bin"
+    src.write_bytes(b"content")
 
     def forbidden(self, target):
-        raise AssertionError("su Windows non si usano collegamenti simbolici")
+        raise AssertionError("no symbolic links on Windows")
 
     monkeypatch.setattr(Path, "symlink_to", forbidden)
-    dst = tmp_path / "ingresso.bin"
+    dst = tmp_path / "input.bin"
     system.link_or_copy(src, dst)
-    assert dst.read_bytes() == b"contenuto" and not dst.is_symlink()
+    assert dst.read_bytes() == b"content" and not dst.is_symlink()
 
 
 def test_kill_tree_stops_process_and_children():
-    # Un processo che ne avvia un altro: entrambi devono fermarsi.
+    # A process that starts another one: both must stop.
     child = "import subprocess, sys, time; subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(60)']); time.sleep(60)"
     proc = subprocess.Popen([sys.executable, "-c", child], **system.popen_options())
     time.sleep(0.5)

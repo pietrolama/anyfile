@@ -5,6 +5,7 @@ import subprocess
 from pathlib import Path
 
 from anyfile.engines.base import ConversionContext, Engine, compressions, pairs
+from anyfile.i18n import N_, _
 from anyfile.models.conversion import Conversion, Presets, Quality
 
 # id ANYFILE → nome del coder ImageMagick
@@ -14,13 +15,13 @@ CODERS = {
 }
 IMAGES = [f for f in CODERS if f != "pdf"]
 
-# Formati che conservano più fotogrammi/pagine; per gli altri si usa il primo.
+# Formats that keep several frames/pages; for the others the first one is used.
 MULTI_FRAME = {"gif", "webp", "tiff", "pdf"}
-# Formati senza trasparenza: lo sfondo trasparente diventa bianco invece che nero.
+# Formats without transparency: a transparent background becomes white, not black.
 NO_ALPHA = {"jpg", "bmp"}
 
-# Solo i formati con perdita hanno preset: per PNG, BMP, TIFF... non cambierebbero nulla.
-# qualità → (valore di -quality, rimozione dei metadati)
+# Only lossy formats have presets: for PNG, BMP, TIFF... they would change nothing.
+# quality → (-quality value, strip metadata)
 QUALITY: dict[str, dict[Quality, tuple[int, bool]]] = {
     "jpg": {Quality.MAX: (95, False), Quality.BALANCED: (85, False), Quality.SMALL: (70, True)},
     "webp": {Quality.MAX: (95, False), Quality.BALANCED: (80, False), Quality.SMALL: (60, True)},
@@ -31,13 +32,13 @@ _FORMAT_LINE = re.compile(r"^\s*([A-Z0-9-]+)\*?\s+\S+\s+([r-])([w-])[+-]")
 
 def _notes(source: str, target: str) -> str:
     if source in ("gif", "webp", "tiff") and target not in MULTI_FRAME:
-        return "Per immagini animate o multipagina viene salvato solo il primo fotogramma"
+        return N_("For animated or multi-page images only the first frame is saved")
     if target in NO_ALPHA:
-        return "Le aree trasparenti diventano bianche"
+        return N_("Transparent areas become white")
     if target == "ico":
-        return "Icona con le dimensioni 16–256 px"
+        return N_("Icon with sizes from 16 to 256 px")
     if target == "pdf":
-        return "Un'immagine per pagina"
+        return N_("One image per page")
     return ""
 
 
@@ -72,14 +73,15 @@ class ImageMagickEngine(Engine):
 
     def presets(self, target: str) -> Presets:
         return {
-            q: f"Qualità {value}" + (", senza metadati (EXIF, GPS)" if strip else "")
+            q: (_("Quality {value}, no metadata (EXIF, GPS)") if strip else _("Quality {value}"))
+            .format(value=value)
             for q, (value, strip) in QUALITY.get(target, {}).items()
         }
 
     def convert(self, conversion: Conversion, src: Path, dst: Path, ctx: ConversionContext) -> None:
         target = conversion.target
         ctx.progress(None)
-        # src è un collegamento con nome sicuro: la sintassi [0] non può collidere col nome.
+        # src is a link with a safe name: the [0] syntax cannot clash with the file name.
         args = [self.binary(), str(src) if target in MULTI_FRAME else f"{src}[0]", "-auto-orient"]
         if target in NO_ALPHA:
             args += ["-background", "white", "-alpha", "remove", "-alpha", "off"]

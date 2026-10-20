@@ -1,131 +1,142 @@
-# Checklist delle prove manuali
+# Manual test checklist
 
-Apri questa cartella in Dolphin. Tasto destro sul file → **Converti con ANYFILE**
-apre il **menu radiale** sotto il puntatore: clic su un formato per convertire.
-Per le prove indicate «in ANYFILE» clicca il **centro** del menu: si apre la finestra completa.
-Per ripartire da zero: `python3 scripts/genera_prove.py --pulisci`.
+Open this folder in Dolphin. Right-click a file → **Convert with ANYFILE** opens the
+**radial menu** under the pointer: click a format to convert. For the tests marked
+“in ANYFILE”, click the **centre** of the menu: the full window opens.
+To start again from scratch: `python3 scripts/make_test_files.py --clean`.
 
-## Menu radiale
+The interface follows the system language. To check the English one on an Italian
+desktop: `LANGUAGE=en anyfile --radial FILE`.
 
-| # | File | Azione | Risultato atteso |
-|---|------|--------|------------------|
-| R1 | `01-foto.png` | Tasto destro → Converti con ANYFILE | Il menu compare **sotto il puntatore**, con le fette raggruppate per categoria |
-| R2 | `01-foto.png` | Passa sulle fette | La fetta si evidenzia; al centro il formato, sotto la nota (es. «Le aree trasparenti diventano bianche») |
-| R3 | `01-foto.png` | Clic su WEBP | Avanzamento al centro, «✓ Fatto», il menu si chiude da solo; il file è accanto all'originale |
-| R4 | `01-foto.png` | Frecce ←/→ e Invio | Stessa scelta da tastiera |
-| R5 | Qualsiasi | Esc, clic fuori, tasto destro | Il menu si chiude senza fare nulla |
-| R6 | `09-video-lungo.mp4` | Clic su WEBM, poi **Esc** | Il menu sparisce, la conversione continua; a fine lavoro arriva una notifica |
-| R7 | `09-video-lungo.mp4` | Clic su WEBM, poi clic al **centro** («Annulla») | Conversione annullata, nessun file parziale |
-| R8 | `01-foto.png` + `06-animata.gif` + `07-tono.wav` | Selezionali insieme → menu | Fette immagine «2/3» e audio «1/3»: ognuna converte solo i file compatibili |
-| R9 | `01-foto.png` + `02-trasparente.png` + `17-archivio.zip` | Selezionali insieme → menu | Solo formati immagine; «1 file non riconosciuto sarà ignorato» |
-| R10 | `08-clip-breve.mp4` | Menu | 12 fette: Video, Immagine (GIF), Audio |
-| R11 | `18-danneggiato.png` | Menu → JPG | «✕ Errore» al centro e messaggio sotto; il centro apre la finestra completa, dove riconvertendo si leggono i dettagli nel tooltip |
-| R12 | Vicino al bordo dello schermo | Menu | Il menu resta interamente visibile |
+## Radial menu
 
-## Qualità
+| # | File | Action | Expected result |
+|---|------|--------|-----------------|
+| R1 | `01-photo.png` | Right-click → Convert with ANYFILE | The menu appears **under the pointer**, slices grouped by category |
+| R2 | `01-photo.png` | Hover the slices | The slice lights up; the format in the centre, the note below (e.g. “Transparent areas become white”) |
+| R3 | `01-photo.png` | Click WEBP | Progress in the centre, “✓ Done”, the menu closes by itself; the file is next to the original |
+| R4 | `01-photo.png` | Arrows ←/→ and Enter | Same choice from the keyboard |
+| R5 | Any | Esc, click outside, right-click | The menu closes without doing anything |
+| R6 | `09-long-video.mp4` | Click WEBM, then **Esc** | The menu disappears, the conversion continues; a notification arrives at the end |
+| R7 | `09-long-video.mp4` | Click WEBM, then click the **centre** (“Cancel”) | Conversion cancelled, no partial file |
+| R8 | `01-photo.png` + `06-animated.gif` + `07-tone.wav` | Select them together → menu | Image slices “2/3” and audio “1/3”: each converts only the compatible files |
+| R9 | `01-photo.png` + `02-transparent.png` + `17-archive.zip` | Select them together → menu | Image formats only; “1 unrecognized file will be ignored” |
+| R10 | `08-short-clip.mp4` | Menu | 12 slices: Video, Image (GIF), Audio |
+| R11 | `18-damaged.png` | Menu → JPG | “✕ Error” in the centre and the message below; the centre opens the full window, where converting again shows the details in the tooltip |
+| R12 | Near the edge of the screen | Menu | The menu stays fully visible |
 
-| # | File | Azione | Risultato atteso |
-|---|------|--------|------------------|
-| Q1 | `01-foto.png` | Menu → passa su JPG | Al centro «Bilanciata»; sotto «Qualità 85» e l'invito a scorrere verso l'esterno |
-| Q2 | `01-foto.png` | Su JPG scorri verso l'esterno, anche in diagonale | Compare l'anello Massima · Bilanciata · Leggera; resta agganciato a JPG |
-| Q3 | `01-foto.png` | JPG → Massima, poi JPG → Leggera | `01-foto.jpg` ≈ 640 KB, `01-foto (1).jpg` ≈ 90 KB |
-| Q4 | `01-foto.png` | Passa su PNG o TIFF | Nessun anello di qualità |
-| Q5 | `01-foto.png` | Su JPG premi 3 | Converte subito con «File più leggero» |
-| Q6 | `09-video-lungo.mp4` | WEBM → Leggera | Video a 720p, molto più piccolo (verifica con le proprietà in Dolphin) |
-| Q7 | Finestra | Qualità: «File più leggero», chiudi e riapri | La scelta è ricordata, e la ruota la usa come predefinita (segnata con •) |
+## Quality
 
-## Comprimi
+| # | File | Action | Expected result |
+|---|------|--------|-----------------|
+| Q1 | `01-photo.png` | Menu → hover JPG | “Balanced” in the centre; below, “Quality 85” and the hint to move outwards |
+| Q2 | `01-photo.png` | On JPG move outwards, diagonally too | The Maximum · Balanced · Small ring appears and stays locked to JPG |
+| Q3 | `01-photo.png` | JPG → Maximum, then JPG → Small | `01-photo.jpg` ≈ 640 KB, `01-photo (1).jpg` ≈ 90 KB |
+| Q4 | `01-photo.png` | Hover PNG or TIFF | No quality ring |
+| Q5 | `01-photo.png` | On JPG press 3 | Converts right away with “Smallest file” |
+| Q6 | `09-long-video.mp4` | WEBM → Small | 720p video, much smaller (check the properties in Dolphin) |
+| Q7 | Window | Quality: “Smallest file”, close and reopen | The choice is remembered, and the menu uses it as default (marked with •) |
 
-| # | File | Azione | Risultato atteso |
-|---|------|--------|------------------|
-| C1 | `20-foto-pesante.jpg` | Menu | Prima fetta in alto: **COMPRIMI**; anello con sole «Bilanciata» e «Leggera» |
-| C2 | `20-foto-pesante.jpg` | Clic su COMPRIMI | Nasce `20-foto-pesante-compresso.jpg` (≈ 240 KB invece di ≈ 950 KB); l'originale resta |
-| C3 | `20-foto-pesante.jpg` | COMPRIMI → Leggera | ≈ 140 KB, senza metadati |
-| C4 | `21-gia-compressa.jpg` | Clic su COMPRIMI | Al centro «＝ Già compatto», sotto le dimensioni a confronto; nessun file creato |
-| C5 | `09-video-lungo.mp4` | COMPRIMI → Leggera | `09-video-lungo-compresso.mp4` a 720p |
-| C6 | `15-tre-pagine.pdf` | Menu | Senza Ghostscript niente fetta COMPRIMI; dopo `sudo apt install ghostscript` compare |
-| C7 | `01-foto.png` | Menu | Niente COMPRIMI: un PNG non si riduce senza cambiare formato (usa JPG o WEBP) |
-| C8 | `20-foto-pesante.jpg` + `09-video-lungo.mp4` + `01-foto.png` | Selezionali → menu | Una sola fetta COMPRIMI «2/3»: ogni file resta nel suo formato |
-| C9 | Finestra | Riga di una JPEG | Prima voce: «Comprimi (stesso formato)» |
+## Compress
 
-## Conversioni concatenate
+| # | File | Action | Expected result |
+|---|------|--------|-----------------|
+| C1 | `20-heavy-photo.jpg` | Menu | First slice at the top: **COMPRESS**; ring with only “Balanced” and “Small” |
+| C2 | `20-heavy-photo.jpg` | Click COMPRESS | `20-heavy-photo-compressed.jpg` appears (≈ 240 KB instead of ≈ 950 KB); the original stays |
+| C3 | `20-heavy-photo.jpg` | COMPRESS → Small | ≈ 140 KB, without metadata |
+| C4 | `21-already-compressed.jpg` | Click COMPRESS | “＝ Already compact” in the centre, the sizes compared below; no file created |
+| C5 | `09-long-video.mp4` | COMPRESS → Small | `09-long-video-compressed.mp4` at 720p |
+| C6 | `15-three-pages.pdf` | Menu | Without Ghostscript no COMPRESS slice; after `sudo apt install ghostscript` it appears |
+| C7 | `01-photo.png` | Menu | No COMPRESS: a PNG cannot shrink without changing format (use JPG or WEBP) |
+| C8 | `20-heavy-photo.jpg` + `09-long-video.mp4` + `01-photo.png` | Select them → menu | A single COMPRESS slice “2/3”: each file stays in its own format |
+| C9 | Window | Row of a JPEG | First entry: “Compress (same format)” |
 
-| # | File | Azione | Risultato atteso |
-|---|------|--------|------------------|
-| K1 | `11-foglio.xlsx` | Menu | Fette PNG, JPG, TXT con «via PDF» |
-| K2 | `11-foglio.xlsx` | → PNG | `11-foglio.png` con la tabella |
-| K3 | `12-presentazione.pptx` | → PNG | Cartella `12-presentazione-pagine/` con una immagine per slide |
-| K4 | `15-tre-pagine.pdf` | Passa su DOCX | «via Testo semplice · Solo il testo…»: dichiara che si perde l'impaginazione |
-| K5 | `10-documento.docx` | Finestra, menu della riga | Le catene hanno «· via PDF» accanto al formato |
-| K6 | `08-clip-breve.mp4` | Menu | Nessuna fetta PNG/JPG: passare dalla GIF degraderebbe due volte |
-| K7 | `01-foto.png` | Menu | Nessuna fetta TXT/DOCX: un'immagine non contiene testo senza OCR |
-| K8 | `anyfile info prove-manuali/11-foglio.xlsx` | Terminale | Le catene sono indicate con «(via pdf)» |
+## Chained conversions
 
-## Cronologia
+| # | File | Action | Expected result |
+|---|------|--------|-----------------|
+| K1 | `11-sheet.xlsx` | Menu | PNG, JPG, TXT slices with “via PDF” |
+| K2 | `11-sheet.xlsx` | → PNG | `11-sheet.png` with the table |
+| K3 | `12-slides.pptx` | → PNG | Folder `12-slides-pages/` with one image per slide |
+| K4 | `15-three-pages.pdf` | Hover DOCX | “via Plain text · Text only…”: it says the layout is lost |
+| K5 | `10-document.docx` | Window, the row's menu | Chains show “· via PDF” next to the format |
+| K6 | `08-short-clip.mp4` | Menu | No PNG/JPG slice: going through GIF would degrade twice |
+| K7 | `01-photo.png` | Menu | No TXT/DOCX slice: an image contains no text without OCR |
+| K8 | `anyfile info manual-tests/11-sheet.xlsx` | Terminal | Chains are shown with “(via pdf)” |
 
-| # | File | Azione | Risultato atteso |
-|---|------|--------|------------------|
-| H1 | Qualsiasi | Fai qualche conversione dalla ruota, poi finestra → **Cronologia** (Ctrl+H) | Le conversioni della ruota ci sono, con operazione ed esito |
-| H2 | `20-foto-pesante.jpg` | COMPRIMI → Leggera, poi apri la cronologia | «Comprimi JPEG · Leggera — 927 KB → 134 KB (−86%)» |
-| H3 | `18-danneggiato.png` | → JPG, poi in cronologia seleziona la riga | Esito in rosso; il pulsante dice **Riprova** |
-| H4 | Una riga riuscita | **Ripeti** | Nuova voce in cima; il file nuovo è `nome (1).ext`, nulla sovrascritto |
-| H5 | Una riga riuscita | **Ripeti su altri file…** e scegli 2 file | Stessa operazione e qualità sui nuovi file |
-| H6 | Una voce di cui hai cancellato l'originale | Ripeti | Avviso «non esiste più»; nessuna nuova voce |
-| H7 | Icona di ANYFILE nel menu | Clic destro → *Cronologia delle conversioni* | Si apre direttamente la cronologia |
-| H8 | Finestra cronologia | Togli «Registra le nuove conversioni», converti un file | Nessuna nuova voce |
-| H9 | Terminale | `anyfile history` e `anyfile repeat ID` | Stesso contenuto della finestra; la ripetizione funziona |
+## History
 
-## Selezioni multiple
+| # | File | Action | Expected result |
+|---|------|--------|-----------------|
+| H1 | Any | Convert something from the menu, then window → **History** (Ctrl+H) | The menu's conversions are there, with operation and result |
+| H2 | `20-heavy-photo.jpg` | COMPRESS → Small, then open the history | “Compress JPEG · Small — 927 KB → 134 KB (−86%)” |
+| H3 | `18-damaged.png` | → JPG, then select the row in the history | Result in red; the button says **Retry** |
+| H4 | A successful row | **Repeat** | New entry at the top; the new file is `name (1).ext`, nothing overwritten |
+| H5 | A successful row | **Repeat on other files…** and pick 2 files | Same operation and quality on the new files |
+| H6 | An entry whose original you deleted | Repeat | Warning “no longer exist”; no new entry |
+| H7 | ANYFILE icon in the menu | Right-click → *Conversion history* | The history opens directly |
+| H8 | History window | Untick “Record new conversions”, convert a file | No new entry |
+| H9 | Terminal | `anyfile history` and `anyfile repeat ID` | Same content as the window; repeating works |
 
-| # | File | Azione | Risultato atteso |
-|---|------|--------|------------------|
-| M1 | Dieci file diversi | Selezionali → menu | Fette con conteggi (es. «PDF 6/9»), prima le destinazioni valide per più file |
-| M2 | Come M1 | Clic su PDF | Converte solo i 6 compatibili; gli altri restano intatti |
+## Language
 
-## Immagini
+| # | File | Action | Expected result |
+|---|------|--------|-----------------|
+| L1 | Any | Open the menu and the window on an Italian desktop | Everything in Italian, numbers with a decimal comma (“926,8 KB”) |
+| L2 | Any | `LANGUAGE=en anyfile` | Everything in English, numbers with a decimal point (“926.8 KB”) |
+| L3 | Dolphin | Context menu on an English and an Italian desktop | “Convert with ANYFILE” / “Converti con ANYFILE” |
 
-| # | File | Azione | Risultato atteso |
-|---|------|--------|------------------|
-| 1 | `01-foto.png` | → JPEG, WebP, ICO, PDF | File validi accanto all'originale |
-| 2 | `02-trasparente.png` | → JPEG | Sfondo **bianco**, non nero |
-| 3 | `03-png-travestito.jpg` | Apri in ANYFILE | Formato «PNG ⚠»; il tooltip spiega che l'estensione non corrisponde |
-| 3b | `03-png-travestito.jpg` | → JPEG con «Sovrascrivi» attivo | Crea `03-png-travestito (1).jpg`: l'originale non viene toccato |
-| 4 | `04-conflitto.png` | → JPEG | Crea `04-conflitto (1).jpg`, il `04-conflitto.jpg` esistente resta intatto |
-| 4b | `04-conflitto.png` | → JPEG con «Sovrascrivi» | Sostituisce `04-conflitto.jpg` |
-| 5 | `05-nome strano [1] -x.png` | → WebP | Funziona nonostante spazi, parentesi e trattino |
-| 6 | `06-animata.gif` | → WebP / → PNG / → MP4 | WebP animata; PNG con solo il primo fotogramma (vedi tooltip); MP4 video |
+## Multiple selections
 
-## Audio e video
+| # | File | Action | Expected result |
+|---|------|--------|-----------------|
+| M1 | Ten different files | Select them → menu | Slices with counts (e.g. “PDF 6/9”), targets valid for more files first |
+| M2 | As M1 | Click PDF | Converts only the 6 compatible files; the others stay untouched |
 
-| # | File | Azione | Risultato atteso |
-|---|------|--------|------------------|
-| 7 | `07-tono.wav` | → MP3, FLAC, Opus | File riproducibili |
-| 8 | `08-clip-breve.mp4` | → GIF, → WebM, → MP3 | GIF animata; WebM; solo audio |
-| 9 | `09-video-lungo.mp4` | → WebM, poi **Annulla** a metà | Barra di avanzamento; stato «Annullato»; nessun file parziale (né `.anyfile-*`) nella cartella |
+## Images
 
-## Documenti
+| # | File | Action | Expected result |
+|---|------|--------|-----------------|
+| 1 | `01-photo.png` | → JPEG, WebP, ICO, PDF | Valid files next to the original |
+| 2 | `02-transparent.png` | → JPEG | **White** background, not black |
+| 3 | `03-png-named-jpg.jpg` | Open in ANYFILE | Format “PNG ⚠”; the tooltip explains that the extension does not match |
+| 3b | `03-png-named-jpg.jpg` | → JPEG with “Overwrite” on | Creates `03-png-named-jpg (1).jpg`: the original is not touched |
+| 4 | `04-conflict.png` | → JPEG | Creates `04-conflict (1).jpg`; the existing `04-conflict.jpg` stays intact |
+| 4b | `04-conflict.png` | → JPEG with “Overwrite” | Replaces `04-conflict.jpg` |
+| 5 | `05-odd name [1] -x.png` | → WebP | Works despite spaces, brackets and dash |
+| 6 | `06-animated.gif` | → WebP / → PNG / → MP4 | Animated WebP; PNG with only the first frame (see tooltip); MP4 video |
 
-| # | File | Azione | Risultato atteso |
-|---|------|--------|------------------|
-| 10 | `10-documento.docx` | → PDF, → ODT, → Markdown | PDF/ODT con tabella; Markdown con il testo |
-| 10b | `10-documento.docx` | → PDF **con LibreOffice aperto** | Funziona lo stesso (profilo separato) |
-| 11 | `11-foglio.xlsx` | → ODS, → CSV, → PDF | CSV leggibile con gli accenti |
-| 12 | `12-presentazione.pptx` | → PDF, → ODP | Due slide |
-| 13 | `13-nota.md` | → DOCX, → HTML, → PDF | HTML apribile nel browser |
-| 14 | `14-dati.csv` | → XLSX | Tabella con 3 righe |
-| 15 | `15-tre-pagine.pdf` | → PNG | Cartella `15-tre-pagine-pagine/` con 3 immagini |
-| 15b | `15-tre-pagine.pdf` | → Testo | Testo delle tre pagine |
-| 16 | `16-scansione.pdf` | → Testo | Errore leggibile: «non contiene testo estraibile… serve l'OCR» |
+## Audio and video
 
-## Casi limite
+| # | File | Action | Expected result |
+|---|------|--------|-----------------|
+| 7 | `07-tone.wav` | → MP3, FLAC, Opus | Playable files |
+| 8 | `08-short-clip.mp4` | → GIF, → WebM, → MP3 | Animated GIF; WebM; audio only |
+| 9 | `09-long-video.mp4` | → WebM, then **Cancel** halfway | Progress bar; status “Cancelled”; no partial file (nor `.anyfile-*`) in the folder |
 
-| # | File | Azione | Risultato atteso |
-|---|------|--------|------------------|
-| 17 | `17-archivio.zip` | Apri in ANYFILE | Riga grigia «Formato non riconosciuto», menu disattivato |
-| 18 | `18-danneggiato.png` | → JPEG | Stato «✗ ImageMagick non è riuscito…»; tooltip con i dettagli; le altre conversioni della coda proseguono |
-| 19 | `19-vuoto.txt` | Apri in ANYFILE | «Il file è vuoto» |
-| 20 | Tutti i file insieme | Seleziona tutto → ANYFILE → «Converti tutti in: PDF» | Il PDF viene impostato solo dove è possibile; gli altri restano su «Scegli formato…» |
-| 21 | Una cartella | Trascinala nella finestra | Messaggio in basso: le cartelle non sono supportate |
-| 22 | Qualsiasi | «Salva in:» una cartella diversa | I risultati finiscono lì; «Mostra risultati» apre Dolphin sul file |
-| 23 | `09-video-lungo.mp4` | Avvia, poi riduci la finestra a icona | Notifica di sistema a fine conversione |
-| 24 | `09-video-lungo.mp4` | Avvia e chiudi la finestra | Chiede se annullare le conversioni in corso |
+## Documents
+
+| # | File | Action | Expected result |
+|---|------|--------|-----------------|
+| 10 | `10-document.docx` | → PDF, → ODT, → Markdown | PDF/ODT with the table; Markdown with the text |
+| 10b | `10-document.docx` | → PDF **with LibreOffice open** | Works anyway (separate profile) |
+| 11 | `11-sheet.xlsx` | → ODS, → CSV, → PDF | Readable CSV |
+| 12 | `12-slides.pptx` | → PDF, → ODP | Two slides |
+| 13 | `13-note.md` | → DOCX, → HTML, → PDF | HTML that opens in the browser |
+| 14 | `14-data.csv` | → XLSX | Table with 3 rows |
+| 15 | `15-three-pages.pdf` | → PNG | Folder `15-three-pages-pages/` with 3 images |
+| 15b | `15-three-pages.pdf` | → Text | Text of the three pages |
+| 16 | `16-scan.pdf` | → Text | Readable error: “contains no extractable text… would need OCR” |
+
+## Edge cases
+
+| # | File | Action | Expected result |
+|---|------|--------|-----------------|
+| 17 | `17-archive.zip` | Open in ANYFILE | Grey row “Unrecognized format”, menu disabled |
+| 18 | `18-damaged.png` | → JPEG | Status “✗ ImageMagick could not…”; tooltip with the details; the other conversions in the queue carry on |
+| 19 | `19-empty.txt` | Open in ANYFILE | “The file is empty” |
+| 20 | All files together | Select all → ANYFILE → “Convert all to: PDF” | PDF is set only where possible; the others stay on “Choose format…” |
+| 21 | A folder | Drop it on the window | Message at the bottom: folders are not supported |
+| 22 | Any | “Save in:” a different folder | The results end up there; “Show results” opens Dolphin on the file |
+| 23 | `09-long-video.mp4` | Start, then minimize the window | System notification at the end |
+| 24 | `09-long-video.mp4` | Start and close the window | Asks whether to cancel the running conversions |

@@ -1,6 +1,6 @@
-"""Tutto ciò che dipende dal sistema operativo: processi, cartelle, eseguibili, file.
+"""Everything that depends on the operating system: processes, folders, executables, files.
 
-Il resto di ANYFILE non controlla mai su quale sistema gira: usa queste funzioni.
+The rest of ANYFILE never checks which system it runs on: it uses these functions.
 """
 
 from __future__ import annotations
@@ -15,15 +15,15 @@ from pathlib import Path
 
 IS_WINDOWS = sys.platform == "win32"
 
-# Su Windows «convert.exe» è un comando di sistema (conversione FAT → NTFS), non
-# ImageMagick: non va mai scambiato per un motore.
+# On Windows “convert.exe” is a system command (FAT → NTFS conversion), not
+# ImageMagick: it must never be mistaken for an engine.
 _WINDOWS_IMPOSTORS = {"convert"}
 
 
-# --- cartelle -------------------------------------------------------------------
+# --- folders --------------------------------------------------------------------
 
 def data_dir() -> Path:
-    """Dati persistenti (cronologia)."""
+    """Persistent data (history)."""
     if IS_WINDOWS:
         base = os.environ.get("APPDATA") or Path.home() / "AppData" / "Roaming"
     else:
@@ -32,7 +32,7 @@ def data_dir() -> Path:
 
 
 def cache_dir() -> Path:
-    """Dati ricreabili (profilo di LibreOffice)."""
+    """Data that can be recreated (LibreOffice profile)."""
     if IS_WINDOWS:
         base = os.environ.get("LOCALAPPDATA") or Path.home() / "AppData" / "Local"
     else:
@@ -40,10 +40,10 @@ def cache_dir() -> Path:
     return Path(base) / "anyfile"
 
 
-# --- eseguibili -----------------------------------------------------------------
+# --- executables --------------------------------------------------------------
 
 def _windows_install_dirs(name: str) -> list[Path]:
-    """Cartelle in cui gli installer Windows mettono i motori senza aggiungerli al PATH."""
+    """Folders where Windows installers put the engines without adding them to the PATH."""
     roots = [Path(os.environ[v]) for v in ("ProgramFiles", "ProgramFiles(x86)") if os.environ.get(v)]
     patterns = {
         "soffice": ["LibreOffice/program"],
@@ -55,14 +55,14 @@ def _windows_install_dirs(name: str) -> list[Path]:
     found: list[Path] = []
     for root in roots:
         for pattern in patterns:
-            # Versioni più recenti per prime (gs10.04.0 prima di gs9.56.1, che in ordine
-            # alfabetico verrebbe dopo).
+            # Newest versions first (gs10.04.0 before gs9.56.1, which alphabetical
+            # order would put first).
             found.extend(sorted(root.glob(pattern), key=_version_key, reverse=True))
     return found
 
 
 def _version_key(path: Path) -> list:
-    """Ordine naturale: i numeri contano come numeri («10» viene dopo «9»)."""
+    """Natural order: numbers compare as numbers (“10” comes after “9”)."""
     return [(0, int(part)) if part.isdigit() else (1, part)
             for part in re.findall(r"\d+|\D+", str(path))]
 
@@ -81,25 +81,25 @@ def which(name: str) -> str | None:
     return shutil.which(name)
 
 
-# --- processi -------------------------------------------------------------------
+# --- processes ------------------------------------------------------------------
 
 def popen_options() -> dict:
-    """Il motore parte in un gruppo di processi proprio, così si può fermare con i figli
-    (LibreOffice, per esempio, avvia un secondo processo)."""
+    """The engine starts in its own process group, so it can be stopped together with
+    its children (LibreOffice, for example, starts a second process)."""
     if IS_WINDOWS:
         return {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW}
     return {"start_new_session": True}
 
 
 def detached_options() -> dict:
-    """Programmi avviati e lasciati andare (file manager, notifiche)."""
+    """Programs started and left running (file manager, notifications)."""
     if IS_WINDOWS:
         return {"creationflags": subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP}
     return {"start_new_session": True}
 
 
 def kill_tree(proc: subprocess.Popen) -> None:
-    """Ferma il processo e tutti i suoi figli: prima con garbo, poi con la forza."""
+    """Stops the process and all its children: gently first, then by force."""
     if IS_WINDOWS:
         subprocess.run(["taskkill", "/T", "/F", "/PID", str(proc.pid)],
                        capture_output=True, check=False)
@@ -119,16 +119,16 @@ def kill_tree(proc: subprocess.Popen) -> None:
         proc.wait()
 
 
-# --- file -----------------------------------------------------------------------
+# --- files ----------------------------------------------------------------------
 
 def link_or_copy(src: Path, dst: Path) -> None:
-    """Rende src disponibile come dst senza duplicarlo, se il filesystem lo permette.
+    """Makes src available as dst without duplicating it, when the filesystem allows.
 
-    Collegamento simbolico su Linux, altrimenti hard link (stesso volume), altrimenti
-    copia (es. chiavetta FAT o volumi diversi).
+    A symbolic link on Linux, otherwise a hard link (same volume), otherwise a copy
+    (e.g. a FAT USB stick or different volumes).
 
-    Su Windows niente collegamenti simbolici: alcune API ne riportano la dimensione
-    come 0 byte, e ImageMagick legge così un file vuoto.
+    No symbolic links on Windows: some APIs report their size as 0 bytes, so
+    ImageMagick would read an empty file.
     """
     if not IS_WINDOWS:
         try:

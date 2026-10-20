@@ -5,6 +5,7 @@ Actions=convertWithAnyfile;
 X-KDE-Priority=TopLevel
 
 [Desktop Action convertWithAnyfile]
-Name=Converti con ANYFILE
+Name=Convert with ANYFILE
+Name[it]=Converti con ANYFILE
 Icon=document-export
 Exec=anyfile --radial %F

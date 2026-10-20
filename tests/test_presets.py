@@ -14,7 +14,7 @@ from anyfile.models.job import Job
 def test_lossless_targets_offer_no_presets(registry, source, target):
     conv = registry.find(source, target) or registry.find("mp3", target) or registry.find("jpg", target)
     if conv is None:
-        pytest.skip("conversione non disponibile")
+        pytest.skip("conversion not available")
     assert registry.presets(conv) == {}
 
 
@@ -23,17 +23,19 @@ def test_lossless_targets_offer_no_presets(registry, source, target):
 def test_lossy_targets_offer_three_described_presets(registry, source, target):
     conv = registry.find(source, target)
     if conv is None:
-        pytest.skip("conversione non disponibile")
+        pytest.skip("conversion not available")
     presets = registry.presets(conv)
     assert list(presets) == list(Quality)
     assert all(presets.values())
 
 
 def test_quality_parse():
-    assert Quality.parse("Massima") is Quality.MAX
-    assert Quality.parse("leggero") is Quality.SMALL
+    assert Quality.parse("Max") is Quality.MAX
+    assert Quality.parse("small") is Quality.SMALL
     assert Quality.parse("balanced") is Quality.BALANCED
-    assert Quality.parse("enorme") is None
+    assert Quality.parse("huge") is None
+    # Italian names from version 0.3 are still accepted.
+    assert Quality.parse("massima") is Quality.MAX and Quality.parse("leggero") is Quality.SMALL
 
 
 def _sizes(registry, src, target, tmp_path):
@@ -46,7 +48,7 @@ def _sizes(registry, src, target, tmp_path):
 
 @needs("magick")
 def test_image_presets_change_size(registry, tmp_path):
-    src = tmp_path / "foto.png"
+    src = tmp_path / "photo.png"
     subprocess.run(["magick", "-size", "400x300", "plasma:fractal", str(src)], check=True)
     for target in ("jpg", "webp"):
         s = _sizes(registry, src, target, tmp_path / target)
@@ -55,7 +57,7 @@ def test_image_presets_change_size(registry, tmp_path):
 
 @needs("ffmpeg")
 def test_media_presets_change_size(registry, tmp_path):
-    wav = tmp_path / "rumore.wav"
+    wav = tmp_path / "noise.wav"
     subprocess.run(["ffmpeg", "-v", "error", "-f", "lavfi", "-i", "anoisesrc=d=3", str(wav)], check=True)
     s = _sizes(registry, wav, "mp3", tmp_path / "mp3")
     assert s[Quality.MAX] > s[Quality.BALANCED] > s[Quality.SMALL], s
@@ -71,18 +73,18 @@ def test_media_presets_change_size(registry, tmp_path):
 
 
 def test_cli_rejects_unknown_quality(sample, capsys):
-    assert cli.main(["convert", str(sample("md")), "-t", "html", "-q", "enorme"]) == 2
-    assert "qualità sconosciuta" in capsys.readouterr().err
+    assert cli.main(["convert", str(sample("md")), "-t", "html", "-q", "huge"]) == 2
+    assert "unknown quality" in capsys.readouterr().err
 
 
 @needs("magick")
 def test_compress_jpeg_keeps_original_and_is_smaller(registry, tmp_path):
-    src = tmp_path / "foto.jpg"
+    src = tmp_path / "photo.jpg"
     subprocess.run(["magick", "-size", "800x600", "plasma:fractal", "-quality", "98", str(src)],
                    check=True)
     original = src.read_bytes()
     out = Executor(registry).run(Job(src, "jpg", quality=Quality.SMALL, overwrite=True))
-    assert out.name == "foto-compresso.jpg"
+    assert out.name == "photo-compressed.jpg"
     assert out.stat().st_size < src.stat().st_size
     assert src.read_bytes() == original
 
@@ -90,36 +92,36 @@ def test_compress_jpeg_keeps_original_and_is_smaller(registry, tmp_path):
 @needs("magick")
 def test_compress_without_gain_is_discarded(registry, tmp_path):
     from anyfile.core.errors import NothingGained
-    src = tmp_path / "piccola.jpg"
+    src = tmp_path / "small.jpg"
     subprocess.run(["magick", "-size", "800x600", "plasma:fractal", "-quality", "30", str(src)],
                    check=True)
-    with pytest.raises(NothingGained, match="già compatto"):
+    with pytest.raises(NothingGained, match="already compact"):
         Executor(registry).run(Job(src, "jpg", quality=Quality.BALANCED))
-    assert sorted(p.name for p in tmp_path.iterdir()) == ["piccola.jpg"]
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["small.jpg"]
 
 
 def test_compress_offers_no_max_preset(registry):
     conv = registry.find("jpg", "jpg")
     if conv is None:
-        pytest.skip("ImageMagick non disponibile")
+        pytest.skip("ImageMagick not available")
     assert list(registry.presets(conv)) == [Quality.BALANCED, Quality.SMALL]
 
 
 def test_lossless_format_cannot_be_compressed(registry, sample):
     from anyfile.core.planner import PlanError
-    with pytest.raises(PlanError, match="non si può comprimere"):
+    with pytest.raises(PlanError, match="cannot be compressed further"):
         Executor(registry).run(Job(sample("png"), "png"))
 
 
 def test_queue_reports_unchanged(registry, tmp_path):
     if registry.find("jpg", "jpg") is None:
-        pytest.skip("ImageMagick non disponibile")
+        pytest.skip("ImageMagick not available")
     from anyfile.core.jobs import JobQueue
     from anyfile.models.job import JobStatus
-    src = tmp_path / "piccola.jpg"
+    src = tmp_path / "small.jpg"
     subprocess.run(["magick", "-size", "400x300", "plasma:fractal", "-quality", "30", str(src)],
                    check=True)
     queue = JobQueue(Executor(registry))
     job = queue.submit(src, "jpg")
     queue.wait()
-    assert job.status is JobStatus.UNCHANGED and "già compatto" in job.message
+    assert job.status is JobStatus.UNCHANGED and "already compact" in job.message

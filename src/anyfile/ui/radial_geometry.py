@@ -1,7 +1,7 @@
-"""Geometria del menu radiale, indipendente da Qt.
+"""Geometry of the radial menu, independent of Qt.
 
-Gli angoli sono in gradi, in senso orario a partire da ore 12; le coordinate
-seguono la convenzione dello schermo (y verso il basso).
+Angles are in degrees, clockwise from 12 o'clock; coordinates follow the screen
+convention (y grows downwards).
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ def clockwise_angle(dx: float, dy: float) -> float:
 
 
 def in_arc(angle: float, a0: float, a1: float) -> bool:
-    """L'angolo cade nell'arco orario da a0 ad a1 (anche se l'arco attraversa ore 12)."""
+    """The angle lies on the clockwise arc from a0 to a1 (even across 12 o'clock)."""
     return (angle - a0) % 360.0 <= (a1 - a0)
 
 
@@ -37,7 +37,7 @@ class Ring:
     inner: float
     outer: float
     count: int
-    # Distanza oltre l'anello entro cui un clic seleziona ancora una fetta.
+    # Distance beyond the ring within which a click still selects a slice.
     reach: float = 40.0
 
     @property
@@ -52,7 +52,7 @@ class Ring:
         return (index + 0.5) * self.span
 
     def hit(self, dx: float, dy: float) -> int | None:
-        """Indice della fetta, CENTER, oppure None se il punto è fuori dal menu."""
+        """Slice index, CENTER, or None when the point is outside the menu."""
         r = math.hypot(dx, dy)
         if r <= self.inner:
             return CENTER
@@ -62,7 +62,7 @@ class Ring:
 
 
 def groups(keys: Sequence[str]) -> list[tuple[str, int, int]]:
-    """Raggruppa le fette consecutive con la stessa chiave: [(chiave, inizio, fine esclusa)]."""
+    """Groups consecutive slices with the same key: [(key, start, end excluded)]."""
     out: list[tuple[str, int, int]] = []
     for i, key in enumerate(keys):
         if out and out[-1][0] == key:

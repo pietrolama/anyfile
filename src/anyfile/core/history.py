@@ -1,8 +1,8 @@
-"""Cronologia delle conversioni, condivisa da ruota, finestra e terminale.
+"""Conversion history, shared by the radial menu, the window and the command line.
 
-Un piccolo database SQLite locale. Registra ciò che serve per capire cosa è
-successo (esito, dimensioni, risparmio) e per ripetere l'operazione con le stesse
-impostazioni. Un problema della cronologia non deve mai far fallire una conversione.
+A small local SQLite database. It records what is needed to understand what happened
+(outcome, sizes, saving) and to repeat the operation with the same settings. A
+problem with the history must never make a conversion fail.
 """
 
 from __future__ import annotations
@@ -16,6 +16,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from anyfile.core import system
+from anyfile.i18n import _, format_number
 from anyfile.models.conversion import Quality
 from anyfile.models.job import Job, JobStatus
 
@@ -23,24 +24,24 @@ MAX_ENTRIES = 1000
 _RECORDED = (JobStatus.DONE, JobStatus.FAILED, JobStatus.UNCHANGED)
 
 _SCHEMA = """
-CREATE TABLE IF NOT EXISTS conversioni (
+CREATE TABLE IF NOT EXISTS conversions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    quando TEXT NOT NULL,
-    sorgente TEXT NOT NULL,
-    formato_sorgente TEXT,
-    dimensione_sorgente INTEGER,
-    destinazione TEXT NOT NULL,
+    time TEXT NOT NULL,
+    source TEXT NOT NULL,
+    source_format TEXT,
+    source_size INTEGER,
+    target TEXT NOT NULL,
     via TEXT NOT NULL DEFAULT '',
-    qualita TEXT,
-    esito TEXT NOT NULL,
-    messaggio TEXT NOT NULL DEFAULT '',
-    dettagli TEXT NOT NULL DEFAULT '',
-    risultato TEXT,
-    dimensione_risultato INTEGER,
-    cartella TEXT,
-    sovrascrivi INTEGER NOT NULL DEFAULT 0
+    quality TEXT,
+    status TEXT NOT NULL,
+    message TEXT NOT NULL DEFAULT '',
+    details TEXT NOT NULL DEFAULT '',
+    output TEXT,
+    output_size INTEGER,
+    output_dir TEXT,
+    overwrite INTEGER NOT NULL DEFAULT 0
 );
-CREATE TABLE IF NOT EXISTS impostazioni (chiave TEXT PRIMARY KEY, valore TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 """
 
 
@@ -68,18 +69,18 @@ class Entry:
 
     @property
     def saved(self) -> int | None:
-        """Byte risparmiati rispetto all'originale (negativo se il risultato è più grande)."""
+        """Bytes saved compared with the original (negative if the result is bigger)."""
         if self.status is not JobStatus.DONE or self.source_size is None or self.output_size is None:
             return None
         return self.source_size - self.output_size
 
     def submit_args(self) -> dict:
-        """Argomenti per ripetere l'operazione con le stesse impostazioni."""
+        """Arguments to repeat the operation with the same settings."""
         return {"output_dir": self.output_dir, "overwrite": self.overwrite,
                 "quality": self.quality or Quality.BALANCED}
 
 
-# --- presentazione, condivisa da finestra e terminale ---------------------------
+# --- presentation, shared by the window and the command line --------------------
 
 def format_size(size: int | None) -> str:
     if size is None:
@@ -87,7 +88,7 @@ def format_size(size: int | None) -> str:
     value = float(size)
     for unit in ("B", "KB", "MB", "GB"):
         if value < 1024 or unit == "GB":
-            return f"{value:.0f} {unit}" if unit == "B" else f"{value:.1f} {unit}".replace(".", ",")
+            return f"{value:.0f} {unit}" if unit == "B" else f"{format_number(value)} {unit}"
         value /= 1024
     return ""
 
@@ -97,14 +98,14 @@ def format_when(when: datetime, now: datetime | None = None) -> str:
     today = (now or datetime.now().astimezone()).date()
     days = (today - local.date()).days
     if days == 0:
-        return f"oggi {local:%H:%M}"
+        return _("today {time}").format(time=f"{local:%H:%M}")
     if days == 1:
-        return f"ieri {local:%H:%M}"
-    return f"{local:%d/%m/%Y %H:%M}"
+        return _("yesterday {time}").format(time=f"{local:%H:%M}")
+    return local.strftime(_("%Y-%m-%d %H:%M"))
 
 
 def describe(entry: Entry) -> str:
-    """Es. «PNG → JPEG · Bilanciata · via PDF» oppure «Comprimi JPEG · Leggera»."""
+    """E.g. “PNG → JPEG · Balanced · via PDF” or “Compress JPEG · Small”."""
     from anyfile.core import formats
 
     def label(fid: str | None) -> str:
@@ -112,13 +113,13 @@ def describe(entry: Entry) -> str:
         return fmt.label if fmt else (fid or "?").upper()
 
     if entry.is_compression:
-        parts = [f"Comprimi {label(entry.target)}"]
+        parts = [_("Compress {format}").format(format=label(entry.target))]
     else:
         parts = [f"{label(entry.source_format)} → {label(entry.target)}"]
     if entry.quality:
         parts.append(entry.quality.short)
     if entry.via:
-        parts.append("via " + "/".join(label(v) for v in entry.via))
+        parts.append(_("via {formats}").format(formats="/".join(label(v) for v in entry.via)))
     return " · ".join(parts)
 
 
@@ -126,50 +127,63 @@ def describe_result(entry: Entry) -> str:
     if entry.status is JobStatus.FAILED:
         return entry.message
     if entry.status is JobStatus.UNCHANGED:
-        return "Già compatto: nessun file creato"
+        return _("Already compact: no file created")
     sizes = f"{format_size(entry.source_size)} → {format_size(entry.output_size)}"
     if entry.saved is not None and entry.source_size:
         change = -entry.saved / entry.source_size
-        sizes += f" ({change:+.0%})".replace("-", "−")  # segno meno tipografico
+        sizes += f" ({change:+.0%})".replace("-", "−")  # typographic minus sign
     return sizes
 
 
 def default_path() -> Path:
-    return system.data_dir() / "cronologia.sqlite"
+    return system.data_dir() / "history.sqlite"
+
+
+def _migrate_file(path: Path) -> None:
+    """Versions up to 0.3 used “cronologia.sqlite”: the file is renamed, not lost."""
+    old = path.with_name("cronologia.sqlite")
+    if path.exists() or not old.exists():
+        return
+    for suffix in ("", "-wal", "-shm"):
+        old_part = old.with_name(old.name + suffix)
+        if old_part.exists():
+            old_part.rename(path.with_name(path.name + suffix))
 
 
 class History:
     def __init__(self, path: Path | None = None) -> None:
         self.path = path or default_path()
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        _migrate_file(self.path)
         with self._connect() as db:
             db.executescript(_SCHEMA)
+            _migrate_schema(db)
 
     @contextmanager
     def _connect(self) -> Iterator[sqlite3.Connection]:
-        # Una connessione per operazione: la cronologia è scritta dal thread dei lavori
-        # e letta dall'interfaccia, anche da processi diversi (ruota e finestra).
-        # La chiusura è esplicita: su Windows un database aperto resta bloccato.
+        # One connection per operation: the history is written by the job thread and
+        # read by the interface, even from different processes (menu and window).
+        # Closing is explicit: on Windows an open database stays locked.
         db = sqlite3.connect(self.path, timeout=5)
         try:
             db.execute("PRAGMA journal_mode=WAL")
-            with db:  # commit, oppure rollback in caso di errore
+            with db:  # commit, or rollback on error
                 yield db
         finally:
             db.close()
 
-    # --- registrazione -----------------------------------------------------
+    # --- recording -----------------------------------------------------------
 
     @property
     def enabled(self) -> bool:
         with self._connect() as db:
-            row = db.execute("SELECT valore FROM impostazioni WHERE chiave = 'attiva'").fetchone()
+            row = db.execute("SELECT value FROM settings WHERE key = 'enabled'").fetchone()
         return row is None or row[0] == "1"
 
     @enabled.setter
     def enabled(self, value: bool) -> None:
         with self._connect() as db:
-            db.execute("INSERT OR REPLACE INTO impostazioni VALUES ('attiva', ?)", ("1" if value else "0",))
+            db.execute("INSERT OR REPLACE INTO settings VALUES ('enabled', ?)", ("1" if value else "0",))
 
     def record(self, job: Job) -> int | None:
         if job.status not in _RECORDED or not self.enabled:
@@ -183,28 +197,27 @@ class History:
         )
         with self._connect() as db:
             cursor = db.execute(
-                "INSERT INTO conversioni (quando, sorgente, formato_sorgente, dimensione_sorgente,"
-                " destinazione, via, qualita, esito, messaggio, dettagli, risultato,"
-                " dimensione_risultato, cartella, sovrascrivi)"
+                "INSERT INTO conversions (time, source, source_format, source_size, target, via,"
+                " quality, status, message, details, output, output_size, output_dir, overwrite)"
                 " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", values)
-            db.execute("DELETE FROM conversioni WHERE id <= ?", (cursor.lastrowid - MAX_ENTRIES,))
+            db.execute("DELETE FROM conversions WHERE id <= ?", (cursor.lastrowid - MAX_ENTRIES,))
             return cursor.lastrowid
 
     def safe_record(self, job: Job) -> None:
         try:
             self.record(job)
         except (sqlite3.Error, OSError) as e:
-            print(f"anyfile: cronologia non aggiornata: {e}", file=sys.stderr)
+            print(_("anyfile: history not updated: {error}").format(error=e), file=sys.stderr)
 
-    # --- lettura e gestione ------------------------------------------------
+    # --- reading and management ----------------------------------------------
 
     def entries(self, limit: int = 200, *, failed_only: bool = False, text: str = "") -> list[Entry]:
-        sql = "SELECT * FROM conversioni"
+        sql = "SELECT * FROM conversions"
         where, params = [], []
         if failed_only:
-            where.append("esito = 'FAILED'")
+            where.append("status = 'FAILED'")
         if text:
-            where.append("sorgente LIKE ?")
+            where.append("source LIKE ?")
             params.append(f"%{text}%")
         if where:
             sql += " WHERE " + " AND ".join(where)
@@ -215,16 +228,28 @@ class History:
 
     def get(self, entry_id: int) -> Entry | None:
         with self._connect() as db:
-            row = db.execute("SELECT * FROM conversioni WHERE id = ?", (entry_id,)).fetchone()
+            row = db.execute("SELECT * FROM conversions WHERE id = ?", (entry_id,)).fetchone()
         return _entry(row) if row else None
 
     def delete(self, ids: Iterable[int]) -> None:
         with self._connect() as db:
-            db.executemany("DELETE FROM conversioni WHERE id = ?", [(i,) for i in ids])
+            db.executemany("DELETE FROM conversions WHERE id = ?", [(i,) for i in ids])
 
     def clear(self) -> None:
         with self._connect() as db:
-            db.execute("DELETE FROM conversioni")
+            db.execute("DELETE FROM conversions")
+
+
+def _migrate_schema(db: sqlite3.Connection) -> None:
+    """Moves entries from the Italian schema of versions up to 0.3 (same column order)."""
+    tables = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
+    if "conversioni" in tables:
+        db.execute("INSERT INTO conversions SELECT * FROM conversioni")
+        db.execute("DROP TABLE conversioni")
+    if "impostazioni" in tables:
+        db.execute("INSERT OR REPLACE INTO settings SELECT 'enabled', valore FROM impostazioni"
+                   " WHERE chiave = 'attiva'")
+        db.execute("DROP TABLE impostazioni")
 
 
 def _entry(row: tuple) -> Entry:

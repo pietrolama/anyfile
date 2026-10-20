@@ -1,4 +1,4 @@
-"""Registry delle capacità: quali conversioni sono eseguibili con i motori installati."""
+"""Capability registry: which conversions the installed engines can carry out."""
 
 from __future__ import annotations
 
@@ -10,13 +10,13 @@ from anyfile.engines.base import Engine
 from anyfile.models.conversion import Category, Conversion, Presets, Quality, Route
 
 
-# Un'immagine non contiene testo estraibile (servirebbe l'OCR): una catena che la porta
-# verso un documento passando dal PDF produrrebbe un file vuoto.
+# An image contains no extractable text (that would need OCR): a chain taking it to a
+# document through PDF would produce an empty file.
 _NO_CONTENT = {
     (Category.IMAGE, Category.TEXT), (Category.IMAGE, Category.DOCUMENT),
     (Category.IMAGE, Category.SPREADSHEET), (Category.IMAGE, Category.PRESENTATION),
 }
-# A parità di perdite dichiarate, il formato intermedio preferito.
+# With equal declared losses, the preferred intermediate format.
 _INTERMEDIATE_PREFERENCE = ("docx", "odt", "pdf", "html", "md", "png", "wav", "flac",
                             "tex", "rst", "txt")
 
@@ -28,7 +28,7 @@ def default_engines() -> list[Engine]:
     from anyfile.engines.imagemagick import ImageMagickEngine
     from anyfile.engines.pdf import PopplerEngine
 
-    # L'ordine è la priorità: se due motori offrono la stessa coppia vince il primo.
+    # The order is the priority: when two engines offer the same pair, the first one wins.
     return [FFmpegEngine(), ImageMagickEngine(), PopplerEngine(), LibreOfficeEngine(), PandocEngine(),
             GhostscriptEngine()]
 
@@ -50,7 +50,7 @@ class Registry:
         self.refresh()
 
     def refresh(self) -> None:
-        """Ricontrolla i motori installati (es. dopo aver installato una dipendenza)."""
+        """Checks the installed engines again (e.g. after a dependency was installed)."""
         self._edges: dict[tuple[str, str], Conversion] = {}
         self._missing: dict[tuple[str, str], list[Engine]] = {}
         self._routes: dict[str, list[Route]] = {}
@@ -71,7 +71,7 @@ class Registry:
             conversion = conversion.last
         presets = self.engine(conversion.engine).presets(conversion.target)
         if conversion.is_compression:
-            # Ricomprimere alla massima qualità darebbe quasi sempre un file più grande.
+            # Re-encoding at maximum quality would almost always give a bigger file.
             presets = {q: d for q, d in presets.items() if q is not Quality.MAX}
         return presets
 
@@ -79,12 +79,12 @@ class Registry:
         return self._edges.get((source, target))
 
     def targets(self, source: str) -> list[Conversion]:
-        convs = [c for (s, _), c in self._edges.items() if s == source]
+        convs = [c for (s, _target), c in self._edges.items() if s == source]
         return sorted(convs, key=_target_order)
 
     def routes(self, source: str) -> list[Route]:
-        """Destinazioni raggiungibili: dirette, oppure con un solo passaggio intermedio
-        quando la conversione diretta non esiste."""
+        """Reachable targets: direct ones, or with a single intermediate step when no
+        direct conversion exists."""
         if source not in self._routes:
             direct = [Route((c,)) for c in self.targets(source)]
             chains = sorted(self._chains(source), key=lambda r: _target_order(r.last))
@@ -99,7 +99,7 @@ class Registry:
         best: dict[str, tuple[tuple[int, int], Route]] = {}
         for first in self.targets(source):
             middle = first.target
-            # L'intermedio deve essere un solo file e senza perdita.
+            # The intermediate must be a single file and lossless.
             if first.is_compression or first.multi_output or middle in formats.LOSSY_FORMATS:
                 continue
             for second in self.targets(middle):
@@ -120,7 +120,7 @@ class Registry:
         return list(self._missing.get((source, target), []))
 
     def unlockable_targets(self, source: str) -> dict[str, list[str]]:
-        """Formati raggiungibili da source installando un motore mancante: {motore: [formati]}."""
+        """Formats reachable from source by installing a missing engine: {engine: [formats]}."""
         out: dict[str, list[str]] = {}
         for (s, t), engines in self._missing.items():
             if s == source and (s, t) not in self._edges:
@@ -143,6 +143,6 @@ def _preference(fmt: str) -> int:
 
 
 def _target_order(c: Conversion) -> tuple[int, int, str]:
-    # La compressione nello stesso formato viene per prima: è l'operazione più frequente.
+    # Compression into the same format comes first: it is the most frequent operation.
     fmt = formats.get(c.target)
     return (0 if c.is_compression else 1, fmt.category.order, fmt.label.lower())

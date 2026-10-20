@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Installa ANYFILE per l'utente corrente (nessun privilegio di amministratore).
-#   - ambiente virtuale in ~/.local/share/anyfile/venv
-#   - comando ~/.local/bin/anyfile
-#   - voce nel menu delle applicazioni
-#   - azione "Converti con ANYFILE" nel menu contestuale di Dolphin
-# Uso: packaging/install-user.sh [--uninstall]
+# Installs ANYFILE for the current user (no administrator rights needed).
+#   - virtual environment in ~/.local/share/anyfile/venv
+#   - command ~/.local/bin/anyfile
+#   - entry in the application menu
+#   - "Convert with ANYFILE" action in the Dolphin context menu
+# Usage: packaging/install-user.sh [--uninstall]
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -24,34 +24,34 @@ if [[ "${1:-}" == "--uninstall" ]]; then
     rm -f "$BIN" "$SERVICEMENU" "$APPENTRY"
     rm -rf "$DATA/anyfile"
     refresh_kde
-    echo "ANYFILE rimosso."
+    echo "ANYFILE removed."
     exit 0
 fi
 
 if dpkg-query -W -f='${Status}' anyfile 2>/dev/null | grep -q "install ok installed"; then
-    echo "ANYFILE è già installato come pacchetto di sistema (.deb)." >&2
-    echo "Due installazioni mostrerebbero due voci nel menu di Dolphin: rimuovi prima il" >&2
-    echo "pacchetto (sudo apt remove anyfile) oppure usa solo quello." >&2
+    echo "ANYFILE is already installed as a system package (.deb)." >&2
+    echo "Two installations would show two entries in the Dolphin menu: remove the" >&2
+    echo "package first (sudo apt remove anyfile) or use only that one." >&2
     exit 1
 fi
 
-echo "→ Ambiente Python in $VENV"
+echo "→ Python environment in $VENV"
 python3 -m venv "$VENV"
 "$VENV/bin/pip" install --quiet --upgrade pip
-# -e: le modifiche al codice sorgente sono subito attive (fase di sviluppo).
+# -e: changes to the source code take effect immediately (development).
 "$VENV/bin/pip" install --quiet -e "$ROOT"
 
-echo "→ Comando $BIN"
+echo "→ Command $BIN"
 mkdir -p "$(dirname "$BIN")"
 ln -sf "$VENV/bin/anyfile" "$BIN"
 
-# Dolphin non eredita sempre il PATH della shell: si usa il percorso assoluto.
-echo "→ Menu contestuale di Dolphin"
+# Dolphin does not always inherit the shell PATH: use the absolute path.
+echo "→ Dolphin context menu"
 mkdir -p "$(dirname "$SERVICEMENU")"
 sed "s|^Exec=anyfile |Exec=$BIN |" "$ROOT/packaging/dolphin/anyfile.desktop" > "$SERVICEMENU"
-chmod +x "$SERVICEMENU"  # KDE 6 ignora i service menu utente non eseguibili
+chmod +x "$SERVICEMENU"  # KDE 6 ignores user service menus that are not executable
 
-echo "→ Menu delle applicazioni"
+echo "→ Application menu"
 mkdir -p "$(dirname "$APPENTRY")"
 sed "s|^Exec=anyfile |Exec=$BIN |" "$ROOT/packaging/anyfile.desktop" > "$APPENTRY"
 
@@ -60,4 +60,4 @@ refresh_kde
 echo
 "$BIN" engines
 echo
-echo "Fatto. In Dolphin: tasto destro su un file → «Converti con ANYFILE»."
+echo "Done. In Dolphin: right-click a file → “Convert with ANYFILE”."

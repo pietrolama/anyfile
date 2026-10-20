@@ -1,9 +1,9 @@
-"""Menu radiale: le destinazioni pertinenti al file, disposte attorno al puntatore.
+"""Radial menu: the targets that make sense for the file, arranged around the pointer.
 
-È una sovrapposizione trasparente a schermo intero. Su Wayland una finestra non può
-posizionarsi da sola sotto il cursore, ma riceve la posizione del puntatore appena
-questo entra nella sua superficie: il menu compare lì. Se la posizione non arriva
-(es. sessione X11 senza movimento) si usa il cursore noto o il centro dello schermo.
+It is a full-screen transparent overlay. On Wayland a window cannot place itself
+under the cursor, but it receives the pointer position as soon as the pointer enters
+its surface: the menu appears there. If no position arrives (e.g. an X11 session
+without movement) the known cursor position or the centre of the screen is used.
 """
 
 from __future__ import annotations
@@ -27,6 +27,7 @@ from anyfile.core.detector import detect
 from anyfile.core.executor import Executor
 from anyfile.core.history import History
 from anyfile.core.registry import Registry
+from anyfile.i18n import _, ngettext
 from anyfile.models.conversion import Category, Presets, Quality, Route
 from anyfile.models.file_info import FileInfo
 from anyfile.models.job import Job, JobStatus
@@ -49,18 +50,18 @@ CATEGORY_COLORS = {
 }
 MORE_COLOR = "#7f8c8d"
 COMPRESS_COLOR = "#6c5ce7"
-# Chiave della fetta «Comprimi»: ogni file resta nel proprio formato.
+# Key of the “Compress” slice: every file stays in its own format.
 COMPRESS = "="
 OK_COLOR = "#27ae60"
 ERROR_COLOR = "#da4453"
 
 INNER, OUTER = 66.0, 172.0
 BAND_IN, BAND_OUT = 181.0, 186.0
-# Anello esterno dei preset di qualità, visibile solo sulla fetta indicata.
+# Outer ring of quality presets, visible only on the slice under the pointer.
 SUB_IN, SUB_OUT = 194.0, 236.0
 SUB_MIN_SPAN = 120.0
 CAPTION_Y = 256.0
-# Spazio da lasciare tra il centro del menu e il bordo dello schermo.
+# Space to leave between the centre of the menu and the edge of the screen.
 MARGIN = 300.0
 HOVER_GROW = 8.0
 GAP = 3.0
@@ -77,13 +78,13 @@ class Phase(Enum):
 
 @dataclass(frozen=True)
 class Entry:
-    # None: la voce «Altro…», che apre la finestra completa.
+    # None: the “More…” entry, which opens the full window.
     conversion: Route | None
     label: str
     short: str
     category_label: str
     color: str
-    # File della selezione a cui la destinazione si applica.
+    # Files of the selection the target applies to.
     paths: tuple[Path, ...] = ()
 
 
@@ -91,10 +92,10 @@ Option = tuple[Route, tuple[Path, ...]]
 
 
 def selection_targets(infos: list[FileInfo], registry: Registry) -> list[Option]:
-    """Ogni destinazione raggiungibile da almeno un file, con i file a cui si applica.
+    """Every target reachable from at least one file, with the files it applies to.
 
-    Con una selezione mista non esiste quasi mai un formato comune a tutti: la ruota
-    mostra comunque ciò che si può fare, e ogni fetta converte solo i file compatibili.
+    A mixed selection almost never has a format common to all files: the menu still
+    shows what can be done, and each slice converts only the compatible files.
     """
     found: dict[str, tuple[Route, list[Path]]] = {}
     for info in infos:
@@ -107,7 +108,7 @@ def selection_targets(infos: list[FileInfo], registry: Registry) -> list[Option]
 
 
 def _category_order(option: Option) -> tuple[int, int, str]:
-    # «Comprimi» per prima, in alto: è l'operazione più frequente.
+    # “Compress” first, at the top: it is the most frequent operation.
     conv = option[0]
     fmt = formats.get(conv.target)
     return (0 if conv.is_compression else 1), fmt.category.order, fmt.label.lower()
@@ -116,20 +117,20 @@ def _category_order(option: Option) -> tuple[int, int, str]:
 def build_entries(options: list[Option]) -> list[Entry]:
     truncated = len(options) > MAX_SLICES
     if truncated:
-        # Restano le destinazioni che valgono per più file; le altre sono nella finestra.
-        # A parità di copertura le conversioni dirette precedono le catene.
+        # Keep the targets that apply to the most files; the others are in the window.
+        # With equal coverage, direct conversions come before chains.
         options = sorted(options, key=lambda o: (-len(o[1]), o[0].is_chain, *_category_order(o)))
         options = options[:MAX_SLICES - 1]
     entries = []
     for conv, paths in sorted(options, key=_category_order):
         fmt = formats.get(conv.target)
         if conv.is_compression:
-            entries.append(Entry(conv, "Comprimi", "COMPRIMI", "Comprimi", COMPRESS_COLOR, paths))
+            entries.append(Entry(conv, _("Compress"), _("COMPRESS"), _("Compress"), COMPRESS_COLOR, paths))
         else:
             entries.append(Entry(conv, fmt.label, fmt.ext.upper(), fmt.category.label,
                                  CATEGORY_COLORS[fmt.category], paths))
     if truncated:
-        entries.append(Entry(None, "Altri formati", "…", "", MORE_COLOR))
+        entries.append(Entry(None, _("More formats"), "…", "", MORE_COLOR))
     return entries
 
 
@@ -143,7 +144,7 @@ def mix(a: QColor, b: QColor, t: float) -> QColor:
 
 
 def sector(a0: float, a1: float, r_in: float, r_out: float, gap: float = GAP) -> QPainterPath:
-    """Settore di corona circolare con bordi paralleli distanti `gap` px dai vicini."""
+    """Annular sector whose edges run parallel, `gap` px away from its neighbours."""
     go = math.degrees(gap / 2 / r_out)
     gi = math.degrees(gap / 2 / r_in)
     outer = QRectF(-r_out, -r_out, 2 * r_out, 2 * r_out)
@@ -157,7 +158,7 @@ def sector(a0: float, a1: float, r_in: float, r_out: float, gap: float = GAP) ->
 
 
 class RadialMenu(QWidget):
-    open_window = Signal(list)  # list[Path]: passa alla finestra completa
+    open_window = Signal(list)  # list[Path]: hand over to the full window
     finished = Signal()
 
     def __init__(self, registry: Registry, paths: list[Path], history: History | None = None) -> None:
@@ -188,7 +189,7 @@ class RadialMenu(QWidget):
         self._done = False
 
         self.origin: QPointF | None = None
-        self.t = 0.0  # avanzamento dell'animazione di apertura/chiusura
+        self.t = 0.0  # progress of the open/close animation
         self.spin = 0.0
         self._anim = QVariantAnimation(self)
         self._anim.valueChanged.connect(self._on_anim)
@@ -200,7 +201,7 @@ class RadialMenu(QWidget):
         self.queue = QtJobQueue(Executor(registry), self, history=history)
         self.queue.job_updated.connect(self._on_job)
 
-    # --- apertura e posizionamento ------------------------------------------
+    # --- opening and placement ----------------------------------------------
 
     def popup(self) -> None:
         screen = QGuiApplication.screenAt(QCursor.pos()) or QGuiApplication.primaryScreen()
@@ -211,12 +212,12 @@ class RadialMenu(QWidget):
         self.activateWindow()
         self.setFocus()
         QTimer.singleShot(0, self._place_from_cursor)
-        # Nessuna notizia del puntatore: si apre al centro.
+        # No news about the pointer: open in the centre.
         QTimer.singleShot(300, lambda: self._place(QPointF(self.rect().center())))
 
     def _place_from_cursor(self) -> None:
         if QGuiApplication.platformName() == "wayland":
-            return  # la posizione arriva con l'evento di ingresso del puntatore
+            return  # the position arrives with the pointer-enter event
         pos = self.mapFromGlobal(QCursor.pos())
         if self.rect().contains(pos):
             self._place(QPointF(pos))
@@ -234,7 +235,7 @@ class RadialMenu(QWidget):
     def enterEvent(self, event: QEnterEvent) -> None:  # noqa: N802
         self._place(event.position())
 
-    # --- animazione -------------------------------------------------------
+    # --- animation --------------------------------------------------------
 
     def _animate(self, to: float, ms: int, curve: QEasingCurve.Type, done=None) -> None:
         self._anim.stop()
@@ -261,7 +262,7 @@ class RadialMenu(QWidget):
     def _scale(self) -> float:
         return 0.82 + 0.18 * self.t
 
-    # --- interazione --------------------------------------------------------
+    # --- interaction --------------------------------------------------------
 
     def presets(self, index: int | None) -> Presets:
         if index is None or index == CENTER or self.entries[index].conversion is None:
@@ -269,28 +270,28 @@ class RadialMenu(QWidget):
         return self.registry.presets(self.entries[index].conversion)
 
     def preset_arc(self, index: int) -> tuple[float, float]:
-        """Arco dell'anello dei preset: centrato sulla fetta, largo almeno SUB_MIN_SPAN."""
+        """Arc of the preset ring: centred on the slice, at least SUB_MIN_SPAN wide."""
         a0, a1 = self.ring.bounds(index)
         span = max(a1 - a0, SUB_MIN_SPAN)
         mid = (a0 + a1) / 2
         return mid - span / 2, mid + span / 2
 
     def preset_order(self, index: int) -> list[Quality]:
-        """Preset in senso orario lungo l'arco, con «Massima» sempre a sinistra o in alto.
-        In basso e a sinistra il senso orario va da destra a sinistra o dal basso in alto,
-        quindi lì l'ordine si inverte."""
+        """Presets clockwise along the arc, with “Maximum” always on the left or at the top.
+        At the bottom and on the left, clockwise runs right to left or bottom to top,
+        so the order is reversed there."""
         order = list(self.presets(index))
         return order[::-1] if 135 < self.ring.mid_angle(index) < 315 else order
 
     def default_for(self, index: int | None) -> Quality:
-        """Qualità del clic diretto sulla fetta: la predefinita, se la fetta la offre."""
+        """Quality for a direct click on the slice: the default one, if the slice offers it."""
         presets = self.presets(index)
         if not presets or self.default_quality in presets:
             return self.default_quality
         return Quality.BALANCED
 
     def _target_at(self, pos: QPointF) -> tuple[int | None, Quality | None]:
-        """Fetta (o CENTER/None) e preset sotto il punto."""
+        """Slice (or CENTER/None) and preset under the point."""
         if self.origin is None:
             return None, None
         s = self._scale()
@@ -298,8 +299,8 @@ class RadialMenu(QWidget):
         if self.phase is Phase.CHOOSING and self.presets(self.hover):
             r, angle = math.hypot(dx, dy), clockwise_angle(dx, dy)
             a0, a1 = self.preset_arc(self.hover)
-            # Oltre l'anello e dentro l'arco dei preset la fetta resta agganciata,
-            # anche se in diagonale si passa sopra le fette vicine.
+            # Beyond the ring and within the preset arc the slice stays locked, even when
+            # moving diagonally over the neighbouring slices.
             if OUTER < r <= SUB_OUT + 24 and in_arc(angle, a0, a1):
                 if r < SUB_IN:
                     return self.hover, None
@@ -347,7 +348,7 @@ class RadialMenu(QWidget):
         elif key in (Qt.Key.Key_Return, Qt.Key.Key_Enter, Qt.Key.Key_Space):
             self._activate(self.hover if self.hover is not None else CENTER, self.hover_quality)
         elif key in (Qt.Key.Key_1, Qt.Key.Key_2, Qt.Key.Key_3) and self.presets(self.hover):
-            # 1 = massima, 2 = bilanciata, 3 = più leggera (se la fetta la offre)
+            # 1 = maximum, 2 = balanced, 3 = small (if the slice offers it)
             quality = list(Quality)[key - Qt.Key.Key_1]
             if quality in self.presets(self.hover):
                 self._activate(self.hover, quality)
@@ -385,7 +386,7 @@ class RadialMenu(QWidget):
         self._close()
 
     def _to_background(self) -> None:
-        """Nasconde il menu: la conversione continua e una notifica ne darà l'esito."""
+        """Hides the menu: the conversion continues and a notification will report the outcome."""
         self.in_background = True
         self._animate(0.0, 120, QEasingCurve.Type.InCubic, self.hide)
 
@@ -404,7 +405,7 @@ class RadialMenu(QWidget):
         self.hide()
         self.finished.emit()
 
-    # --- conversione --------------------------------------------------------
+    # --- converting ------------------------------------------------------
 
     def _start(self, entry: Entry, quality: Quality) -> None:
         assert entry.conversion is not None
@@ -434,21 +435,22 @@ class RadialMenu(QWidget):
         done = [j for j in jobs if j.status is JobStatus.DONE]
         failed = [j for j in jobs if j.status is JobStatus.FAILED]
         unchanged = [j for j in jobs if j.status is JobStatus.UNCHANGED]
-        if not done and not failed and not unchanged:  # tutto annullato
+        if not done and not failed and not unchanged:  # everything cancelled
             self._close()
             return
         if failed:
             self.phase = Phase.FAILED
             first = failed[0]
-            prefix = f"{len(failed)} di {len(jobs)} non convertiti. " if len(jobs) > 1 else ""
+            prefix = (_("{failed} of {total} not converted.").format(failed=len(failed), total=len(jobs))
+                      + " " if len(jobs) > 1 else "")
             self.error_text = f"{prefix}{first.source.name}: {first.message}"
             if self.in_background:
-                notify("Conversione non riuscita", self.error_text)
+                notify(_("Conversion failed"), self.error_text)
                 self._finish()
             return
         self.phase = Phase.DONE
         if self.in_background:
-            notify("Conversione completata", self.outcome_text())
+            notify(_("Conversion complete"), self.outcome_text())
             self._finish()
         else:
             QTimer.singleShot(DONE_CLOSE_MS, self._close)
@@ -459,14 +461,18 @@ class RadialMenu(QWidget):
         unchanged = [j for j in jobs if j.status is JobStatus.UNCHANGED]
         if len(jobs) == 1:
             return done[0].output.name if done else unchanged[0].message
-        verb = "compressi" if self.chosen and self.chosen.conversion.is_compression else "convertiti"
-        text = f"{len(done)} file {verb}"
+        if self.chosen and self.chosen.conversion.is_compression:
+            text = ngettext("{n} file compressed", "{n} files compressed", len(done)).format(n=len(done))
+        else:
+            text = ngettext("{n} file converted", "{n} files converted", len(done)).format(n=len(done))
         if unchanged:
-            text += f", {len(unchanged)} già compatti (originali invariati)"
+            text += ", " + ngettext("{n} already compact (original unchanged)",
+                                    "{n} already compact (originals unchanged)",
+                                    len(unchanged)).format(n=len(unchanged))
         return text
 
     def progress(self) -> float | None:
-        """Avanzamento complessivo; None se indeterminato."""
+        """Overall progress; None when unknown."""
         jobs = list(self.jobs.values())
         if not jobs:
             return None
@@ -475,7 +481,7 @@ class RadialMenu(QWidget):
         total = sum(1.0 if j.finished else (j.progress or 0.0) for j in jobs)
         return total / len(jobs)
 
-    # --- disegno ----------------------------------------------------------
+    # --- drawing --------------------------------------------------------
 
     def paintEvent(self, _event: QPaintEvent) -> None:  # noqa: N802
         if self.origin is None:
@@ -515,7 +521,7 @@ class RadialMenu(QWidget):
         p.setPen(Qt.PenStyle.NoPen)
         p.setBrush(g)
         p.drawEllipse(QPointF(0, 4), r, r)
-        # Disco di fondo su cui poggiano fette e archi di categoria.
+        # Background disc under the slices and the category arcs.
         p.setBrush(self.c_base)
         p.drawEllipse(QPointF(0, 0), plate, plate)
 
@@ -536,7 +542,7 @@ class RadialMenu(QWidget):
             cx, cy = polar(self.ring.mid_angle(i), (INNER + OUTER) / 2 + grow / 2)
             arc_width = math.radians(a1 - a0) * (INNER + OUTER) / 2
             p.setPen(text_color)
-            # La scritta si riduce se non entra nella fetta (es. «COMPRIMI» con molte fette).
+            # The label shrinks when it does not fit the slice (e.g. “COMPRESS” with many slices).
             title = self._font(1.15, bold=True)
             width = QFontMetricsF(title).horizontalAdvance(entry.short)
             if width > arc_width - 12:
@@ -544,13 +550,13 @@ class RadialMenu(QWidget):
             p.setFont(title)
             small = self._font(0.8)
             partial = entry.conversion is not None and len(entry.paths) < len(self.recognized)
-            # Seconda riga: quanti file copre la fetta, oppure il nome esteso se aggiunge
-            # qualcosa e sta nella fetta.
+            # Second line: how many files the slice covers, or the full name when it adds
+            # something and fits the slice.
             second = ""
             if partial:
                 second = f"{len(entry.paths)}/{len(self.recognized)}"
             elif entry.conversion is not None and entry.conversion.is_chain:
-                second = "via " + "/".join(v.upper() for v in entry.conversion.via)
+                second = _("via {formats}").format(formats="/".join(v.upper() for v in entry.conversion.via))
             elif (entry.conversion is not None and entry.short not in entry.label.upper()
                   and QFontMetricsF(small).horizontalAdvance(entry.label) <= arc_width - 16):
                 second = entry.label
@@ -598,13 +604,13 @@ class RadialMenu(QWidget):
         p.setFont(self._font(0.85, bold=True))
         fm = QFontMetricsF(p.font())
         w, h = fm.horizontalAdvance(text) + 14, fm.height() + 4
-        # Il riquadro si sposta verso l'esterno lungo la direzione del gruppo,
-        # così non tocca l'arco qualunque sia l'angolo.
+        # The box moves outwards along the direction of the group, so it never touches
+        # the arc whatever the angle.
         ux, uy = polar(angle, 1.0)
         ax, ay = polar(angle, BAND_OUT + 6)
         cx, cy = ax + ux * w / 2, ay + uy * h / 2
         box = QRectF(cx - w / 2, cy - h / 2, w, h)
-        # Fondo proprio: l'etichetta sta sopra lo sfondo del desktop, che può essere qualsiasi.
+        # Own background: the label sits on the desktop wallpaper, which can be anything.
         p.setPen(Qt.PenStyle.NoPen)
         p.setBrush(self.c_base)
         p.drawRoundedRect(box, h / 2, h / 2)
@@ -620,7 +626,7 @@ class RadialMenu(QWidget):
 
         if self.phase is Phase.CHOOSING:
             if hovered:
-                self._center_lines(p, "⤢", "Finestra", "completa")
+                self._center_lines(p, "⤢", _("Full"), _("window"))
             elif self.hover is not None:
                 entry = self.entries[self.hover]
                 quality = self.hover_quality or self.default_for(self.hover)
@@ -632,18 +638,18 @@ class RadialMenu(QWidget):
         elif self.phase is Phase.RUNNING:
             self._paint_progress(p, r - 3)
             if hovered:
-                self._center_lines(p, "✕", "Annulla", "", accent=QColor(ERROR_COLOR))
+                self._center_lines(p, "✕", _("Cancel"), "", accent=QColor(ERROR_COLOR))
             else:
                 value = self.progress()
                 big = f"{value:.0%}" if value is not None else "…"
                 self._center_lines(p, big, f"→ {self.chosen.short}" if self.chosen else "", "")
         elif self.phase is Phase.DONE:
             if any(j.status is JobStatus.DONE for j in self.jobs.values()):
-                self._center_lines(p, "✓", "Fatto", "", accent=QColor(OK_COLOR))
+                self._center_lines(p, "✓", _("Done"), "", accent=QColor(OK_COLOR))
             else:
-                self._center_lines(p, "＝", "Già compatto", "", accent=self.c_muted)
+                self._center_lines(p, "＝", _("Already compact"), "", accent=self.c_muted)
         else:
-            self._center_lines(p, "✕", "Errore", "", accent=QColor(ERROR_COLOR))
+            self._center_lines(p, "✕", _("Error"), "", accent=QColor(ERROR_COLOR))
 
     def _center_lines(self, p: QPainter, big: str, line1: str, line2: str,
                       accent: QColor | None = None) -> None:
@@ -665,12 +671,12 @@ class RadialMenu(QWidget):
                                    QIcon.fromTheme("text-x-generic"))
             name = info.name
             detail = (f"{info.format.label} · {human_size(info.size)}" if info.format
-                      else info.reason or "Formato sconosciuto")
+                      else info.reason or _("Unknown format"))
         else:
             icon = QIcon.fromTheme("document-multiple", QIcon.fromTheme("folder-documents"))
-            name = f"{len(self.infos)} file"
+            name = ngettext("{n} file", "{n} files", len(self.infos)).format(n=len(self.infos))
             kinds = {i.format.label for i in self.recognized}
-            detail = kinds.pop() if len(kinds) == 1 else "formati diversi"
+            detail = kinds.pop() if len(kinds) == 1 else _("different formats")
         icon.paint(p, QRectF(-18, -44, 36, 36).toRect())
         p.setPen(self.c_text)
         p.setFont(self._font(0.85, bold=True))
@@ -703,22 +709,24 @@ class RadialMenu(QWidget):
             if self.hover is not None and self.hover != CENTER:
                 entry = self.entries[self.hover]
                 if entry.conversion is None:
-                    return "Mostra tutte le conversioni nella finestra completa", None
+                    return _("Show all the conversions in the full window"), None
                 kinds = {i.format.label for i in self.recognized if i.path in entry.paths}
                 if entry.conversion.is_compression:
                     return self._compress_caption(entry, kinds), None
-                # La nota descrive una coppia sorgente → destinazione: con sorgenti diverse
-                # (es. PNG e DOCX → PDF) non sarebbe vera per tutti i file.
+                # The note describes a source → target pair: with different sources
+                # (e.g. PNG and DOCX → PDF) it would not be true for every file.
                 note = (f" · {entry.conversion.notes}"
                         if entry.conversion.notes and len(kinds) == 1 else "")
                 if entry.conversion.is_chain:
                     via = ", ".join(formats.get(v).label for v in entry.conversion.via)
-                    note = f" · via {via}{note}"
+                    note = " · " + _("via {formats}").format(formats=via) + note
                 if len(entry.paths) < len(self.recognized):
-                    text = (f"{entry.label} per {len(entry.paths)} file su {len(self.recognized)}"
-                            " · gli altri non si convertono in questo formato")
+                    text = (_("{format} for {n} of {total} files").format(
+                        format=entry.label, n=len(entry.paths), total=len(self.recognized))
+                        + " · " + _("the others cannot be converted to this format"))
                 else:
-                    source = kinds.pop() if len(kinds) == 1 else f"{len(entry.paths)} file"
+                    source = (kinds.pop() if len(kinds) == 1
+                              else ngettext("{n} file", "{n} files", len(entry.paths)).format(n=len(entry.paths)))
                     text = f"{source} → {entry.label}{note}"
                 presets = self.presets(self.hover)
                 if not presets:
@@ -727,38 +735,44 @@ class RadialMenu(QWidget):
                 text = f"{text} · {quality.label}: {presets[quality]}"
                 if self.hover_quality is None:
                     keys = "-".join(str(list(Quality).index(q) + 1) for q in presets)
-                    text += f"\nScorri verso l'esterno (o premi {keys}) per cambiare qualità"
+                    text += "\n" + _("Move outwards (or press {keys}) to change quality").format(keys=keys)
                 return text, None
             if not self.entries:
                 if not self.recognized:
-                    return "Nessun file riconosciuto. Clic al centro per i dettagli.", None
-                return "Nessuna conversione disponibile per questi file.", None
+                    return _("No file recognized. Click the centre for details."), None
+                return _("No conversion available for these files."), None
             skipped = len(self.infos) - len(self.recognized)
-            hint = "Clic su un formato per convertire · Esc per chiudere"
+            hint = _("Click a format to convert · Esc to close")
             if skipped:
-                hint = ("1 file non riconosciuto sarà ignorato" if skipped == 1
-                        else f"{skipped} file non riconosciuti saranno ignorati")
+                hint = ngettext("{n} unrecognized file will be ignored",
+                                "{n} unrecognized files will be ignored", skipped).format(n=skipped)
             return hint, self.c_muted
         if self.phase is Phase.RUNNING:
-            return "Esc: continua in background · Centro: annulla", self.c_muted
+            return _("Esc: continue in the background · Centre: cancel"), self.c_muted
         if self.phase is Phase.DONE:
             return self.outcome_text(), None
-        return f"{self.error_text}\nClic al centro per i dettagli", QColor(ERROR_COLOR)
+        return f"{self.error_text}\n" + _("Click the centre for details"), QColor(ERROR_COLOR)
 
     def _compress_caption(self, entry: Entry, kinds: set[str]) -> str:
         quality = self.hover_quality or self.default_for(self.hover)
         presets = self.presets(self.hover)
         if len(kinds) == 1:
-            # I parametri valgono per un solo formato: con formati diversi non si mostrano.
-            text = f"Comprimi {next(iter(kinds))} · {quality.label}: {presets[quality]}"
+            # The parameters belong to one format: with different formats they are not shown.
+            text = (_("Compress {format}").format(format=next(iter(kinds)))
+                    + f" · {quality.label}: {presets[quality]}")
         else:
-            text = f"Comprimi {len(entry.paths)} file ({', '.join(sorted(kinds))}) · {quality.label}"
+            text = (ngettext("Compress {n} file ({formats})", "Compress {n} files ({formats})",
+                             len(entry.paths)).format(n=len(entry.paths), formats=", ".join(sorted(kinds)))
+                    + f" · {quality.label}")
         others = len(self.recognized) - len(entry.paths)
         if others:
-            text += f" · {others} non comprimibili senza cambiare formato"
-        text += "\nGli originali restano intatti" if len(entry.paths) > 1 else "\nL'originale resta intatto"
+            text += " · " + ngettext("{n} cannot be compressed without changing format",
+                                     "{n} cannot be compressed without changing format",
+                                     others).format(n=others)
+        text += "\n" + (_("The originals stay untouched") if len(entry.paths) > 1
+                        else _("The original stays untouched"))
         if self.hover_quality is None:
-            text += " · scorri verso l'esterno per «Leggera»"
+            text += " · " + _("move outwards for “Small”")
         return text
 
     def _paint_caption(self, p: QPainter) -> None:

@@ -2,34 +2,69 @@
 
 [![Test](https://github.com/pietrolama/anyfile/actions/workflows/test.yml/badge.svg)](https://github.com/pietrolama/anyfile/actions/workflows/test.yml)
 
-Convertitore di file locale per Linux, pensato per KDE Plasma su Debian/Ubuntu.
-Tasto destro su un file in Dolphin, e una ruota sotto il puntatore mostra cosa puoi
-farne: convertirlo, comprimerlo, scegliere la qualità. Si sceglie il risultato, non
-il programma: ANYFILE rileva il formato, offre solo le conversioni che i motori
-installati sanno davvero eseguire, le esegue in sicurezza e verifica il file prodotto.
+*[Leggi in italiano](README.it.md)*
 
-Tutto avviene sul computer: nessun file viene caricato in rete.
+A local file converter for Linux, made for KDE Plasma on Debian/Ubuntu. Right-click a
+file in Dolphin and a wheel under the pointer shows what you can do with it: convert
+it, compress it, pick the quality. You choose the result, not the program: ANYFILE
+detects the format, offers only the conversions the installed engines can really
+carry out, runs them safely and checks the file it produces.
 
-## Installazione
+Everything happens on your computer: no file is uploaded anywhere.
 
-### Compatibilità
+## Installation
 
-Verificata con `packaging/deb/test-clean-install.sh` in container puliti:
+### Compatibility
 
-| Sistema | Installazione | Risultato |
+Checked with `packaging/deb/test-clean-install.sh` in clean containers:
+
+| System | Installation | Result |
 |---|---|---|
-| Debian 13 (trixie) | pacchetto `.deb` | installazione, 111 test sul pacchetto, aggiornamento e rimozione senza residui |
-| Ubuntu 26.04 LTS | pacchetto `.deb` | come sopra |
-| Ubuntu 24.04 LTS | `packaging/install-user.sh` | conversioni e ruota funzionanti (anche con ImageMagick 6). Il `.deb` non si installa perché la 24.04 non ha PySide6 nei repository |
-| Windows 10/11 | `pip install` dai sorgenti | sperimentale: motore, terminale, finestra e ruota funzionano e sono testati a ogni push. Mancano ancora il menu contestuale di Explorer e un installer |
+| Debian 13 (trixie) | `.deb` package | install, full test suite on the installed package, upgrade, removal without leftovers |
+| Ubuntu 26.04 LTS | `.deb` package | same as above |
+| Ubuntu 24.04 LTS | `packaging/install-user.sh` | conversions and the wheel work (with ImageMagick 6 too). The `.deb` cannot be installed because 24.04 has no PySide6 in its repositories |
+| Windows 10/11 | `pip install` from source | experimental: engine, command line, window and wheel work and are tested on every push. The Explorer context menu and an installer are still missing |
 
-A ogni push GitHub Actions esegue l'intera suite su **Debian 13** (con tutti i motori,
-LibreOffice compreso) e su **Windows** (FFmpeg, ImageMagick, Pandoc, Ghostscript,
-Poppler).
+On every push GitHub Actions runs the whole suite on **Debian 13** (with all the
+engines, LibreOffice included) and on **Windows** (FFmpeg, ImageMagick, Pandoc,
+Ghostscript, Poppler).
 
-### Windows (sperimentale)
+### .deb package (Debian 13, Ubuntu 26.04 and later)
 
-Servono Python 3.10+ e i motori desiderati, per esempio con winget:
+Download it from the [releases](https://github.com/pietrolama/anyfile/releases), then:
+
+```sh
+sudo apt install ./anyfile_0.3.0_all.deb
+```
+
+The package is about 40 KB and uses the system's Python and PySide6. Dependencies are
+split like this:
+
+| Kind | Packages | What they unlock |
+|---|---|---|
+| required | python3, python3-pyside6.*, file | the application |
+| recommended (installed by apt) | ffmpeg, imagemagick, poppler-utils, ghostscript, libnotify-bin | images, audio, video, PDF, compression, notifications |
+| suggested | libreoffice-writer/calc/impress, pandoc, texlive-xetex, qt6-translations-l10n | Office documents, Markdown/EPUB, PDF from Markdown, translated Qt dialogs |
+
+Removal: `sudo apt remove anyfile`. The package is built with `packaging/deb/build.sh`;
+`packaging/deb/test-clean-install.sh [image]` tests it in a clean container.
+
+### Development install, without root
+
+```sh
+git clone https://github.com/pietrolama/anyfile.git && cd anyfile
+packaging/install-user.sh
+```
+
+It creates a virtualenv in `~/.local/share/anyfile/venv` pointing at the sources
+(changes take effect immediately), the command `~/.local/bin/anyfile`, the menu entry
+and the Dolphin action in your home folder. To remove everything:
+`packaging/install-user.sh --uninstall`. Do not use it together with the `.deb`
+package, or Dolphin would show two entries; the script detects this and stops.
+
+### Windows (experimental)
+
+You need Python 3.10+ and the engines you want, for example with winget:
 
 ```powershell
 winget install Gyan.FFmpeg
@@ -38,7 +73,7 @@ winget install JohnMacFarlane.Pandoc
 winget install ArtifexSoftware.GhostScript
 ```
 
-Poi:
+Then:
 
 ```powershell
 git clone https://github.com/pietrolama/anyfile.git
@@ -47,257 +82,237 @@ pip install .
 anyfile engines
 ```
 
-ANYFILE trova i motori nel PATH o nelle loro cartelle di installazione standard: non
-serve configurare nulla. La finestra si apre con `anyfile`, la ruota con
-`anyfile --radial FILE`.
+ANYFILE finds the engines on the PATH or in their standard install folders: nothing to
+configure. The window opens with `anyfile`, the wheel with `anyfile --radial FILE`.
 
-### Pacchetto .deb (Debian 13, Ubuntu 26.04 e successive)
+All the engines are optional: ANYFILE uses the ones it finds and tells you what to
+install to unlock the other conversions (`anyfile engines`).
 
-```sh
-sudo apt install ./anyfile_0.3.0_all.deb
-```
+## The radial menu
 
-Il pacchetto pesa circa 40 KB e usa Python e PySide6 del sistema. Le dipendenze sono
-divise così:
+In Dolphin: right-click one or more files → **Convert with ANYFILE**.
 
-| Tipo | Pacchetti | Cosa sbloccano |
-|---|---|---|
-| obbligatorie | python3, python3-pyside6.*, file | l'applicazione |
-| consigliate (installate da apt) | ffmpeg, imagemagick, poppler-utils, ghostscript, libnotify-bin | immagini, audio, video, PDF, compressione, notifiche |
-| suggerite | libreoffice-writer/calc/impress, pandoc, texlive-xetex | documenti Office, Markdown/EPUB, PDF da Markdown |
+- A wheel appears **under the pointer** (on Wayland too), with one slice for each
+  possible target, coloured and grouped by category: image, audio, video, document, PDF…
+- **Click a slice** to convert: the progress shows in the centre, then “✓ Done”, and
+  the wheel closes by itself. The new file is next to the original.
+- **Click the centre** to open the full window with the files already loaded.
+- **Esc**, a click outside or a right-click close the wheel. During a long conversion,
+  Esc lets it continue in the background and a notification reports the outcome;
+  a click on the centre cancels it instead.
+- From the keyboard: arrows to choose, Enter to confirm, 1-2-3 for the quality.
 
-Rimozione: `sudo apt remove anyfile`. Il pacchetto si costruisce con
-`packaging/deb/build.sh`. `packaging/deb/test-clean-install.sh [immagine]` lo prova in
-un container pulito: installazione, suite di test completa sul pacchetto installato,
-aggiornamento e rimozione.
+### Compress
 
-### Installazione per sviluppo, senza root
+The first slice, at the top, makes the file **smaller in the same format**: JPEG and
+WebP photos, lossy audio and video, PDF (with Ghostscript). The result is
+`name-compressed.ext`; the original is never touched. If the compressed version is not
+smaller it is discarded and the wheel shows “Already compact”. PNG, WAV, FLAC and
+documents do not get this slice: there is nothing to gain in the same format.
 
-```sh
-git clone https://github.com/pietrolama/anyfile.git && cd anyfile
-packaging/install-user.sh
-```
+### Quality
 
-Crea un virtualenv in `~/.local/share/anyfile/venv` che punta ai sorgenti (le modifiche
-sono subito attive), il comando `~/.local/bin/anyfile`, la voce nel menu e l'azione di
-Dolphin nella home. Per rimuovere tutto: `packaging/install-user.sh --uninstall`. Non va
-usata insieme al pacchetto `.deb`: Dolphin mostrerebbe due voci. Lo script lo rileva e
-si ferma.
+Lossy formats have three presets, with parameters suited to each format:
 
-I motori sono tutti facoltativi: ANYFILE usa quelli presenti e spiega cosa installare
-per sbloccare le altre conversioni (`anyfile engines`).
-
-## Il menu radiale
-
-In Dolphin: tasto destro su uno o più file → **Converti con ANYFILE**.
-
-- Compare una ruota **sotto il puntatore** (anche su Wayland), con una fetta per ogni
-  destinazione possibile, colorata e raggruppata per categoria: immagine, audio, video,
-  documento, PDF…
-- **Clic su una fetta** per convertire: al centro si vede l'avanzamento, poi «✓ Fatto»
-  e la ruota si chiude da sola. Il nuovo file è accanto all'originale.
-- **Clic al centro** apre la finestra completa con i file già caricati.
-- **Esc**, clic fuori o tasto destro chiudono la ruota. Durante una conversione lunga,
-  Esc la lascia proseguire in background: una notifica ne darà l'esito. Il clic al
-  centro, invece, la annulla.
-- Da tastiera: frecce per scegliere, Invio per confermare, 1-2-3 per la qualità.
-
-### Comprimi
-
-La prima fetta, in alto, rende il file **più leggero restando nello stesso formato**:
-foto JPEG e WebP, audio e video con perdita, PDF (con Ghostscript). Il risultato è
-`nome-compresso.ext`; l'originale non viene mai toccato. Se la versione compressa non
-è più leggera viene scartata e la ruota mostra «Già compatto». PNG, WAV, FLAC e
-documenti non hanno questa fetta: nello stesso formato non c'è nulla da guadagnare.
-
-### Qualità
-
-Per i formati con perdita ci sono tre preset, con parametri adatti a ciascun formato:
-
-| Preset | Foto (JPEG/WebP) | Audio (MP3, Opus…) | Video (H.264/VP9) | GIF |
+| Preset | Photos (JPEG/WebP) | Audio (MP3, Opus…) | Video (H.264/VP9) | GIF |
 |---|---|---|---|---|
-| Massima qualità | qualità 95 | ~245 kbit/s (MP3) | CRF 18 | 15 fps, 960 px |
-| Bilanciata (predefinita) | 85 / 80 | ~190 kbit/s | CRF 23 / 32 | 12 fps, 640 px |
-| File più leggero | 70 / 60, senza metadati | ~115 kbit/s | CRF 28 / 40, max 720p | 8 fps, 400 px |
+| Maximum quality | quality 95 | ~245 kbit/s (MP3) | CRF 18 | 15 fps, 960 px |
+| Balanced (default) | 85 / 80 | ~190 kbit/s | CRF 23 / 32 | 12 fps, 640 px |
+| Smallest file | 70 / 60, no metadata | ~115 kbit/s | CRF 28 / 40, at most 720p | 8 fps, 400 px |
 
-Il clic sulla fetta usa la qualità predefinita, che si sceglie nella finestra completa.
-**Scorrendo verso l'esterno** dalla fetta compare un anello con le tre qualità. L'anello
-resta agganciato alla fetta anche passando in diagonale sopra quelle vicine. Per
-«Comprimi» le qualità sono due: alla massima il file crescerebbe. Per i formati senza
-perdita l'anello non compare.
+A click on the slice uses the default quality, which you choose in the full window.
+**Moving outwards** from the slice reveals a ring with the three qualities; it stays
+locked to the slice even when you move diagonally over the neighbouring ones.
+“Compress” has two qualities only: at the maximum the file would grow. Lossless
+formats show no ring.
 
-### Conversioni concatenate
+### Chained conversions
 
-Se un formato non è raggiungibile direttamente, ANYFILE passa da un formato intermedio
-e lo indica sulla fetta («via PDF»):
+When a format cannot be reached directly, ANYFILE goes through an intermediate format
+and says so on the slice (“via PDF”):
 
-| Da | A | Via |
+| From | To | Via |
 |---|---|---|
-| DOCX, XLSX, PPTX, ODT, CSV… | PNG / JPG, una immagine per pagina | PDF |
+| DOCX, XLSX, PPTX, ODT, CSV… | PNG / JPG, one image per page | PDF |
 | DOC, RTF, TXT | Markdown, HTML, EPUB, LaTeX | DOCX |
 | EPUB, HTML | PDF, RTF | DOCX |
-| PDF | DOCX, ODT, RTF (solo il testo) | testo |
+| PDF | DOCX, ODT, RTF (text only) | plain text |
 
-Regole: al massimo un intermedio, e solo se manca la conversione diretta. L'intermedio
-non è mai un formato con perdita, per non comprimere due volte. Sono esclusi i percorsi
-che darebbero un file vuoto: un'immagine non diventa testo senza OCR. Le perdite di
-ogni passaggio vengono sommate e dichiarate. Ogni file intermedio viene verificato, e
-un errore indica il passaggio in cui è avvenuto.
+Rules: at most one intermediate step, and only when there is no direct conversion.
+The intermediate format is never lossy, so nothing is compressed twice. Paths that
+would give an empty file are excluded: an image does not become text without OCR. The
+losses of each step add up and are declared. Every intermediate file is checked, and
+an error tells which step it happened in.
 
-### Più file insieme
+### Several files at once
 
-Con una selezione mista la ruota mostra tutto ciò che si può fare, mettendo prima le
-destinazioni valide per più file. Una fetta che vale solo per una parte della
-selezione indica quanti file copre (es. «PDF 6/9») e converte solo quelli. «Comprimi»
-è una sola fetta: comprime ogni file nel proprio formato.
+With a mixed selection the wheel shows everything that can be done, putting first the
+targets valid for more files. A slice that applies to only part of the selection
+shows how many files it covers (e.g. “PDF 6/9”) and converts only those. “Compress”
+is a single slice: it compresses each file in its own format.
 
-## Cronologia
+## History
 
-Ogni conversione fatta con la ruota, la finestra o il terminale finisce nella stessa
-cronologia. Si apre dalla finestra completa (**Cronologia**, Ctrl+H), dal menu
-dell'applicazione (clic destro sull'icona → *Cronologia delle conversioni*) o con
-`anyfile --history`.
+Every conversion made with the wheel, the window or the command line ends up in the
+same history. Open it from the full window (**History**, Ctrl+H), from the application
+menu (right-click the icon → *Conversion history*) or with `anyfile --history`.
 
-- Per ogni operazione mostra quando, il file, cosa è stato fatto ed esito. «Cosa» vuol
-  dire per esempio «Comprimi JPEG · Leggera» o «Excel XLSX → PNG · via PDF». L'esito è
-  la dimensione prima e dopo con il risparmio, oppure il motivo dell'errore, oppure
-  «già compatto».
-- **Ripeti** riesegue con le stesse impostazioni: formato, qualità, cartella,
-  sovrascrittura. Sulle conversioni non riuscite diventa **Riprova**: utile dopo aver
-  corretto il problema, per esempio installando un motore mancante.
-- **Ripeti su altri file…** applica la stessa procedura a nuovi file.
-- Ci sono anche ricerca per nome, filtro «Solo errori», *Mostra risultato* e
-  *Rimuovi*. *Svuota cronologia* cancella le voci, non i file convertiti.
-- Vengono conservate le ultime 1000 operazioni in `~/.local/share/anyfile/cronologia.sqlite`,
-  solo sul computer. La registrazione si può disattivare dalla finestra.
+- Each operation shows when, the file, what was done and the result. “What” means, for
+  example, “Compress JPEG · Small” or “Excel XLSX → PNG · via PDF”. The result is the
+  size before and after with the saving, or the reason for an error, or “already
+  compact”.
+- **Repeat** runs it again with the same settings: format, quality, folder, overwrite.
+  On failed conversions it becomes **Retry**, handy after fixing the problem, for
+  example by installing a missing engine.
+- **Repeat on other files…** applies the same procedure to new files.
+- There are also search by name, an “Errors only” filter, *Show result* and *Remove*.
+  *Clear history* deletes the entries, not the converted files.
+- The last 1000 operations are kept in `~/.local/share/anyfile/history.sqlite`, on
+  your computer only. Recording can be turned off from the window.
 
-Se la cronologia non è disponibile, per esempio per un database danneggiato, le
-conversioni funzionano comunque.
+If the history is not available, for example because the database is damaged,
+conversions still work.
 
-## La finestra completa
+## The full window
 
-`anyfile [FILE...]`, il menu delle applicazioni, o il centro della ruota. Le funzioni:
+`anyfile [FILE...]`, the application menu, or the centre of the wheel. It offers:
 
-- trascinamento dei file nella finestra;
-- formato scelto file per file, oppure per tutti con «Converti tutti in»;
-- cartella di destinazione e qualità predefinita, entrambe ricordate;
-- sovrascrittura solo se richiesta: altrimenti il nuovo file diventa `nome (1).ext`;
-- coda con avanzamento e annullamento;
-- errori leggibili, con i dettagli tecnici nel tooltip;
-- stato dei motori, con il comando per installare quelli mancanti.
+- dropping files on the window;
+- a format per file, or one for all with “Convert all to”;
+- destination folder and default quality, both remembered;
+- overwriting only on request: otherwise the new file becomes `name (1).ext`;
+- a queue with progress and cancellation;
+- readable errors, with the technical details in the tooltip;
+- the engine status, with the command to install the missing ones.
 
-## Terminale
+## Command line
 
 ```sh
-anyfile info documento.docx                   # formato rilevato e destinazioni possibili
-anyfile convert *.wav -t mp3 -o ~/Musica       # conversione, anche di più file
-anyfile convert video.mov -t mp4 -q leggera    # qualità: massima | bilanciata | leggera
-anyfile convert foto.jpg -t jpg                # stesso formato = comprimi
-anyfile engines                                # motori installati e mancanti
-anyfile history [-n 20] [--errori]             # cronologia (--svuota per cancellarla)
-anyfile repeat 42 43                           # ripete le voci 42 e 43 della cronologia
-anyfile --radial FILE...                       # apre la ruota
+anyfile info document.docx                    # detected format and possible targets
+anyfile convert *.wav -t mp3 -o ~/Music        # conversion, several files too
+anyfile convert video.mov -t mp4 -q small      # quality: max | balanced | small
+anyfile convert photo.jpg -t jpg               # same format = compress
+anyfile engines                                # installed and missing engines
+anyfile history [-n 20] [--failed]             # history (--clear to delete it)
+anyfile repeat 42 43                           # repeat history entries 42 and 43
+anyfile --radial FILE...                       # open the wheel
 ```
 
-## Motori
+## Languages
 
-| Motore | Usato per |
+ANYFILE speaks **English** and **Italian** and follows the system language; numbers
+follow it too (“926.8 KB” / “926,8 KB”). To force a language: `LANGUAGE=en anyfile`.
+
+Translations are standard gettext files in `src/anyfile/locale/`, read directly at
+runtime. To add a language:
+
+```sh
+sudo apt install gettext
+scripts/i18n.sh new de          # creates src/anyfile/locale/de.po
+# translate the msgstr entries, then:
+scripts/i18n.sh                 # updates every .po file and checks it
+```
+
+A test makes sure every string in the code is translated in every `.po` file.
+
+## Engines
+
+| Engine | Used for |
 |---|---|
-| FFmpeg | audio ↔ audio, video ↔ video, estrazione dell'audio, video → GIF, compressione |
-| ImageMagick | PNG, JPEG, WebP, GIF, BMP, TIFF, ICO (lettura AVIF/HEIC), immagini → PDF, compressione |
-| Poppler | PDF → testo, PDF → PNG/JPEG (una immagine per pagina) |
-| LibreOffice | DOCX/DOC/ODT/RTF/TXT, XLSX/XLS/ODS/CSV, PPTX/PPT/ODP tra loro e → PDF |
-| Pandoc | Markdown, HTML, EPUB, RST, LaTeX ↔ DOCX/ODT; → PDF se c'è LaTeX |
-| Ghostscript | compressione dei PDF |
+| FFmpeg | audio ↔ audio, video ↔ video, audio extraction, video → GIF, compression |
+| ImageMagick | PNG, JPEG, WebP, GIF, BMP, TIFF, ICO (reading AVIF/HEIC), images → PDF, compression |
+| Poppler | PDF → text, PDF → PNG/JPEG (one image per page) |
+| LibreOffice | DOCX/DOC/ODT/RTF/TXT, XLSX/XLS/ODS/CSV, PPTX/PPT/ODP to each other and → PDF |
+| Pandoc | Markdown, HTML, EPUB, RST, LaTeX ↔ DOCX/ODT; → PDF when LaTeX is available |
+| Ghostscript | PDF compression |
 
-Le capacità vengono rilevate all'avvio: encoder di FFmpeg, coder di ImageMagick,
-presenza di LaTeX. Un motore assente nasconde le sue conversioni, e l'app spiega cosa
-installare.
+Capabilities are detected at start-up: FFmpeg encoders, ImageMagick coders, LaTeX. A
+missing engine hides its conversions, and the app says what to install.
 
-## Sicurezza e affidabilità
+## Safety and reliability
 
-- I motori sono invocati con argomenti separati, mai tramite shell.
-- Il motore legge un collegamento con nome neutro (`input.png`): spazi, parentesi o
-  trattini iniziali nel nome del file non arrivano mai alla riga di comando.
-- Il formato si riconosce dal contenuto, non dall'estensione: un PNG chiamato `.jpg`
-  viene trattato come PNG.
-- L'output si prepara in una cartella temporanea e viene spostato in modo atomico. Il
-  file sorgente non viene mai sostituito.
-- Il risultato è verificato nel contenuto (firma del formato, testo, tracce audio/video),
-  non solo con il codice di uscita del motore.
-- LibreOffice usa un profilo dedicato, quindi funziona anche se è già aperto.
-- Ghostscript è eseguito con `-dSAFER`.
+- Engines are run with separate arguments, never through a shell.
+- The engine reads a link with a neutral name (`input.png`): spaces, brackets or
+  leading dashes in the file name never reach the command line.
+- The format is recognized from the content, not the extension: a PNG named `.jpg` is
+  treated as PNG.
+- The output is prepared in a temporary folder and moved atomically. The source file
+  is never replaced.
+- The result is checked in its content (format signature, text, audio/video tracks),
+  not only by the engine's exit code.
+- LibreOffice uses a dedicated profile, so it works even when it is already open.
+- Ghostscript runs with `-dSAFER`.
 
-ANYFILE **non è una sandbox**. I motori girano con i permessi dell'utente: un file
-costruito apposta per sfruttare una vulnerabilità di FFmpeg, ImageMagick, LibreOffice o
-Ghostscript potrebbe agire come un qualsiasi programma avviato dall'utente. Con file di
-provenienza non attendibile conviene tenere aggiornati i motori. Un isolamento vero
-(bubblewrap, Flatpak) è un possibile sviluppo futuro.
+ANYFILE is **not a sandbox**. The engines run with your permissions: a file crafted to
+exploit a vulnerability in FFmpeg, ImageMagick, LibreOffice or Ghostscript could act
+like any program you start. With files from untrusted sources, keep the engines up to
+date. Real isolation (bubblewrap, Flatpak) is a possible future step.
 
-## Architettura
+## Architecture
 
 ```
 src/anyfile/
-  core/detector.py      rilevamento: firma del contenuto → MIME → estensione
-  core/formats.py       catalogo dei formati
-  core/registry.py      grafo delle conversioni dei motori installati, percorsi concatenati
-  core/planner.py       scelta del percorso per un file e una destinazione
-  core/executor.py      esecuzione passo per passo, file temporanei, collocamento sicuro
-  core/validation.py    verifica dei file prodotti
-  core/jobs.py          coda dei lavori con avanzamento e annullamento
-  core/history.py       cronologia in SQLite, condivisa da ruota, finestra e terminale
-  core/system.py        tutto ciò che dipende dal sistema operativo (Linux / Windows)
+  core/detector.py      detection: content signature → MIME → extension
+  core/formats.py       format catalogue
+  core/registry.py      conversion graph of the installed engines, chained paths
+  core/planner.py       choice of the path for a file and a target
+  core/executor.py      step-by-step execution, temporary files, safe placement
+  core/validation.py    checks on the produced files
+  core/jobs.py          job queue with progress and cancellation
+  core/history.py       SQLite history shared by wheel, window and command line
+  core/system.py        everything that depends on the operating system (Linux / Windows)
   engines/              FFmpeg, ImageMagick, Poppler, LibreOffice + Pandoc, Ghostscript
-  ui/radial.py          menu radiale (ui/radial_geometry.py: geometria senza Qt)
-  ui/main_window.py     finestra completa
-  ui/history_window.py  finestra della cronologia
-  cli.py, app.py        punti di ingresso
-packaging/              .desktop, azione di Dolphin, script di installazione
-scripts/                generatore dei file di prova e checklist
-tests/                  test automatici
+  ui/radial.py          radial menu (ui/radial_geometry.py: geometry without Qt)
+  ui/main_window.py     full window
+  ui/history_window.py  history window
+  i18n.py, locale/      translations
+  cli.py, app.py        entry points
+packaging/              .desktop files, Dolphin action, install scripts, .deb
+scripts/                test file generator, checklist, translation tools
+tests/                  automated tests
 ```
 
-Aggiungere un formato o un motore significa dichiararne le conversioni in `engines/`.
-Ruota, finestra, terminale e percorsi concatenati le usano senza altre modifiche.
+Adding a format or an engine means declaring its conversions in `engines/`. The wheel,
+the window, the command line and the chained paths use them with no other change.
 
-## Sviluppo e prove
+## Development and testing
 
 ```sh
 python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'
 .venv/bin/pytest
 ```
 
-I test automatici sono più di 140. Generano piccoli file di esempio con i motori stessi e
-controllano le conversioni reali. Coprono anche annullamento, conflitti di nome,
-preset, catene e il comportamento della ruota (con Qt offscreen). Un test viene
-saltato se il motore che serve non è installato.
+There are more than 150 automated tests. They generate small sample files with the
+engines themselves and check real conversions, cancellation, name conflicts, presets,
+chains, the history, translations and the behaviour of the wheel (with offscreen Qt).
+A test is skipped when the engine it needs is not installed.
 
-Per le prove a mano:
+For manual testing:
 
 ```sh
-python3 scripts/genera_prove.py        # crea prove-manuali/ con un file per ogni caso
+python3 scripts/make_test_files.py     # creates manual-tests/ with one file per case
 ```
 
-Poi si apre `prove-manuali/` in Dolphin e si segue `00-CHECKLIST.md`: azione e
-risultato atteso per ogni caso, inclusi ruota, qualità, Comprimi, catene e casi limite.
+Then open `manual-tests/` in Dolphin and follow `00-CHECKLIST.md`: the action and the
+expected result for each case, including the wheel, quality, Compress, chains, history,
+languages and edge cases.
 
-## Stato
+## Status
 
-Prototipo in sviluppo attivo, usato su Debian 13 con KDE Plasma 6.3 (Wayland).
-La compressione dei PDF con Ghostscript è verificata su PDF reali in Debian 13 e
-Ubuntu 26.04, nei container puliti.
+A prototype in active development, used daily on Debian 13 with KDE Plasma 6.3
+(Wayland). PDF compression with Ghostscript is verified on real PDFs on Debian 13 and
+Ubuntu 26.04, in clean containers.
 
-Prossimi passi: su Windows il menu contestuale di Explorer e un installer con i motori
-inclusi; su Linux il Flatpak e l'isolamento dei motori per i file non attendibili.
+Next steps: on Windows, the Explorer context menu and an installer with the engines
+included; on Linux, Flatpak and isolation of the engines for untrusted files.
 
-## Licenza
+## License
 
-ANYFILE è software libero, distribuito secondo i termini della
-[GNU General Public License](LICENSE), versione 3 o (a tua scelta) qualsiasi versione
-successiva (GPL-3.0-or-later). Puoi usarlo, studiarlo, modificarlo e ridistribuirlo;
-chi distribuisce una versione modificata deve renderne disponibile il codice con la
-stessa licenza. ANYFILE è fornito senza alcuna garanzia.
+ANYFILE is free software, released under the [GNU General Public License](LICENSE),
+version 3 or (at your option) any later version (GPL-3.0-or-later). You can use,
+study, modify and redistribute it; whoever distributes a modified version must make
+its source available under the same license. ANYFILE comes with no warranty.
 
-I motori di conversione (FFmpeg, ImageMagick, Poppler, LibreOffice, Pandoc,
-Ghostscript) sono programmi indipendenti, con le rispettive licenze, avviati come
-processi esterni.
+The conversion engines (FFmpeg, ImageMagick, Poppler, LibreOffice, Pandoc,
+Ghostscript) are independent programs with their own licenses, run as external
+processes.

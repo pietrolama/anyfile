@@ -4,5 +4,4 @@ __pycache__/
 .pytest_cache/
 build/
 dist/
-prove-manuali/
-dist/
+manual-tests/

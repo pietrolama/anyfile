@@ -1,4 +1,4 @@
-"""Conversioni concatenate: regole del grafo ed esecuzione reale passo per passo."""
+"""Chained conversions: graph rules and real step-by-step execution."""
 
 import zipfile
 
@@ -33,13 +33,13 @@ def test_chain_when_no_direct_conversion():
 
 
 def test_lossy_intermediates_are_never_used():
-    # MP4 → GIF → PNG degraderebbe due volte: niente catena.
+    # MP4 → GIF → PNG would degrade twice: no chain.
     reg = fake_registry(("mp4", ["gif"]), ("gif", ["png"]))
     assert reg.route("mp4", "png") is None
 
 
 def test_no_chain_that_invents_text_from_images():
-    # PNG → PDF → testo darebbe un file vuoto senza OCR.
+    # PNG → PDF → text would give an empty file without OCR.
     reg = fake_registry(("png", ["pdf"]), ("pdf", ["txt"]))
     assert reg.route("png", "txt") is None
 
@@ -51,13 +51,13 @@ def test_multi_output_only_as_last_step():
         FakeEngine("c", "C", pairs("x", ["png"], ["webp"])),
     ])
     assert reg.route("docx", "png").via == ("pdf",)
-    assert reg.route("pdf", "webp") is None  # pdf → (più png) → webp: intermedio multiplo
+    assert reg.route("pdf", "webp") is None  # pdf → (several pngs) → webp: multiple intermediate
 
 
 def test_best_intermediate_has_fewest_declared_losses():
     from anyfile.models.conversion import Conversion
     engine = FakeEngine("f", "F", [
-        Conversion("epub", "md", "f", "perde le immagini"), Conversion("md", "pdf", "f", ""),
+        Conversion("epub", "md", "f", "loses the images"), Conversion("md", "pdf", "f", ""),
         Conversion("epub", "docx", "f", ""), Conversion("docx", "pdf", "f", ""),
     ])
     assert Registry([engine]).route("epub", "pdf").via == ("docx",)
@@ -65,9 +65,9 @@ def test_best_intermediate_has_fewest_declared_losses():
 
 def test_chain_notes_accumulate():
     from anyfile.models.conversion import Conversion
-    engine = FakeEngine("f", "F", [Conversion("pdf", "txt", "f", "Solo il testo"),
-                                   Conversion("txt", "docx", "f", "Layout diverso")])
-    assert Registry([engine]).route("pdf", "docx").notes == "Solo il testo; Layout diverso"
+    engine = FakeEngine("f", "F", [Conversion("pdf", "txt", "f", "Text only"),
+                                   Conversion("txt", "docx", "f", "Different layout")])
+    assert Registry([engine]).route("pdf", "docx").notes == "Text only; Different layout"
 
 
 def test_real_registry_chains_follow_the_rules():
@@ -81,7 +81,7 @@ def test_real_registry_chains_follow_the_rules():
                 assert reg.find(route.source, route.target) is None
 
 
-# --- esecuzione reale ------------------------------------------------------
+# --- real execution -------------------------------------------------------
 
 @pytest.mark.slow
 @needs("soffice", "pdftoppm")
@@ -96,11 +96,11 @@ def test_docx_to_png_via_pdf(registry, sample):
 @pytest.mark.slow
 @needs("soffice", "pandoc")
 def test_rtf_to_markdown_via_docx(registry, tmp_path):
-    rtf = tmp_path / "lettera.rtf"
-    rtf.write_text(r"{\rtf1\ansi {\b Titolo}\par Testo della lettera.\par}")
+    rtf = tmp_path / "letter.rtf"
+    rtf.write_text(r"{\rtf1\ansi {\b Title}\par Text of the letter.\par}")
     out = Executor(registry).run(Job(rtf, "md"))
-    assert out.name == "lettera.md"
-    assert "Testo della lettera" in out.read_text()
+    assert out.name == "letter.md"
+    assert "Text of the letter" in out.read_text()
 
 
 @pytest.mark.slow
@@ -116,10 +116,10 @@ def test_xlsx_to_png_progress_is_monotonic(registry, sample, tmp_path):
 @pytest.mark.slow
 @needs("soffice")
 def test_failing_step_is_named(registry, tmp_path):
-    broken = tmp_path / "rotto.docx"
+    broken = tmp_path / "broken.docx"
     with zipfile.ZipFile(broken, "w") as z:
         z.writestr("[Content_Types].xml", "<Types/>")
-        z.writestr("word/document.xml", "non è xml valido")
-    with pytest.raises(AnyfileError, match=r"Passaggio 1 di 2 \(Word DOCX → PDF\)"):
+        z.writestr("word/document.xml", "not valid xml")
+    with pytest.raises(AnyfileError, match=r"Step 1 of 2 \(Word DOCX → PDF\)"):
         Executor(registry).run(Job(broken, "png"))
-    assert sorted(p.name for p in tmp_path.iterdir()) == ["rotto.docx"]
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["broken.docx"]

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Costruisce il pacchetto Debian/Ubuntu di ANYFILE in dist/.
-# Uso: packaging/deb/build.sh            (versione da pyproject.toml)
+# Builds the Debian/Ubuntu package of ANYFILE in dist/.
+# Usage: packaging/deb/build.sh            (version from pyproject.toml)
 #      VERSION=0.2.1 packaging/deb/build.sh
 set -euo pipefail
 
@@ -14,7 +14,7 @@ rm -rf "$STAGE"
 mkdir -p "$PYDIR" "$STAGE/usr/bin" "$STAGE/usr/share/applications" \
          "$STAGE/usr/share/kio/servicemenus" "$STAGE/usr/share/doc/anyfile" "$STAGE/DEBIAN"
 
-# Codice: solo il pacchetto Python, senza cache compilate.
+# Code: only the Python package (with its translations), without compiled caches.
 cp -r "$ROOT/src/anyfile" "$PYDIR/"
 find "$PYDIR" -name __pycache__ -prune -exec rm -rf {} +
 
@@ -29,9 +29,9 @@ PY
 chmod 755 "$STAGE/usr/bin/anyfile"
 
 install -m 644 "$ROOT/packaging/anyfile.desktop" "$STAGE/usr/share/applications/anyfile.desktop"
-# Nelle cartelle di sistema KDE non richiede il bit di esecuzione sul service menu.
+# In system folders KDE does not need the executable bit on the service menu.
 install -m 644 "$ROOT/packaging/dolphin/anyfile.desktop" "$STAGE/usr/share/kio/servicemenus/anyfile.desktop"
-install -m 644 "$ROOT/README.md" "$STAGE/usr/share/doc/anyfile/README.md"
+install -m 644 "$ROOT/README.md" "$ROOT/README.it.md" "$STAGE/usr/share/doc/anyfile/"
 cat > "$STAGE/usr/share/doc/anyfile/copyright" <<TXT
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: anyfile
@@ -65,21 +65,21 @@ Maintainer: pietrolama <pietrolama1@gmail.com>
 Installed-Size: $INSTALLED_KB
 Depends: python3 (>= 3.10), python3-pyside6.qtcore, python3-pyside6.qtgui, python3-pyside6.qtwidgets, file
 Recommends: ffmpeg, imagemagick, poppler-utils, ghostscript, libnotify-bin
-Suggests: dolphin, libreoffice-writer, libreoffice-calc, libreoffice-impress, pandoc, texlive-xetex
+Suggests: dolphin, qt6-translations-l10n, libreoffice-writer, libreoffice-calc, libreoffice-impress, pandoc, texlive-xetex
 Section: utils
 Priority: optional
 Homepage: https://github.com/pietrolama/anyfile
-Description: convertitore di file locale con menu radiale per Dolphin
- ANYFILE converte e comprime immagini, audio, video, documenti e PDF usando i
- programmi installati (FFmpeg, ImageMagick, Poppler, LibreOffice, Pandoc,
- Ghostscript). In Dolphin, «Converti con ANYFILE» apre una ruota sotto il
- puntatore con le sole conversioni possibili per i file selezionati.
+Description: local file converter with a radial menu for Dolphin
+ ANYFILE converts and compresses images, audio, video, documents and PDFs
+ using the installed programs (FFmpeg, ImageMagick, Poppler, LibreOffice,
+ Pandoc, Ghostscript). In Dolphin, "Convert with ANYFILE" opens a wheel under
+ the pointer showing only the conversions possible for the selected files.
  .
- I motori sono facoltativi: ANYFILE usa quelli presenti e indica cosa
- installare per le altre conversioni.
+ The engines are optional: ANYFILE uses the ones available and tells what to
+ install for the other conversions. Available in English and Italian.
 CTRL
 
-# Come py3compile: cache compilate create all'installazione e rimosse prima della rimozione.
+# Like py3compile: compiled caches created on install and removed before removal.
 cat > "$STAGE/DEBIAN/postinst" <<'SH'
 #!/bin/sh
 set -e

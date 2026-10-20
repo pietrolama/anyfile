@@ -1,4 +1,4 @@
-"""Rilevamento del formato: firma del contenuto, poi MIME, poi estensione."""
+"""Format detection: content signature first, then MIME type, then extension."""
 
 from __future__ import annotations
 
@@ -8,12 +8,13 @@ import zipfile
 from pathlib import Path
 
 from anyfile.core import formats
+from anyfile.i18n import _
 from anyfile.models.conversion import Format
 from anyfile.models.file_info import FileInfo
 
 _HEAD_SIZE = 8192
 
-# Formati che condividono contenitore o codifica e possono essere confusi senza errore.
+# Formats that share a container or encoding and can be mixed up without harm.
 _FAMILIES = (
     frozenset({"mp4", "m4a", "mov"}),
     frozenset({"mkv", "webm"}),
@@ -32,8 +33,8 @@ def _read_head(path: Path) -> bytes:
 
 
 def sniff(path: Path, ext_hint: Format | None = None) -> str | None:
-    """Riconosce il formato dalla firma binaria. Non usa l'estensione, salvo dove
-    il contenitore è ambiguo (documenti OLE, MP3/AAC con tag ID3)."""
+    """Recognizes the format from its binary signature. The extension is only used
+    where the container is ambiguous (OLE documents, MP3/AAC with ID3 tags)."""
     head = _read_head(path)
     return _sniff_bytes(path, head, ext_hint)
 
@@ -76,7 +77,7 @@ def _sniff_bytes(path: Path, head: bytes, ext_hint: Format | None) -> str | None
     if head.startswith(b"PK\x03\x04"):
         return _sniff_zip(path)
     if head.startswith(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"):
-        # Contenitore OLE: Word, Excel e PowerPoint condividono la stessa firma.
+        # OLE container: Word, Excel and PowerPoint share the same signature.
         return hint if hint in ("doc", "xls", "ppt") else None
     return None
 
@@ -119,7 +120,7 @@ def _looks_text(head: bytes) -> bool:
         head.decode("utf-8")
         return True
     except UnicodeDecodeError as e:
-        # Un carattere multibyte troncato alla fine del blocco letto è accettabile.
+        # A multi-byte character cut off at the end of the block read is fine.
         if e.start >= len(head) - 3 and len(head) == _HEAD_SIZE:
             return True
     controls = sum(1 for b in head if b < 32 and b not in (9, 10, 12, 13))
@@ -147,16 +148,16 @@ def _mime_of(path: Path) -> str | None:
 def detect(path: Path | str) -> FileInfo:
     path = Path(path)
     if not path.is_file():
-        return FileInfo(path, None, 0, "", reason="Non è un file regolare")
+        return FileInfo(path, None, 0, "", reason=_("Not a regular file"))
     size = path.stat().st_size
     if size == 0:
-        return FileInfo(path, None, 0, "", reason="Il file è vuoto")
+        return FileInfo(path, None, 0, "", reason=_("The file is empty"))
 
     ext_fmt = formats.by_extension(path.suffix)
     try:
         head = _read_head(path)
     except OSError as e:
-        return FileInfo(path, None, size, "", reason=f"Impossibile leggere il file: {e.strerror}")
+        return FileInfo(path, None, size, "", reason=_("Cannot read the file: {error}").format(error=e.strerror))
 
     fmt: Format | None = None
     detected_by = ""
@@ -164,24 +165,24 @@ def detect(path: Path | str) -> FileInfo:
 
     sig = _sniff_bytes(path, head, ext_fmt)
     if sig:
-        fmt, detected_by = formats.get(sig), "firma"
+        fmt, detected_by = formats.get(sig), "signature"
     elif _looks_text(head):
         if ext_fmt and ext_fmt.id in formats.TEXT_FORMATS:
             fmt = ext_fmt
         else:
             fmt = formats.get("html" if _looks_html(head) else "txt")
-        detected_by = "testo"
+        detected_by = "text"
     else:
         mime = _mime_of(path)
         if mime and (by_mime := formats.by_mime(mime)):
             fmt, detected_by = by_mime, "mime"
         elif ext_fmt:
-            fmt, detected_by = ext_fmt, "estensione"
+            fmt, detected_by = ext_fmt, "extension"
 
     mismatch = bool(
-        fmt and ext_fmt and detected_by == "firma" and not same_family(fmt.id, ext_fmt.id)
+        fmt and ext_fmt and detected_by == "signature" and not same_family(fmt.id, ext_fmt.id)
     )
     return FileInfo(
         path, fmt, size, detected_by, mime=mime, extension_mismatch=mismatch,
-        reason="" if fmt else "Formato non riconosciuto",
+        reason="" if fmt else _("Unrecognized format"),
     )

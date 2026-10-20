@@ -10,9 +10,9 @@ def write(tmp_path, name, data: bytes):
 
 
 def test_signature_wins_over_extension(tmp_path):
-    info = detect(write(tmp_path, "foto.jpg", b"\x89PNG\r\n\x1a\n" + b"\0" * 32))
+    info = detect(write(tmp_path, "photo.jpg", b"\x89PNG\r\n\x1a\n" + b"\0" * 32))
     assert info.format.id == "png"
-    assert info.detected_by == "firma"
+    assert info.detected_by == "signature"
     assert info.extension_mismatch
 
 
@@ -51,16 +51,16 @@ def test_office_open_xml_and_opendocument(tmp_path):
 
 
 def test_text_files_use_extension_or_content(tmp_path):
-    assert detect(write(tmp_path, "a.md", b"# Titolo\n")).format.id == "md"
+    assert detect(write(tmp_path, "a.md", b"# Title\n")).format.id == "md"
     assert detect(write(tmp_path, "a.csv", b"a,b\n1,2\n")).format.id == "csv"
-    assert detect(write(tmp_path, "pagina", b"<!DOCTYPE html><html></html>")).format.id == "html"
-    assert detect(write(tmp_path, "LEGGIMI", "Testo con àccenti\n".encode())).format.id == "txt"
+    assert detect(write(tmp_path, "page", b"<!DOCTYPE html><html></html>")).format.id == "html"
+    assert detect(write(tmp_path, "README", "Text with àccents\n".encode())).format.id == "txt"
 
 
 def test_unrecognized_and_empty(tmp_path):
-    empty = detect(write(tmp_path, "vuoto.png", b""))
-    assert empty.format is None and "vuoto" in empty.reason
-    junk = detect(write(tmp_path, "dati.xyz", bytes(range(256)) * 4))
+    empty = detect(write(tmp_path, "empty.png", b""))
+    assert empty.format is None and "empty" in empty.reason
+    junk = detect(write(tmp_path, "data.xyz", bytes(range(256)) * 4))
     assert junk.format is None
 
 

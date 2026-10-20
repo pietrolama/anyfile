@@ -1,4 +1,4 @@
-"""Esecuzione di una conversione: file temporanei, verifica e collocamento sicuro."""
+"""Running a conversion: temporary files, checks and safe placement of the result."""
 
 from __future__ import annotations
 
@@ -10,10 +10,12 @@ from pathlib import Path
 
 from anyfile.core import formats, system
 from anyfile.core.detector import detect
+from anyfile.core.history import format_size
 from anyfile.core.errors import AnyfileError, ConversionCancelled, NothingGained
 from anyfile.core.planner import plan
 from anyfile.core.registry import Registry
 from anyfile.core.validation import validate_output
+from anyfile.i18n import _
 from anyfile.engines.base import ConversionContext, ProgressFn, Runner
 from anyfile.models.conversion import Quality
 from anyfile.models.job import Job
@@ -23,10 +25,10 @@ class Executor:
     def __init__(self, registry: Registry) -> None:
         self.registry = registry
 
-    def run(self, job: Job, progress: ProgressFn = lambda _: None) -> Path:
+    def run(self, job: Job, progress: ProgressFn = lambda _value: None) -> Path:
         src = job.source
         if not src.is_file():
-            raise AnyfileError(f"File non trovato: {src}")
+            raise AnyfileError(_("File not found: {path}").format(path=src))
 
         info = detect(src)
         job.source_size = info.size
@@ -41,18 +43,19 @@ class Executor:
         try:
             out_dir.mkdir(parents=True, exist_ok=True)
         except OSError as e:
-            raise AnyfileError(f"Impossibile creare la cartella {out_dir}: {e.strerror}") from e
+            raise AnyfileError(_("Cannot create the folder {folder}: {error}").format(
+                folder=out_dir, error=e.strerror)) from e
         if not os.access(out_dir, os.W_OK):
-            raise AnyfileError(f"Non è possibile scrivere in {out_dir}: "
-                               "scegli un'altra cartella di destinazione")
+            raise AnyfileError(_("Cannot write to {folder}: choose another destination folder")
+                               .format(folder=out_dir))
 
-        # L'output si prepara nella cartella di destinazione, così lo spostamento finale
-        # è un rename atomico sullo stesso filesystem.
+        # The output is prepared inside the destination folder, so the final move is an
+        # atomic rename on the same filesystem.
         work_dir = Path(tempfile.mkdtemp(prefix=".anyfile-", dir=out_dir))
         try:
-            # Il motore legge un collegamento con nome neutro: i nomi arbitrari dei file
-            # (spazi, parentesi, trattini iniziali) non arrivano mai sulla riga di comando.
-            input_dir = work_dir / "ingresso"
+            # The engine reads a link with a neutral name: arbitrary file names (spaces,
+            # brackets, leading dashes) never reach the command line.
+            input_dir = work_dir / "input"
             input_dir.mkdir()
             link = input_dir / f"input.{info.format.ext}"
             system.link_or_copy(src, link)
@@ -64,7 +67,7 @@ class Executor:
 
             quality = job.quality
             if route.is_compression and quality is Quality.MAX:
-                # Comprimi ha due livelli: alla massima qualità il file crescerebbe.
+                # Compress has two levels: at maximum quality the file would grow.
                 quality = Quality.BALANCED
             job.applied_quality = quality if self.registry.presets(route) else None
 
@@ -73,11 +76,11 @@ class Executor:
             for n, step in enumerate(route.steps, 1):
                 last = n == total
                 step_format = formats.get(step.target)
-                # Gli intermedi restano nella cartella di lavoro, con un nome neutro.
-                dst = produced if last else work_dir / f"passo{n}.{step_format.ext}"
+                # Intermediate files stay in the work folder, with a neutral name.
+                dst = produced if last else work_dir / f"step{n}.{step_format.ext}"
                 ctx = ConversionContext(
                     Runner(job.cancel_event), _step_progress(progress, n, total), src,
-                    # La qualità conta solo per il risultato: gli intermedi sono senza perdita.
+                    # Quality only matters for the result: intermediate files are lossless.
                     quality if last else Quality.BALANCED,
                 )
                 try:
@@ -86,12 +89,13 @@ class Executor:
                         raise ConversionCancelled()
                     validate_output(dst, step_format)
                 except AnyfileError as e:
-                    # Nei messaggi l'utente deve vedere il proprio file, non il collegamento interno.
+                    # Messages must show the user's own file, not the internal link.
                     e.message = e.message.replace(str(link), src.name)
                     e.details = e.details.replace(str(link), str(src))
                     if total > 1:
                         a, b = formats.get(step.source).label, step_format.label
-                        e.message = f"Passaggio {n} di {total} ({a} → {b}): {e.message}"
+                        e.message = _("Step {n} of {total} ({source} → {target}): {message}").format(
+                            n=n, total=total, source=a, target=b, message=e.message)
                     raise
                 current = dst
 
@@ -99,17 +103,18 @@ class Executor:
                 before, after = src.stat().st_size, produced.stat().st_size
                 if after >= before:
                     raise NothingGained(
-                        f"«{src.name}» è già compatto: la versione compressa non sarebbe più "
-                        f"leggera ({_kb(after)} contro {_kb(before)})")
+                        _("“{name}” is already compact: the compressed version would not be "
+                          "smaller ({after} instead of {before})").format(
+                            name=src.name, after=_kb(after), before=_kb(before)))
 
             if multi:
                 files = sorted(f for f in produced.iterdir() if f.is_file())
                 if len(files) == 1:
                     produced, multi = files[0], False
             if route.is_compression:
-                name = f"{src.stem}-compresso.{target.ext}"
+                name = _("{name}-compressed").format(name=src.stem) + f".{target.ext}"
             elif multi:
-                name = f"{src.stem}-pagine"
+                name = _("{name}-pages").format(name=src.stem)
             else:
                 name = f"{src.stem}.{target.ext}"
             final = out_dir / name
@@ -121,7 +126,7 @@ class Executor:
 
 
 def _step_progress(progress: ProgressFn, n: int, total: int) -> ProgressFn:
-    """Riporta l'avanzamento del passaggio n sull'intera catena."""
+    """Maps the progress of step n onto the whole chain."""
     return lambda value: progress(None if value is None else (n - 1 + value) / total)
 
 
@@ -132,14 +137,14 @@ def _size(path: Path) -> int:
 
 
 def _kb(size: int) -> str:
-    return f"{size / 1024:,.0f} KB".replace(",", ".")
+    return format_size(size)
 
 
 def place(produced: Path, final: Path, *, overwrite: bool, protect: Path | None = None) -> Path:
-    """Sposta il risultato nella posizione finale senza mai sovrascrivere per errore.
+    """Moves the result to its final place without ever overwriting by mistake.
 
-    Senza overwrite, se il nome è occupato si usa "nome (1).ext", "nome (2).ext"...
-    Il file sorgente (protect) non viene mai sostituito.
+    Without overwrite, a taken name becomes "name (1).ext", "name (2).ext"...
+    The source file (protect) is never replaced.
     """
     is_dir = produced.is_dir()
     protected = protect.resolve() if protect else None
@@ -157,11 +162,11 @@ def place(produced: Path, final: Path, *, overwrite: bool, protect: Path | None 
             continue
         try:
             if is_dir:
-                # Linux sostituirebbe al più una cartella vuota creata nel frattempo;
-                # con una cartella piena, e su Windows con qualsiasi cartella, fallisce.
+                # Linux would at most replace an empty folder created in the meantime;
+                # with a non-empty folder, and on Windows with any folder, it fails.
                 os.rename(produced, candidate)
             else:
-                os.link(produced, candidate)  # fallisce se il nome esiste già
+                os.link(produced, candidate)  # fails if the name already exists
                 produced.unlink()
             return candidate
         except FileExistsError:
@@ -171,7 +176,7 @@ def place(produced: Path, final: Path, *, overwrite: bool, protect: Path | None 
                 continue
             if is_dir:
                 raise
-            # Filesystem senza hard link (es. FAT): rename dopo il controllo.
+            # Filesystem without hard links (e.g. FAT): rename after the check.
             os.rename(produced, candidate)
             return candidate
     raise AssertionError("unreachable")

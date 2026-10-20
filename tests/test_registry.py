@@ -48,7 +48,7 @@ def test_status_reports_missing_binaries():
 
 
 def test_compressions_only_for_lossy_formats():
-    # Stesso formato in uscita solo dove un preset riduce davvero il file.
+    # Same format out only where a preset really makes the file smaller.
     reg = Registry()
     for engine in reg.engines:
         for c in engine.declared():

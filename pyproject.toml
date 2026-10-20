@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "anyfile"
 version = "0.3.0"
-description = "Convertitore di file locale per Linux, con integrazione KDE Dolphin"
+description = "Local file converter for Linux with a radial menu for KDE Dolphin"
 readme = "README.md"
 license = "GPL-3.0-or-later"
 license-files = ["LICENSE"]
@@ -20,6 +20,10 @@ anyfile = "anyfile.main:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+# Translations are read at runtime from the .po files.
+anyfile = ["locale/*.po"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
