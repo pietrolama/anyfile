@@ -26,7 +26,7 @@ from anyfile.core import formats
 from anyfile.core.detector import detect
 from anyfile.core.executor import Executor
 from anyfile.core.registry import Registry
-from anyfile.models.conversion import Category, Conversion, Presets, Quality
+from anyfile.models.conversion import Category, Presets, Quality, Route
 from anyfile.models.file_info import FileInfo
 from anyfile.models.job import Job, JobStatus
 from anyfile.ui.desktop import human_size, notify
@@ -77,7 +77,7 @@ class Phase(Enum):
 @dataclass(frozen=True)
 class Entry:
     # None: la voce «Altro…», che apre la finestra completa.
-    conversion: Conversion | None
+    conversion: Route | None
     label: str
     short: str
     category_label: str
@@ -86,7 +86,7 @@ class Entry:
     paths: tuple[Path, ...] = ()
 
 
-Option = tuple[Conversion, tuple[Path, ...]]
+Option = tuple[Route, tuple[Path, ...]]
 
 
 def selection_targets(infos: list[FileInfo], registry: Registry) -> list[Option]:
@@ -95,11 +95,11 @@ def selection_targets(infos: list[FileInfo], registry: Registry) -> list[Option]
     Con una selezione mista non esiste quasi mai un formato comune a tutti: la ruota
     mostra comunque ciò che si può fare, e ogni fetta converte solo i file compatibili.
     """
-    found: dict[str, tuple[Conversion, list[Path]]] = {}
+    found: dict[str, tuple[Route, list[Path]]] = {}
     for info in infos:
         if info.format is None:
             continue
-        for conv in registry.targets(info.format.id):
+        for conv in registry.routes(info.format.id):
             key = COMPRESS if conv.is_compression else conv.target
             found.setdefault(key, (conv, []))[1].append(info.path)
     return [(conv, tuple(paths)) for conv, paths in found.values()]
@@ -116,7 +116,9 @@ def build_entries(options: list[Option]) -> list[Entry]:
     truncated = len(options) > MAX_SLICES
     if truncated:
         # Restano le destinazioni che valgono per più file; le altre sono nella finestra.
-        options = sorted(options, key=lambda o: (-len(o[1]), *_category_order(o)))[:MAX_SLICES - 1]
+        # A parità di copertura le conversioni dirette precedono le catene.
+        options = sorted(options, key=lambda o: (-len(o[1]), o[0].is_chain, *_category_order(o)))
+        options = options[:MAX_SLICES - 1]
     entries = []
     for conv, paths in sorted(options, key=_category_order):
         fmt = formats.get(conv.target)
@@ -546,6 +548,8 @@ class RadialMenu(QWidget):
             second = ""
             if partial:
                 second = f"{len(entry.paths)}/{len(self.recognized)}"
+            elif entry.conversion is not None and entry.conversion.is_chain:
+                second = "via " + "/".join(v.upper() for v in entry.conversion.via)
             elif (entry.conversion is not None and entry.short not in entry.label.upper()
                   and QFontMetricsF(small).horizontalAdvance(entry.label) <= arc_width - 16):
                 second = entry.label
@@ -706,6 +710,9 @@ class RadialMenu(QWidget):
                 # (es. PNG e DOCX → PDF) non sarebbe vera per tutti i file.
                 note = (f" · {entry.conversion.notes}"
                         if entry.conversion.notes and len(kinds) == 1 else "")
+                if entry.conversion.is_chain:
+                    via = ", ".join(formats.get(v).label for v in entry.conversion.via)
+                    note = f" · via {via}{note}"
                 if len(entry.paths) < len(self.recognized):
                     text = (f"{entry.label} per {len(entry.paths)} file su {len(self.recognized)}"
                             " · gli altri non si convertono in questo formato")

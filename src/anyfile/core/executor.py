@@ -8,6 +8,7 @@ import shutil
 import tempfile
 from pathlib import Path
 
+from anyfile.core import formats
 from anyfile.core.detector import detect
 from anyfile.core.errors import AnyfileError, ConversionCancelled, NothingGained
 from anyfile.core.planner import plan
@@ -31,7 +32,7 @@ class Executor:
         p = plan(info, job.target, self.registry)
         assert info.format is not None
         target = p.target_format
-        engine = self.registry.engine(p.conversion.engine)
+        route = p.route
 
         out_dir = job.output_dir or src.parent
         try:
@@ -52,28 +53,44 @@ class Executor:
             link = input_dir / f"input.{info.format.ext}"
             link.symlink_to(src.resolve())
 
-            multi = p.conversion.multi_output
+            multi = route.multi_output
             produced = work_dir / ("out" if multi else f"output.{target.ext}")
             if multi:
                 produced.mkdir()
 
             quality = job.quality
-            if p.conversion.is_compression and quality is Quality.MAX:
+            if route.is_compression and quality is Quality.MAX:
                 # Comprimi ha due livelli: alla massima qualità il file crescerebbe.
                 quality = Quality.BALANCED
-            ctx = ConversionContext(Runner(job.cancel_event), progress, src, quality)
-            try:
-                engine.convert(p.conversion, link, produced, ctx)
-            except AnyfileError as e:
-                # Nei messaggi l'utente deve vedere il proprio file, non il collegamento interno.
-                e.message = e.message.replace(str(link), src.name)
-                e.details = e.details.replace(str(link), str(src))
-                raise
-            if job.cancel_event.is_set():
-                raise ConversionCancelled()
-            validate_output(produced, target)
 
-            if p.conversion.is_compression:
+            current = link
+            total = len(route.steps)
+            for n, step in enumerate(route.steps, 1):
+                last = n == total
+                step_format = formats.get(step.target)
+                # Gli intermedi restano nella cartella di lavoro, con un nome neutro.
+                dst = produced if last else work_dir / f"passo{n}.{step_format.ext}"
+                ctx = ConversionContext(
+                    Runner(job.cancel_event), _step_progress(progress, n, total), src,
+                    # La qualità conta solo per il risultato: gli intermedi sono senza perdita.
+                    quality if last else Quality.BALANCED,
+                )
+                try:
+                    self.registry.engine(step.engine).convert(step, current, dst, ctx)
+                    if job.cancel_event.is_set():
+                        raise ConversionCancelled()
+                    validate_output(dst, step_format)
+                except AnyfileError as e:
+                    # Nei messaggi l'utente deve vedere il proprio file, non il collegamento interno.
+                    e.message = e.message.replace(str(link), src.name)
+                    e.details = e.details.replace(str(link), str(src))
+                    if total > 1:
+                        a, b = formats.get(step.source).label, step_format.label
+                        e.message = f"Passaggio {n} di {total} ({a} → {b}): {e.message}"
+                    raise
+                current = dst
+
+            if route.is_compression:
                 before, after = src.stat().st_size, produced.stat().st_size
                 if after >= before:
                     raise NothingGained(
@@ -84,7 +101,7 @@ class Executor:
                 files = sorted(f for f in produced.iterdir() if f.is_file())
                 if len(files) == 1:
                     produced, multi = files[0], False
-            if p.conversion.is_compression:
+            if route.is_compression:
                 name = f"{src.stem}-compresso.{target.ext}"
             elif multi:
                 name = f"{src.stem}-pagine"
@@ -95,6 +112,11 @@ class Executor:
         finally:
             shutil.rmtree(work_dir, ignore_errors=True)
             shutil.rmtree(input_dir, ignore_errors=True)
+
+
+def _step_progress(progress: ProgressFn, n: int, total: int) -> ProgressFn:
+    """Riporta l'avanzamento del passaggio n sull'intera catena."""
+    return lambda value: progress(None if value is None else (n - 1 + value) / total)
 
 
 def _kb(size: int) -> str:

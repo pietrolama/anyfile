@@ -54,6 +54,51 @@ class Conversion:
         return self.source == self.target
 
 
+@dataclass(frozen=True)
+class Route:
+    """Percorso nel grafo: una conversione diretta o una catena di passaggi."""
+
+    steps: tuple[Conversion, ...]
+
+    @property
+    def source(self) -> str:
+        return self.steps[0].source
+
+    @property
+    def target(self) -> str:
+        return self.steps[-1].target
+
+    @property
+    def last(self) -> Conversion:
+        """Il passaggio che produce il risultato: è lì che contano i preset di qualità."""
+        return self.steps[-1]
+
+    @property
+    def via(self) -> tuple[str, ...]:
+        return tuple(s.target for s in self.steps[:-1])
+
+    @property
+    def is_chain(self) -> bool:
+        return len(self.steps) > 1
+
+    @property
+    def is_compression(self) -> bool:
+        return not self.is_chain and self.steps[0].is_compression
+
+    @property
+    def multi_output(self) -> bool:
+        return self.last.multi_output
+
+    @property
+    def notes(self) -> str:
+        # Le perdite di ogni passaggio si sommano: si dichiarano tutte, senza ripetizioni.
+        seen: list[str] = []
+        for step in self.steps:
+            if step.notes and step.notes not in seen:
+                seen.append(step.notes)
+        return "; ".join(seen)
+
+
 class Quality(Enum):
     """Preset di qualità, offerti solo dove cambiano davvero il risultato (formati con perdita)."""
 

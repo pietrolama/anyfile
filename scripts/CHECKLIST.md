@@ -48,6 +48,19 @@ Per ripartire da zero: `python3 scripts/genera_prove.py --pulisci`.
 | C8 | `20-foto-pesante.jpg` + `09-video-lungo.mp4` + `01-foto.png` | Selezionali → menu | Una sola fetta COMPRIMI «2/3»: ogni file resta nel suo formato |
 | C9 | Finestra | Riga di una JPEG | Prima voce: «Comprimi (stesso formato)» |
 
+## Conversioni concatenate
+
+| # | File | Azione | Risultato atteso |
+|---|------|--------|------------------|
+| K1 | `11-foglio.xlsx` | Menu | Fette PNG, JPG, TXT con «via PDF» |
+| K2 | `11-foglio.xlsx` | → PNG | `11-foglio.png` con la tabella |
+| K3 | `12-presentazione.pptx` | → PNG | Cartella `12-presentazione-pagine/` con una immagine per slide |
+| K4 | `15-tre-pagine.pdf` | Passa su DOCX | «via Testo semplice · Solo il testo…»: dichiara che si perde l'impaginazione |
+| K5 | `10-documento.docx` | Finestra, menu della riga | Le catene hanno «· via PDF» accanto al formato |
+| K6 | `08-clip-breve.mp4` | Menu | Nessuna fetta PNG/JPG: passare dalla GIF degraderebbe due volte |
+| K7 | `01-foto.png` | Menu | Nessuna fetta TXT/DOCX: un'immagine non contiene testo senza OCR |
+| K8 | `anyfile info prove-manuali/11-foglio.xlsx` | Terminale | Le catene sono indicate con «(via pdf)» |
+
 ## Selezioni multiple
 
 | # | File | Azione | Risultato atteso |

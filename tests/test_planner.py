@@ -24,7 +24,7 @@ def reg():
 
 def test_direct_plan(reg):
     p = plan(info("png"), "jpeg", reg)  # alias dell'estensione
-    assert p.conversion.target == "jpg"
+    assert p.route.target == "jpg" and not p.route.is_chain
     assert p.target_format.ext == "jpg"
 
 

@@ -13,7 +13,7 @@ from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import QApplication
 
 from anyfile.core import formats
-from anyfile.models.conversion import Conversion, Quality
+from anyfile.models.conversion import Conversion, Quality, Route
 from anyfile.ui import radial
 from anyfile.ui.radial import MAX_SLICES, Phase, RadialMenu, build_entries
 from anyfile.ui.radial_geometry import CENTER, polar
@@ -74,9 +74,9 @@ def click(menu, hit):
 def test_too_many_targets_collapse_into_more(tmp_path):
     a, b = tmp_path / "a", tmp_path / "b"
     # Le destinazioni che valgono per più file hanno la precedenza sul resto.
-    options = [(Conversion("x", f.id, "e"), (a, b) if f.id in ("pdf", "zzz") else (a,))
+    options = [(Route((Conversion("x", f.id, "e"),)), (a, b) if f.id in ("pdf", "zzz") else (a,))
                for f in formats.FORMATS[:20]]
-    options.append((Conversion("x", "pdf", "e"), (a, b)))
+    options.append((Route((Conversion("x", "pdf", "e"),)), (a, b)))
     entries = build_entries(options[:19] + [options[-1]])
     assert len(entries) == MAX_SLICES
     assert entries[-1].conversion is None

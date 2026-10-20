@@ -68,6 +68,14 @@ _BY_MIME: dict[str, Format] = {m: f for f in FORMATS for m in f.mimes}
 TEXT_FORMATS = frozenset({"txt", "md", "html", "csv", "rst", "tex"})
 
 
+# Formati con perdita: non si usano mai come passaggio intermedio di una catena,
+# perché il risultato verrebbe degradato due volte.
+LOSSY_FORMATS = frozenset({
+    "jpg", "webp", "gif", "mp3", "ogg", "opus", "m4a", "aac",
+    "mp4", "mkv", "webm", "mov", "avi",
+})
+
+
 def get(format_id: str) -> Format:
     return BY_ID[format_id]
 

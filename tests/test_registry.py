@@ -1,3 +1,4 @@
+from dataclasses import replace
 from pathlib import Path
 
 from anyfile.core.registry import Registry
@@ -12,7 +13,7 @@ class FakeEngine(Engine):
         self._declared = convs
 
     def declared(self):
-        return [c.__class__(c.source, c.target, self.name, c.notes) for c in self._declared]
+        return [replace(c, engine=self.name) for c in self._declared]
 
     def convert(self, conversion, src: Path, dst: Path, ctx):  # pragma: no cover
         raise NotImplementedError

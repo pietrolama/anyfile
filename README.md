@@ -30,6 +30,13 @@ Lo script crea un virtualenv in `~/.local/share/anyfile/venv`, il comando
   stesso formato (JPEG, WebP, audio e video con perdita, PDF con Ghostscript) e salva
   `nome-compresso.ext` accanto all'originale. Se il risultato non è più leggero viene
   scartato e la ruota mostra «Già compatto». Da terminale: `anyfile convert foto.jpg -t jpg`.
+- **Conversioni concatenate**: se un formato non è raggiungibile direttamente, ANYFILE
+  passa da un formato intermedio, per esempio XLSX → PDF → PNG (una immagine per pagina),
+  DOC → DOCX → Markdown, EPUB → DOCX → PDF. La ruota e la finestra indicano «via PDF» e
+  sommano le perdite dichiarate di ogni passaggio. Regole: al massimo un intermedio, mai
+  un intermedio con perdita (niente doppia compressione), nessun percorso che darebbe un
+  file vuoto (un'immagine non diventa testo senza OCR); ogni file intermedio viene
+  verificato e un errore indica il passaggio in cui è avvenuto.
 - **Qualità**: per i formati con perdita (JPEG, WebP, MP3, Ogg, Opus, AAC, video, GIF)
   ci sono tre preset: *Massima qualità*, *Bilanciata* (predefinita) e *File più leggero*
   (che riduce anche i video a 720p e toglie i metadati dalle foto). Nella ruota, il clic
@@ -68,7 +75,7 @@ src/anyfile/
   core/detector.py    firma del contenuto → MIME → estensione
   core/formats.py     catalogo dei formati
   core/registry.py    grafo delle conversioni offerte dai motori installati
-  core/planner.py     scelta della conversione (solo dirette, per ora)
+  core/planner.py     scelta del percorso: diretto o con un passaggio intermedio
   core/executor.py    esecuzione isolata, file temporanei, collocamento sicuro
   core/validation.py  verifica dell'output (firma, testo, tracce audio/video)
   core/jobs.py        coda dei lavori con avanzamento e annullamento
@@ -98,5 +105,4 @@ python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'
 
 ## Prossimi passi
 
-Conversioni concatenate (es. DOCX → HTML → EPUB)
-con valutazione della perdita, cronologia, pacchetto `.deb`/Flatpak.
+Cronologia e ripetizione delle conversioni, pacchetto `.deb`/Flatpak.

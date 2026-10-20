@@ -15,7 +15,7 @@ from anyfile.core import formats
 from anyfile.core.detector import detect
 from anyfile.core.planner import available_targets
 from anyfile.core.registry import Registry
-from anyfile.models.conversion import Conversion
+from anyfile.models.conversion import Route
 from anyfile.models.file_info import FileInfo
 from anyfile.models.job import Job, JobStatus
 
@@ -28,7 +28,7 @@ COMPRESS = "="
 @dataclass
 class Row:
     info: FileInfo
-    targets: list[Conversion]
+    targets: list[Route]
     combo: QComboBox
     job_id: int | None = None
     status: JobStatus | None = None
@@ -47,7 +47,7 @@ class Row:
         return self.status in (JobStatus.QUEUED, JobStatus.RUNNING)
 
 
-def fill_target_combo(combo: QComboBox, targets: list[Conversion]) -> None:
+def fill_target_combo(combo: QComboBox, targets: list[Route]) -> None:
     """Popola il menu delle destinazioni raggruppando i formati per categoria."""
     combo.clear()
     combo.addItem(PLACEHOLDER, None)
@@ -60,6 +60,9 @@ def fill_target_combo(combo: QComboBox, targets: list[Conversion]) -> None:
         last_group = group
         if conv.is_compression:
             combo.addItem("Comprimi  (stesso formato)", COMPRESS)
+        elif conv.is_chain:
+            via = ", ".join(formats.get(v).label for v in conv.via)
+            combo.addItem(f"{fmt.label}  (.{fmt.ext})  · via {via}", fmt.id)
         else:
             combo.addItem(f"{fmt.label}  (.{fmt.ext})", fmt.id)
         if conv.notes:
@@ -190,7 +193,7 @@ class ConversionView(QWidget):
     # --- selezione multipla della destinazione ------------------------------
 
     def _refresh_bulk(self) -> None:
-        union: dict[str, Conversion] = {}
+        union: dict[str, Route] = {}
         for row in self.rows:
             for conv in row.targets:
                 union.setdefault(COMPRESS if conv.is_compression else conv.target, conv)

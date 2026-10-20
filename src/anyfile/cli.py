@@ -81,7 +81,9 @@ def cmd_info(registry: Registry, files: list[Path]) -> int:
         if info.extension_mismatch:
             print("  Attenzione: l'estensione non corrisponde al contenuto")
         targets = available_targets(info, registry)
-        names = ", ".join(c.target + ("*" if registry.presets(c) else "") for c in targets)
+        names = ", ".join(
+            c.target + ("*" if registry.presets(c) else "") + (f" (via {'/'.join(c.via)})" if c.is_chain else "")
+            for c in targets)
         print(f"  Conversioni: {names or 'nessuna'}")
         if any(registry.presets(c) for c in targets):
             print("  (* con preset di qualità: --quality massima|bilanciata|leggera)")

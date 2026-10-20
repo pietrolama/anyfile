@@ -7,7 +7,18 @@ from dataclasses import dataclass
 
 from anyfile.core import formats
 from anyfile.engines.base import Engine
-from anyfile.models.conversion import Conversion, Presets, Quality
+from anyfile.models.conversion import Category, Conversion, Presets, Quality, Route
+
+
+# Un'immagine non contiene testo estraibile (servirebbe l'OCR): una catena che la porta
+# verso un documento passando dal PDF produrrebbe un file vuoto.
+_NO_CONTENT = {
+    (Category.IMAGE, Category.TEXT), (Category.IMAGE, Category.DOCUMENT),
+    (Category.IMAGE, Category.SPREADSHEET), (Category.IMAGE, Category.PRESENTATION),
+}
+# A parità di perdite dichiarate, il formato intermedio preferito.
+_INTERMEDIATE_PREFERENCE = ("docx", "odt", "pdf", "html", "md", "png", "wav", "flac",
+                            "tex", "rst", "txt")
 
 
 def default_engines() -> list[Engine]:
@@ -42,6 +53,7 @@ class Registry:
         """Ricontrolla i motori installati (es. dopo aver installato una dipendenza)."""
         self._edges: dict[tuple[str, str], Conversion] = {}
         self._missing: dict[tuple[str, str], list[Engine]] = {}
+        self._routes: dict[str, list[Route]] = {}
         for engine in self.engines:
             engine.reset()
             if engine.available:
@@ -54,7 +66,9 @@ class Registry:
     def engine(self, name: str) -> Engine:
         return self._by_name[name]
 
-    def presets(self, conversion: Conversion) -> Presets:
+    def presets(self, conversion: Conversion | Route) -> Presets:
+        if isinstance(conversion, Route):
+            conversion = conversion.last
         presets = self.engine(conversion.engine).presets(conversion.target)
         if conversion.is_compression:
             # Ricomprimere alla massima qualità darebbe quasi sempre un file più grande.
@@ -67,6 +81,38 @@ class Registry:
     def targets(self, source: str) -> list[Conversion]:
         convs = [c for (s, _), c in self._edges.items() if s == source]
         return sorted(convs, key=_target_order)
+
+    def routes(self, source: str) -> list[Route]:
+        """Destinazioni raggiungibili: dirette, oppure con un solo passaggio intermedio
+        quando la conversione diretta non esiste."""
+        if source not in self._routes:
+            direct = [Route((c,)) for c in self.targets(source)]
+            chains = sorted(self._chains(source), key=lambda r: _target_order(r.last))
+            self._routes[source] = direct + chains
+        return self._routes[source]
+
+    def route(self, source: str, target: str) -> Route | None:
+        return next((r for r in self.routes(source) if r.target == target), None)
+
+    def _chains(self, source: str) -> list[Route]:
+        direct = {c.target for c in self.targets(source)}
+        best: dict[str, tuple[tuple[int, int], Route]] = {}
+        for first in self.targets(source):
+            middle = first.target
+            # L'intermedio deve essere un solo file e senza perdita.
+            if first.is_compression or first.multi_output or middle in formats.LOSSY_FORMATS:
+                continue
+            for second in self.targets(middle):
+                target = second.target
+                if second.is_compression or target in direct or target == source:
+                    continue
+                pair = (formats.get(source).category, formats.get(target).category)
+                if pair in _NO_CONTENT:
+                    continue
+                cost = (bool(first.notes) + bool(second.notes), _preference(middle))
+                if target not in best or cost < best[target][0]:
+                    best[target] = (cost, Route((first, second)))
+        return [route for _cost, route in best.values()]
 
     def missing_engines_for(self, source: str, target: str) -> list[Engine]:
         if (source, target) in self._edges:
@@ -87,6 +133,13 @@ class Registry:
                          len(e.conversions()))
             for e in self.engines
         ]
+
+
+def _preference(fmt: str) -> int:
+    try:
+        return _INTERMEDIATE_PREFERENCE.index(fmt)
+    except ValueError:
+        return len(_INTERMEDIATE_PREFERENCE)
 
 
 def _target_order(c: Conversion) -> tuple[int, int, str]:

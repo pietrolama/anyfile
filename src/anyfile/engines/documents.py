@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import tempfile
 from pathlib import Path
 
 from anyfile.engines.base import ConversionContext, Engine, EngineError, pairs
@@ -49,8 +50,8 @@ class LibreOfficeEngine(Engine):
 
     def convert(self, conversion: Conversion, src: Path, dst: Path, ctx: ConversionContext) -> None:
         ctx.progress(None)
-        outdir = dst.parent / "lo-out"
-        outdir.mkdir()
+        # Cartella propria: in una catena la cartella di lavoro è condivisa tra i passaggi.
+        outdir = Path(tempfile.mkdtemp(prefix="lo-out-", dir=dst.parent))
         # Profilo dedicato: un LibreOffice già aperto dall'utente non blocca la conversione.
         profile = _cache_dir() / "libreoffice-profile"
         profile.mkdir(parents=True, exist_ok=True)
