@@ -1,0 +1,53 @@
+# Checklist delle prove manuali
+
+Apri questa cartella in Dolphin. Per ogni prova: tasto destro sul file →
+**Converti con ANYFILE**, scegli il formato, premi **Converti**.
+Per ripartire da zero: `python3 scripts/genera_prove.py --pulisci`.
+
+## Immagini
+
+| # | File | Azione | Risultato atteso |
+|---|------|--------|------------------|
+| 1 | `01-foto.png` | → JPEG, WebP, ICO, PDF | File validi accanto all'originale |
+| 2 | `02-trasparente.png` | → JPEG | Sfondo **bianco**, non nero |
+| 3 | `03-png-travestito.jpg` | Apri in ANYFILE | Formato «PNG ⚠»; il tooltip spiega che l'estensione non corrisponde |
+| 3b | `03-png-travestito.jpg` | → JPEG con «Sovrascrivi» attivo | Crea `03-png-travestito (1).jpg`: l'originale non viene toccato |
+| 4 | `04-conflitto.png` | → JPEG | Crea `04-conflitto (1).jpg`, il `04-conflitto.jpg` esistente resta intatto |
+| 4b | `04-conflitto.png` | → JPEG con «Sovrascrivi» | Sostituisce `04-conflitto.jpg` |
+| 5 | `05-nome strano [1] -x.png` | → WebP | Funziona nonostante spazi, parentesi e trattino |
+| 6 | `06-animata.gif` | → WebP / → PNG / → MP4 | WebP animata; PNG con solo il primo fotogramma (vedi tooltip); MP4 video |
+
+## Audio e video
+
+| # | File | Azione | Risultato atteso |
+|---|------|--------|------------------|
+| 7 | `07-tono.wav` | → MP3, FLAC, Opus | File riproducibili |
+| 8 | `08-clip-breve.mp4` | → GIF, → WebM, → MP3 | GIF animata; WebM; solo audio |
+| 9 | `09-video-lungo.mp4` | → WebM, poi **Annulla** a metà | Barra di avanzamento; stato «Annullato»; nessun file parziale (né `.anyfile-*`) nella cartella |
+
+## Documenti
+
+| # | File | Azione | Risultato atteso |
+|---|------|--------|------------------|
+| 10 | `10-documento.docx` | → PDF, → ODT, → Markdown | PDF/ODT con tabella; Markdown con il testo |
+| 10b | `10-documento.docx` | → PDF **con LibreOffice aperto** | Funziona lo stesso (profilo separato) |
+| 11 | `11-foglio.xlsx` | → ODS, → CSV, → PDF | CSV leggibile con gli accenti |
+| 12 | `12-presentazione.pptx` | → PDF, → ODP | Due slide |
+| 13 | `13-nota.md` | → DOCX, → HTML, → PDF | HTML apribile nel browser |
+| 14 | `14-dati.csv` | → XLSX | Tabella con 3 righe |
+| 15 | `15-tre-pagine.pdf` | → PNG | Cartella `15-tre-pagine-pagine/` con 3 immagini |
+| 15b | `15-tre-pagine.pdf` | → Testo | Testo delle tre pagine |
+| 16 | `16-scansione.pdf` | → Testo | Errore leggibile: «non contiene testo estraibile… serve l'OCR» |
+
+## Casi limite
+
+| # | File | Azione | Risultato atteso |
+|---|------|--------|------------------|
+| 17 | `17-archivio.zip` | Apri in ANYFILE | Riga grigia «Formato non riconosciuto», menu disattivato |
+| 18 | `18-danneggiato.png` | → JPEG | Stato «✗ ImageMagick non è riuscito…»; tooltip con i dettagli; le altre conversioni della coda proseguono |
+| 19 | `19-vuoto.txt` | Apri in ANYFILE | «Il file è vuoto» |
+| 20 | Tutti i file insieme | Seleziona tutto → ANYFILE → «Converti tutti in: PDF» | Il PDF viene impostato solo dove è possibile; gli altri restano su «Scegli formato…» |
+| 21 | Una cartella | Trascinala nella finestra | Messaggio in basso: le cartelle non sono supportate |
+| 22 | Qualsiasi | «Salva in:» una cartella diversa | I risultati finiscono lì; «Mostra risultati» apre Dolphin sul file |
+| 23 | `09-video-lungo.mp4` | Avvia, poi riduci la finestra a icona | Notifica di sistema a fine conversione |
+| 24 | `09-video-lungo.mp4` | Avvia e chiudi la finestra | Chiede se annullare le conversioni in corso |
