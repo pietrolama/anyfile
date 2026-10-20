@@ -1,5 +1,7 @@
 # ANYFILE
 
+[![Test](https://github.com/pietrolama/anyfile/actions/workflows/test.yml/badge.svg)](https://github.com/pietrolama/anyfile/actions/workflows/test.yml)
+
 Convertitore di file locale per Linux, pensato per KDE Plasma su Debian/Ubuntu.
 Tasto destro su un file in Dolphin, e una ruota sotto il puntatore mostra cosa puoi
 farne: convertirlo, comprimerlo, scegliere la qualità. Si sceglie il risultato, non
@@ -19,6 +21,28 @@ Verificata con `packaging/deb/test-clean-install.sh` in container puliti:
 | Debian 13 (trixie) | pacchetto `.deb` | installazione, 111 test sul pacchetto, aggiornamento e rimozione senza residui |
 | Ubuntu 26.04 LTS | pacchetto `.deb` | come sopra |
 | Ubuntu 24.04 LTS | `packaging/install-user.sh` | conversioni e ruota funzionanti (anche con ImageMagick 6). Il `.deb` non si installa perché la 24.04 non ha PySide6 nei repository |
+| Windows 10/11 | `pip install` dai sorgenti | sperimentale: motore, terminale, finestra e ruota funzionano e sono testati a ogni push. Mancano ancora il menu contestuale di Explorer e un installer |
+
+A ogni push GitHub Actions esegue l'intera suite su **Debian 13** (con tutti i motori,
+LibreOffice compreso) e su **Windows** (FFmpeg, ImageMagick, Pandoc, Ghostscript,
+Poppler).
+
+### Windows (sperimentale)
+
+Servono Python 3.10+ e i motori desiderati, per esempio con
+`winget install Gyan.FFmpeg ImageMagick.ImageMagick JohnMacFarlane.Pandoc ArtifexSoftware.GhostScript`.
+Poi:
+
+```powershell
+git clone https://github.com/pietrolama/anyfile.git
+cd anyfile
+pip install .
+anyfile engines
+```
+
+ANYFILE trova i motori nel PATH o nelle loro cartelle di installazione standard: non
+serve configurare nulla. La finestra si apre con `anyfile`, la ruota con
+`anyfile --radial FILE`.
 
 ### Pacchetto .deb (Debian 13, Ubuntu 26.04 e successive)
 
@@ -215,6 +239,7 @@ src/anyfile/
   core/validation.py    verifica dei file prodotti
   core/jobs.py          coda dei lavori con avanzamento e annullamento
   core/history.py       cronologia in SQLite, condivisa da ruota, finestra e terminale
+  core/system.py        tutto ciò che dipende dal sistema operativo (Linux / Windows)
   engines/              FFmpeg, ImageMagick, Poppler, LibreOffice + Pandoc, Ghostscript
   ui/radial.py          menu radiale (ui/radial_geometry.py: geometria senza Qt)
   ui/main_window.py     finestra completa
@@ -235,7 +260,7 @@ python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'
 .venv/bin/pytest
 ```
 
-I test automatici sono più di 130. Generano piccoli file di esempio con i motori stessi e
+I test automatici sono più di 140. Generano piccoli file di esempio con i motori stessi e
 controllano le conversioni reali. Coprono anche annullamento, conflitti di nome,
 preset, catene e il comportamento della ruota (con Qt offscreen). Un test viene
 saltato se il motore che serve non è installato.
@@ -255,7 +280,8 @@ Prototipo in sviluppo attivo, usato su Debian 13 con KDE Plasma 6.3 (Wayland).
 La compressione dei PDF con Ghostscript è verificata su PDF reali in Debian 13 e
 Ubuntu 26.04, nei container puliti.
 
-Prossimi passi: Flatpak, isolamento dei motori per i file non attendibili.
+Prossimi passi: su Windows il menu contestuale di Explorer e un installer con i motori
+inclusi; su Linux il Flatpak e l'isolamento dei motori per i file non attendibili.
 
 ## Licenza
 
