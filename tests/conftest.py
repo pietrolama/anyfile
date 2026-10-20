@@ -16,6 +16,12 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "slow: conversioni reali lente (LibreOffice, video)")
 
 
+@pytest.fixture(autouse=True)
+def _isolated_data_home(tmp_path_factory, monkeypatch):
+    # La cronologia dei test non deve mai finire in quella dell'utente.
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path_factory.mktemp("data-home")))
+
+
 def _run(*args: str) -> None:
     subprocess.run(args, check=True, capture_output=True, timeout=120)
 

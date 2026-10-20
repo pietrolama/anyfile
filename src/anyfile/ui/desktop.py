@@ -9,6 +9,8 @@ from pathlib import Path
 from PySide6.QtCore import QUrl
 from PySide6.QtGui import QDesktopServices
 
+from anyfile.core.history import format_size
+
 APP_ICON = "document-export"
 
 
@@ -27,9 +29,4 @@ def reveal(path: Path) -> None:
 
 
 def human_size(size: int) -> str:
-    value = float(size)
-    for unit in ("B", "KB", "MB", "GB"):
-        if value < 1024 or unit == "GB":
-            return f"{value:.0f} {unit}" if unit == "B" else f"{value:.1f} {unit}".replace(".", ",")
-        value /= 1024
-    return ""
+    return format_size(size)

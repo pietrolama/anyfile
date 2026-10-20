@@ -14,12 +14,26 @@ def _to_path(arg: str) -> Path:
     return Path(arg).expanduser().absolute()
 
 
+def _open_history():
+    import sqlite3
+
+    from anyfile.core.history import History
+
+    # Senza cronologia ANYFILE funziona comunque: le conversioni non ne dipendono.
+    try:
+        return History()
+    except (OSError, sqlite3.Error) as e:
+        print(f"anyfile: cronologia non disponibile: {e}", file=sys.stderr)
+        return None
+
+
 def run(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="anyfile")
     parser.add_argument("--from-dolphin", action="store_true",
                         help="avviato dal menu contestuale di Dolphin")
     parser.add_argument("--radial", action="store_true",
                         help="mostra il menu radiale sotto il puntatore invece della finestra")
+    parser.add_argument("--history", action="store_true", help="apre la cronologia delle conversioni")
     parser.add_argument("files", nargs="*")
     args, qt_args = parser.parse_known_args(argv)
 
@@ -42,12 +56,13 @@ def run(argv: list[str]) -> int:
     app.setWindowIcon(QIcon.fromTheme(APP_ICON))
 
     registry = Registry()
+    history = _open_history()
     paths = [_to_path(f) for f in args.files]
     windows: list[MainWindow] = []
 
     def open_window(files: list[Path]) -> None:
         app.setQuitOnLastWindowClosed(True)
-        window = MainWindow(registry)
+        window = MainWindow(registry, history)
         window.add_files(files)
         window.show()
         windows.append(window)
@@ -58,10 +73,15 @@ def run(argv: list[str]) -> int:
         # Il menu si nasconde mentre una conversione prosegue in background:
         # l'app termina quando il menu lo segnala, non alla chiusura dell'ultima finestra.
         app.setQuitOnLastWindowClosed(False)
-        menu = RadialMenu(registry, paths)
+        menu = RadialMenu(registry, paths, history)
         menu.open_window.connect(open_window)
         menu.finished.connect(lambda: None if windows else app.quit())
         menu.popup()
+    elif args.history and history is not None:
+        from anyfile.ui.history_window import HistoryWindow
+
+        history_window = HistoryWindow(registry, history)
+        history_window.show()
     else:
         open_window(paths)
     return app.exec()

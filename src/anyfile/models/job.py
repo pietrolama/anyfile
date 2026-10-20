@@ -35,6 +35,13 @@ class Job:
     message: str = ""
     details: str = ""
     output: Path | None = None
+    # Compilati dall'esecutore per la cronologia: cosa è stato fatto davvero.
+    source_format: str | None = None
+    source_size: int | None = None
+    output_size: int | None = None
+    via: tuple[str, ...] = ()
+    # Qualità applicata, oppure None se per questa destinazione non conta (es. PNG).
+    applied_quality: Quality | None = None
     cancel_event: threading.Event = field(default_factory=threading.Event, repr=False)
 
     @property

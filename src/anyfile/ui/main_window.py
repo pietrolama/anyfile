@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
 )
 
 from anyfile.core.executor import Executor
+from anyfile.core.history import History
 from anyfile.core.registry import Registry
 from anyfile.models.conversion import Quality
 from anyfile.models.job import Job, JobStatus
@@ -22,11 +23,13 @@ from anyfile.ui.settings import EnginesDialog, Settings
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, registry: Registry) -> None:
+    def __init__(self, registry: Registry, history: History | None = None) -> None:
         super().__init__()
         self.registry = registry
+        self.history = history
+        self.history_window = None
         self.settings = Settings()
-        self.jobs = QtJobQueue(Executor(registry), self)
+        self.jobs = QtJobQueue(Executor(registry), self, history=history)
         self.jobs.job_updated.connect(self._on_job_updated)
         self._batch: dict[int, JobStatus] = {}
         self._last_output: Path | None = None
@@ -76,12 +79,17 @@ class MainWindow(QMainWindow):
         clear.triggered.connect(lambda: self.view.clear())
         engines = QAction(QIcon.fromTheme("configure"), "Motori…", self)
         engines.triggered.connect(self._show_engines)
+        history = QAction(QIcon.fromTheme("view-history"), "Cronologia", self)
+        history.setShortcut(QKeySequence("Ctrl+H"))
+        history.triggered.connect(self.show_history)
+        history.setEnabled(self.history is not None)
 
         for action in (add, remove, clear):
             bar.addAction(action)
         spacer = QWidget()
         spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         bar.addWidget(spacer)
+        bar.addAction(history)
         bar.addAction(engines)
 
     def _build_output_options(self) -> QVBoxLayout:
@@ -242,6 +250,17 @@ class MainWindow(QMainWindow):
         if path is not None:
             reveal(path)
 
+    def show_history(self) -> None:
+        if self.history is None:
+            return
+        from anyfile.ui.history_window import HistoryWindow
+
+        if self.history_window is None:
+            self.history_window = HistoryWindow(self.registry, self.history)
+        self.history_window.show()
+        self.history_window.raise_()
+        self.history_window.activateWindow()
+
     def _show_engines(self) -> None:
         EnginesDialog(self.registry, self).exec()
         self.view.refresh_capabilities()
@@ -268,5 +287,7 @@ class MainWindow(QMainWindow):
                 return
             self.jobs.cancel_all()
         self.jobs.close()
+        if self.history_window is not None:
+            self.history_window.close()
         event.accept()
 

@@ -8,3 +8,9 @@ Icon=document-export
 Terminal=false
 Categories=Utility;
 Keywords=convert;converter;converti;formato;
+Actions=cronologia;
+
+[Desktop Action cronologia]
+Name=Cronologia delle conversioni
+Icon=view-history
+Exec=anyfile --history

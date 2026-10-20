@@ -61,6 +61,20 @@ Per ripartire da zero: `python3 scripts/genera_prove.py --pulisci`.
 | K7 | `01-foto.png` | Menu | Nessuna fetta TXT/DOCX: un'immagine non contiene testo senza OCR |
 | K8 | `anyfile info prove-manuali/11-foglio.xlsx` | Terminale | Le catene sono indicate con «(via pdf)» |
 
+## Cronologia
+
+| # | File | Azione | Risultato atteso |
+|---|------|--------|------------------|
+| H1 | Qualsiasi | Fai qualche conversione dalla ruota, poi finestra → **Cronologia** (Ctrl+H) | Le conversioni della ruota ci sono, con operazione ed esito |
+| H2 | `20-foto-pesante.jpg` | COMPRIMI → Leggera, poi apri la cronologia | «Comprimi JPEG · Leggera — 927 KB → 134 KB (−86%)» |
+| H3 | `18-danneggiato.png` | → JPG, poi in cronologia seleziona la riga | Esito in rosso; il pulsante dice **Riprova** |
+| H4 | Una riga riuscita | **Ripeti** | Nuova voce in cima; il file nuovo è `nome (1).ext`, nulla sovrascritto |
+| H5 | Una riga riuscita | **Ripeti su altri file…** e scegli 2 file | Stessa operazione e qualità sui nuovi file |
+| H6 | Una voce di cui hai cancellato l'originale | Ripeti | Avviso «non esiste più»; nessuna nuova voce |
+| H7 | Icona di ANYFILE nel menu | Clic destro → *Cronologia delle conversioni* | Si apre direttamente la cronologia |
+| H8 | Finestra cronologia | Togli «Registra le nuove conversioni», converti un file | Nessuna nuova voce |
+| H9 | Terminale | `anyfile history` e `anyfile repeat ID` | Stesso contenuto della finestra; la ripetizione funziona |
+
 ## Selezioni multiple
 
 | # | File | Azione | Risultato atteso |

@@ -10,6 +10,7 @@ from pathlib import Path
 
 from anyfile.core.errors import AnyfileError, ConversionCancelled, NothingGained
 from anyfile.core.executor import Executor
+from anyfile.core.history import History
 from anyfile.models.conversion import Quality
 from anyfile.models.job import Job, JobStatus
 
@@ -17,9 +18,11 @@ UpdateFn = Callable[[Job], None]
 
 
 class JobQueue:
-    def __init__(self, executor: Executor, on_update: UpdateFn | None = None) -> None:
+    def __init__(self, executor: Executor, on_update: UpdateFn | None = None,
+                 history: History | None = None) -> None:
         self.executor = executor
         self.on_update = on_update
+        self.history = history
         self.jobs: list[Job] = []
         self._queue: queue.Queue[Job | None] = queue.Queue()
         self._worker = threading.Thread(target=self._work, name="anyfile-jobs", daemon=True)
@@ -84,4 +87,7 @@ class JobQueue:
         except Exception as e:  # noqa: BLE001 — un errore imprevisto non deve fermare la coda
             job.status, job.message = JobStatus.FAILED, f"Errore imprevisto: {e}"
             job.details = traceback.format_exc()
+        if self.history:
+            # Prima della notifica: chi la riceve trova già l'operazione in cronologia.
+            self.history.safe_record(job)
         self._notify(job)

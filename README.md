@@ -120,6 +120,29 @@ destinazioni valide per più file. Una fetta che vale solo per una parte della
 selezione indica quanti file copre (es. «PDF 6/9») e converte solo quelli. «Comprimi»
 è una sola fetta: comprime ogni file nel proprio formato.
 
+## Cronologia
+
+Ogni conversione fatta con la ruota, la finestra o il terminale finisce nella stessa
+cronologia. Si apre dalla finestra completa (**Cronologia**, Ctrl+H), dal menu
+dell'applicazione (clic destro sull'icona → *Cronologia delle conversioni*) o con
+`anyfile --history`.
+
+- Per ogni operazione mostra quando, il file, cosa è stato fatto ed esito. «Cosa» vuol
+  dire per esempio «Comprimi JPEG · Leggera» o «Excel XLSX → PNG · via PDF». L'esito è
+  la dimensione prima e dopo con il risparmio, oppure il motivo dell'errore, oppure
+  «già compatto».
+- **Ripeti** riesegue con le stesse impostazioni: formato, qualità, cartella,
+  sovrascrittura. Sulle conversioni non riuscite diventa **Riprova**: utile dopo aver
+  corretto il problema, per esempio installando un motore mancante.
+- **Ripeti su altri file…** applica la stessa procedura a nuovi file.
+- Ci sono anche ricerca per nome, filtro «Solo errori», *Mostra risultato* e
+  *Rimuovi*. *Svuota cronologia* cancella le voci, non i file convertiti.
+- Vengono conservate le ultime 1000 operazioni in `~/.local/share/anyfile/cronologia.sqlite`,
+  solo sul computer. La registrazione si può disattivare dalla finestra.
+
+Se la cronologia non è disponibile, per esempio per un database danneggiato, le
+conversioni funzionano comunque.
+
 ## La finestra completa
 
 `anyfile [FILE...]`, il menu delle applicazioni, o il centro della ruota. Le funzioni:
@@ -140,6 +163,8 @@ anyfile convert *.wav -t mp3 -o ~/Musica       # conversione, anche di più file
 anyfile convert video.mov -t mp4 -q leggera    # qualità: massima | bilanciata | leggera
 anyfile convert foto.jpg -t jpg                # stesso formato = comprimi
 anyfile engines                                # motori installati e mancanti
+anyfile history [-n 20] [--errori]             # cronologia (--svuota per cancellarla)
+anyfile repeat 42 43                           # ripete le voci 42 e 43 della cronologia
 anyfile --radial FILE...                       # apre la ruota
 ```
 
@@ -189,9 +214,11 @@ src/anyfile/
   core/executor.py      esecuzione passo per passo, file temporanei, collocamento sicuro
   core/validation.py    verifica dei file prodotti
   core/jobs.py          coda dei lavori con avanzamento e annullamento
+  core/history.py       cronologia in SQLite, condivisa da ruota, finestra e terminale
   engines/              FFmpeg, ImageMagick, Poppler, LibreOffice + Pandoc, Ghostscript
   ui/radial.py          menu radiale (ui/radial_geometry.py: geometria senza Qt)
   ui/main_window.py     finestra completa
+  ui/history_window.py  finestra della cronologia
   cli.py, app.py        punti di ingresso
 packaging/              .desktop, azione di Dolphin, script di installazione
 scripts/                generatore dei file di prova e checklist
@@ -208,7 +235,7 @@ python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'
 .venv/bin/pytest
 ```
 
-I test automatici sono più di 120. Generano piccoli file di esempio con i motori stessi e
+I test automatici sono più di 130. Generano piccoli file di esempio con i motori stessi e
 controllano le conversioni reali. Coprono anche annullamento, conflitti di nome,
 preset, catene e il comportamento della ruota (con Qt offscreen). Un test viene
 saltato se il motore che serve non è installato.
@@ -228,8 +255,7 @@ Prototipo in sviluppo attivo, usato su Debian 13 con KDE Plasma 6.3 (Wayland).
 La compressione dei PDF con Ghostscript è verificata su PDF reali in Debian 13 e
 Ubuntu 26.04, nei container puliti.
 
-Prossimi passi: cronologia con ripetizione delle conversioni, pacchetto `.deb`,
-poi Flatpak.
+Prossimi passi: Flatpak, isolamento dei motori per i file non attendibili.
 
 ## Licenza
 

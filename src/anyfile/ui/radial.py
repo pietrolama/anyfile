@@ -25,6 +25,7 @@ from PySide6.QtWidgets import QWidget
 from anyfile.core import formats
 from anyfile.core.detector import detect
 from anyfile.core.executor import Executor
+from anyfile.core.history import History
 from anyfile.core.registry import Registry
 from anyfile.models.conversion import Category, Presets, Quality, Route
 from anyfile.models.file_info import FileInfo
@@ -159,7 +160,7 @@ class RadialMenu(QWidget):
     open_window = Signal(list)  # list[Path]: passa alla finestra completa
     finished = Signal()
 
-    def __init__(self, registry: Registry, paths: list[Path]) -> None:
+    def __init__(self, registry: Registry, paths: list[Path], history: History | None = None) -> None:
         super().__init__(None, Qt.WindowType.FramelessWindowHint
                          | Qt.WindowType.WindowStaysOnTopHint)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
@@ -196,7 +197,7 @@ class RadialMenu(QWidget):
         self._spinner = QTimer(self, interval=16)
         self._spinner.timeout.connect(self._on_spin)
 
-        self.queue = QtJobQueue(Executor(registry), self)
+        self.queue = QtJobQueue(Executor(registry), self, history=history)
         self.queue.job_updated.connect(self._on_job)
 
     # --- apertura e posizionamento ------------------------------------------

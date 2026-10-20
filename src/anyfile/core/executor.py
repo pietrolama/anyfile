@@ -29,10 +29,13 @@ class Executor:
             raise AnyfileError(f"File non trovato: {src}")
 
         info = detect(src)
+        job.source_size = info.size
+        job.source_format = info.format.id if info.format else None
         p = plan(info, job.target, self.registry)
         assert info.format is not None
         target = p.target_format
         route = p.route
+        job.via = route.via
 
         out_dir = job.output_dir or src.parent
         try:
@@ -62,6 +65,7 @@ class Executor:
             if route.is_compression and quality is Quality.MAX:
                 # Comprimi ha due livelli: alla massima qualità il file crescerebbe.
                 quality = Quality.BALANCED
+            job.applied_quality = quality if self.registry.presets(route) else None
 
             current = link
             total = len(route.steps)
@@ -108,7 +112,9 @@ class Executor:
             else:
                 name = f"{src.stem}.{target.ext}"
             final = out_dir / name
-            return place(produced, final, overwrite=job.overwrite, protect=src)
+            output = place(produced, final, overwrite=job.overwrite, protect=src)
+            job.output_size = _size(output)
+            return output
         finally:
             shutil.rmtree(work_dir, ignore_errors=True)
             shutil.rmtree(input_dir, ignore_errors=True)
@@ -117,6 +123,12 @@ class Executor:
 def _step_progress(progress: ProgressFn, n: int, total: int) -> ProgressFn:
     """Riporta l'avanzamento del passaggio n sull'intera catena."""
     return lambda value: progress(None if value is None else (n - 1 + value) / total)
+
+
+def _size(path: Path) -> int:
+    if path.is_dir():
+        return sum(f.stat().st_size for f in path.iterdir() if f.is_file())
+    return path.stat().st_size
 
 
 def _kb(size: int) -> str:

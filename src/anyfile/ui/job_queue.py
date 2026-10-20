@@ -8,6 +8,7 @@ from pathlib import Path
 from PySide6.QtCore import QObject, Signal
 
 from anyfile.core.executor import Executor
+from anyfile.core.history import History
 from anyfile.core.jobs import JobQueue
 from anyfile.models.conversion import Quality
 from anyfile.models.job import Job
@@ -17,9 +18,10 @@ class QtJobQueue(QObject):
     # Emesso nel thread dell'interfaccia (connessione in coda) con una copia del job.
     job_updated = Signal(object)
 
-    def __init__(self, executor: Executor, parent: QObject | None = None) -> None:
+    def __init__(self, executor: Executor, parent: QObject | None = None,
+                 history: History | None = None) -> None:
         super().__init__(parent)
-        self._queue = JobQueue(executor, on_update=self._forward)
+        self._queue = JobQueue(executor, on_update=self._forward, history=history)
 
     def _forward(self, job: Job) -> None:
         self.job_updated.emit(copy.copy(job))

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import sqlite3
 import sys
 import threading
 from pathlib import Path
@@ -8,6 +9,7 @@ from pathlib import Path
 from anyfile import __version__
 from anyfile.core import formats
 from anyfile.core.detector import detect
+from anyfile.core import history as hist
 from anyfile.core.executor import Executor
 from anyfile.core.jobs import JobQueue
 from anyfile.core.planner import available_targets
@@ -15,7 +17,7 @@ from anyfile.core.registry import Registry
 from anyfile.models.conversion import Quality
 from anyfile.models.job import Job, JobStatus
 
-COMMANDS = ("convert", "info", "engines")
+COMMANDS = ("convert", "info", "engines", "history", "repeat")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -43,6 +45,14 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("files", nargs="+", type=Path)
 
     sub.add_parser("engines", help="mostra i motori di conversione installati")
+
+    p = sub.add_parser("history", help="mostra la cronologia delle conversioni")
+    p.add_argument("-n", type=int, default=20, help="quante voci mostrare (predefinito: 20)")
+    p.add_argument("--errori", action="store_true", help="solo le conversioni non riuscite")
+    p.add_argument("--svuota", action="store_true", help="cancella tutta la cronologia")
+
+    p = sub.add_parser("repeat", help="ripete conversioni della cronologia con le stesse impostazioni")
+    p.add_argument("ids", nargs="+", type=int, metavar="ID", help="numero indicato da «anyfile history»")
     return parser
 
 
@@ -53,7 +63,53 @@ def main(argv: list[str]) -> int:
         return cmd_engines(registry)
     if args.command == "info":
         return cmd_info(registry, args.files)
+    if args.command == "history":
+        return cmd_history(args)
+    if args.command == "repeat":
+        return cmd_repeat(registry, args.ids)
     return cmd_convert(registry, args)
+
+
+def _open_history() -> hist.History | None:
+    try:
+        return hist.History()
+    except (OSError, sqlite3.Error) as e:
+        print(f"anyfile: cronologia non disponibile: {e}", file=sys.stderr)
+        return None
+
+
+def cmd_history(args: argparse.Namespace) -> int:
+    history = _open_history()
+    if history is None:
+        return 1
+    if args.svuota:
+        history.clear()
+        print("Cronologia svuotata.")
+        return 0
+    entries = history.entries(args.n, failed_only=args.errori)
+    if not entries:
+        print("Cronologia vuota." if history.enabled else "La cronologia è disattivata.")
+        return 0
+    marks = {JobStatus.DONE: "✓", JobStatus.FAILED: "✗", JobStatus.UNCHANGED: "="}
+    for e in entries:
+        print(f"{e.id:>5}  {hist.format_when(e.when):<16} {marks[e.status]} {e.source.name}")
+        print(f"       {hist.describe(e)} — {hist.describe_result(e)}")
+    print("\nPer ripetere: anyfile repeat ID")
+    return 0
+
+
+def cmd_repeat(registry: Registry, ids: list[int]) -> int:
+    history = _open_history()
+    if history is None:
+        return 1
+    jobs_args = []
+    for entry_id in ids:
+        entry = history.get(entry_id)
+        if entry is None:
+            print(f"anyfile: nessuna voce {entry_id} in cronologia", file=sys.stderr)
+            return 2
+        jobs_args.append((entry.source, entry.target, entry.submit_args()))
+    return _run_jobs(registry, history, jobs_args, sys.stdout.isatty())
 
 
 def cmd_engines(registry: Registry) -> int:
@@ -104,7 +160,12 @@ def cmd_convert(registry: Registry, args: argparse.Namespace) -> int:
               file=sys.stderr)
         return 2
 
-    tty = sys.stdout.isatty()
+    jobs_args = [(f, target.id, {"output_dir": args.output_dir, "overwrite": args.overwrite,
+                                  "quality": quality}) for f in args.files]
+    return _run_jobs(registry, _open_history(), jobs_args, sys.stdout.isatty())
+
+
+def _run_jobs(registry: Registry, history: hist.History | None, jobs_args: list, tty: bool) -> int:
     lock = threading.Lock()
 
     def on_update(job: Job) -> None:
@@ -113,7 +174,7 @@ def cmd_convert(registry: Registry, args: argparse.Namespace) -> int:
             if job.status is JobStatus.RUNNING:
                 if tty:
                     pct = f"{job.progress:4.0%}" if job.progress is not None else " ..."
-                    print(f"\r  {name} → {target.ext} {pct}", end="", flush=True)
+                    print(f"\r  {name} → {job.target} {pct}", end="", flush=True)
                 return
             if tty:
                 print("\r\033[K", end="")
@@ -126,10 +187,8 @@ def cmd_convert(registry: Registry, args: argparse.Namespace) -> int:
             elif job.status is JobStatus.CANCELLED:
                 print(f"- {name}: annullato", file=sys.stderr)
 
-    queue = JobQueue(Executor(registry), on_update)
-    jobs = [queue.submit(f, target.id, output_dir=args.output_dir, overwrite=args.overwrite,
-                         quality=quality)
-            for f in args.files]
+    queue = JobQueue(Executor(registry), on_update, history)
+    jobs = [queue.submit(source, target, **kwargs) for source, target, kwargs in jobs_args]
     try:
         queue.wait()
     except KeyboardInterrupt:
