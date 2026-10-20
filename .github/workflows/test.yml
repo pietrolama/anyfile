@@ -9,6 +9,7 @@ jobs:
   debian:
     name: Debian 13
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     container: debian:trixie
     env:
       DEBIAN_FRONTEND: noninteractive
@@ -33,6 +34,7 @@ jobs:
   windows:
     name: Windows
     runs-on: windows-latest
+    timeout-minutes: 45
     env:
       QT_QPA_PLATFORM: offscreen
       PYTHONUTF8: "1"
@@ -44,6 +46,8 @@ jobs:
           python-version: "3.12"
       - name: Motori
         shell: pwsh
+        # I download dei motori a volte si bloccano: meglio fallire presto e ripetere.
+        timeout-minutes: 25
         run: |
           choco install -y --no-progress ffmpeg imagemagick pandoc ghostscript
           # Poppler non ha un pacchetto choco ufficiale: build per Windows da GitHub.
