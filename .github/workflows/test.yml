@@ -22,7 +22,7 @@ jobs:
             ffmpeg imagemagick poppler-utils ghostscript pandoc \
             libreoffice-writer-nogui libreoffice-calc-nogui libreoffice-impress-nogui \
             libegl1 libgl1 libxkbcommon0 libfontconfig1 libdbus-1-3 >/dev/null
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Installazione
         run: |
           python3 -m venv /opt/venv
@@ -38,8 +38,8 @@ jobs:
       PYTHONUTF8: "1"
       GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - name: Motori

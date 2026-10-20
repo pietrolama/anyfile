@@ -75,6 +75,19 @@ def test_link_falls_back_to_hard_link_then_copy(tmp_path, monkeypatch):
     assert copy.read_bytes() == b"contenuto" and not os.path.samefile(src, copy)
 
 
+def test_windows_never_uses_symlinks(windows, tmp_path, monkeypatch):
+    src = tmp_path / "originale.bin"
+    src.write_bytes(b"contenuto")
+
+    def forbidden(self, target):
+        raise AssertionError("su Windows non si usano collegamenti simbolici")
+
+    monkeypatch.setattr(Path, "symlink_to", forbidden)
+    dst = tmp_path / "ingresso.bin"
+    system.link_or_copy(src, dst)
+    assert dst.read_bytes() == b"contenuto" and not dst.is_symlink()
+
+
 def test_kill_tree_stops_process_and_children():
     # Un processo che ne avvia un altro: entrambi devono fermarsi.
     child = "import subprocess, sys, time; subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(60)']); time.sleep(60)"

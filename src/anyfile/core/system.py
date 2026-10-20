@@ -124,14 +124,18 @@ def kill_tree(proc: subprocess.Popen) -> None:
 def link_or_copy(src: Path, dst: Path) -> None:
     """Rende src disponibile come dst senza duplicarlo, se il filesystem lo permette.
 
-    Collegamento simbolico (Linux), altrimenti hard link (Windows senza privilegi,
-    stesso volume), altrimenti copia (es. chiavetta FAT o volumi diversi).
+    Collegamento simbolico su Linux, altrimenti hard link (stesso volume), altrimenti
+    copia (es. chiavetta FAT o volumi diversi).
+
+    Su Windows niente collegamenti simbolici: alcune API ne riportano la dimensione
+    come 0 byte, e ImageMagick legge così un file vuoto.
     """
-    try:
-        dst.symlink_to(src.resolve())
-        return
-    except (OSError, NotImplementedError):
-        pass
+    if not IS_WINDOWS:
+        try:
+            dst.symlink_to(src.resolve())
+            return
+        except (OSError, NotImplementedError):
+            pass
     try:
         os.link(src, dst)
         return
