@@ -56,7 +56,7 @@ class Executor:
             if multi:
                 produced.mkdir()
 
-            ctx = ConversionContext(Runner(job.cancel_event), progress, src)
+            ctx = ConversionContext(Runner(job.cancel_event), progress, src, job.quality)
             try:
                 engine.convert(p.conversion, link, produced, ctx)
             except AnyfileError as e:

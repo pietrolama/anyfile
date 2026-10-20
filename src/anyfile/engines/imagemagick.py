@@ -5,7 +5,7 @@ import subprocess
 from pathlib import Path
 
 from anyfile.engines.base import ConversionContext, Engine, pairs
-from anyfile.models.conversion import Conversion
+from anyfile.models.conversion import Conversion, Presets, Quality
 
 # id ANYFILE → nome del coder ImageMagick
 CODERS = {
@@ -18,6 +18,13 @@ IMAGES = [f for f in CODERS if f != "pdf"]
 MULTI_FRAME = {"gif", "webp", "tiff", "pdf"}
 # Formati senza trasparenza: lo sfondo trasparente diventa bianco invece che nero.
 NO_ALPHA = {"jpg", "bmp"}
+
+# Solo i formati con perdita hanno preset: per PNG, BMP, TIFF... non cambierebbero nulla.
+# qualità → (valore di -quality, rimozione dei metadati)
+QUALITY: dict[str, dict[Quality, tuple[int, bool]]] = {
+    "jpg": {Quality.MAX: (95, False), Quality.BALANCED: (85, False), Quality.SMALL: (70, True)},
+    "webp": {Quality.MAX: (95, False), Quality.BALANCED: (80, False), Quality.SMALL: (60, True)},
+}
 
 _FORMAT_LINE = re.compile(r"^\s*([A-Z0-9-]+)\*?\s+\S+\s+([r-])([w-])[+-]")
 
@@ -62,6 +69,12 @@ class ImageMagickEngine(Engine):
         return [c for c in self.declared()
                 if CODERS[c.source] in readable and CODERS[c.target] in writable]
 
+    def presets(self, target: str) -> Presets:
+        return {
+            q: f"Qualità {value}" + (", senza metadati (EXIF, GPS)" if strip else "")
+            for q, (value, strip) in QUALITY.get(target, {}).items()
+        }
+
     def convert(self, conversion: Conversion, src: Path, dst: Path, ctx: ConversionContext) -> None:
         target = conversion.target
         ctx.progress(None)
@@ -69,8 +82,11 @@ class ImageMagickEngine(Engine):
         args = [self.binary(), str(src) if target in MULTI_FRAME else f"{src}[0]", "-auto-orient"]
         if target in NO_ALPHA:
             args += ["-background", "white", "-alpha", "remove", "-alpha", "off"]
-        if target == "jpg":
-            args += ["-quality", "92"]
+        if target in QUALITY:
+            value, strip = QUALITY[target][ctx.quality]
+            args += ["-quality", str(value)]
+            if strip:
+                args += ["-strip"]
         if target == "ico":
             args += ["-define", "icon:auto-resize=256,128,64,48,32,16"]
         args.append(f"{CODERS[target]}:{dst}")

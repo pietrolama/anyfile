@@ -16,11 +16,30 @@ Per ripartire da zero: `python3 scripts/genera_prove.py --pulisci`.
 | R5 | Qualsiasi | Esc, clic fuori, tasto destro | Il menu si chiude senza fare nulla |
 | R6 | `09-video-lungo.mp4` | Clic su WEBM, poi **Esc** | Il menu sparisce, la conversione continua; a fine lavoro arriva una notifica |
 | R7 | `09-video-lungo.mp4` | Clic su WEBM, poi clic al **centro** («Annulla») | Conversione annullata, nessun file parziale |
-| R8 | `01-foto.png` + `06-animata.gif` + `07-tono.wav` | Selezionali insieme → menu | Nessuna conversione comune: il messaggio lo dice; centro → finestra |
+| R8 | `01-foto.png` + `06-animata.gif` + `07-tono.wav` | Selezionali insieme → menu | Fette immagine «2/3» e audio «1/3»: ognuna converte solo i file compatibili |
 | R9 | `01-foto.png` + `02-trasparente.png` + `17-archivio.zip` | Selezionali insieme → menu | Solo formati immagine; «1 file non riconosciuto sarà ignorato» |
 | R10 | `08-clip-breve.mp4` | Menu | 12 fette: Video, Immagine (GIF), Audio |
 | R11 | `18-danneggiato.png` | Menu → JPG | «✕ Errore» al centro e messaggio sotto; il centro apre la finestra completa, dove riconvertendo si leggono i dettagli nel tooltip |
 | R12 | Vicino al bordo dello schermo | Menu | Il menu resta interamente visibile |
+
+## Qualità
+
+| # | File | Azione | Risultato atteso |
+|---|------|--------|------------------|
+| Q1 | `01-foto.png` | Menu → passa su JPG | Al centro «Bilanciata»; sotto «Qualità 85» e l'invito a scorrere verso l'esterno |
+| Q2 | `01-foto.png` | Su JPG scorri verso l'esterno, anche in diagonale | Compare l'anello Massima · Bilanciata · Leggera; resta agganciato a JPG |
+| Q3 | `01-foto.png` | JPG → Massima, poi JPG → Leggera | `01-foto.jpg` ≈ 640 KB, `01-foto (1).jpg` ≈ 90 KB |
+| Q4 | `01-foto.png` | Passa su PNG o TIFF | Nessun anello di qualità |
+| Q5 | `01-foto.png` | Su JPG premi 3 | Converte subito con «File più leggero» |
+| Q6 | `09-video-lungo.mp4` | WEBM → Leggera | Video a 720p, molto più piccolo (verifica con le proprietà in Dolphin) |
+| Q7 | Finestra | Qualità: «File più leggero», chiudi e riapri | La scelta è ricordata, e la ruota la usa come predefinita (segnata con •) |
+
+## Selezioni multiple
+
+| # | File | Azione | Risultato atteso |
+|---|------|--------|------------------|
+| M1 | Dieci file diversi | Selezionali → menu | Fette con conteggi (es. «PDF 6/9»), prima le destinazioni valide per più file |
+| M2 | Come M1 | Clic su PDF | Converte solo i 6 compatibili; gli altri restano intatti |
 
 ## Immagini
 

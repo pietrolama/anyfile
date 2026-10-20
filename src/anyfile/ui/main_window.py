@@ -5,12 +5,13 @@ from pathlib import Path
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction, QDragEnterEvent, QDropEvent, QIcon, QKeySequence
 from PySide6.QtWidgets import (
-    QButtonGroup, QCheckBox, QFileDialog, QHBoxLayout, QLabel, QLineEdit, QMainWindow,
+    QButtonGroup, QCheckBox, QComboBox, QFileDialog, QHBoxLayout, QLabel, QLineEdit, QMainWindow,
     QMessageBox, QPushButton, QRadioButton, QSizePolicy, QStackedWidget, QToolBar, QVBoxLayout, QWidget,
 )
 
 from anyfile.core.executor import Executor
 from anyfile.core.registry import Registry
+from anyfile.models.conversion import Quality
 from anyfile.models.job import Job, JobStatus
 from anyfile.ui.conversion_view import ConversionView, Row
 from anyfile.ui.desktop import APP_ICON, notify, reveal
@@ -91,6 +92,13 @@ class MainWindow(QMainWindow):
         browse = QPushButton(QIcon.fromTheme("document-open-folder"), "Sfoglia…")
         browse.clicked.connect(self._choose_dir)
         self.overwrite = QCheckBox("Sovrascrivi i file esistenti (altrimenti: «nome (1).ext»)")
+        self.quality = QComboBox()
+        for q in Quality:
+            self.quality.addItem(q.label, q)
+        self.quality.setCurrentIndex(self.quality.findData(self.settings.quality))
+        self.quality.setToolTip("Vale per i formati con perdita (JPEG, WebP, MP3, Opus, video, GIF).\n"
+                                "Per PNG, WAV, FLAC e documenti non cambia nulla.")
+        self.quality.currentIndexChanged.connect(self._save_output_settings)
 
         self.custom_dir.setChecked(self.settings.use_custom_dir)
         self.same_dir.setChecked(not self.settings.use_custom_dir)
@@ -107,9 +115,14 @@ class MainWindow(QMainWindow):
         row.addWidget(self.custom_dir)
         row.addWidget(self.dir_edit, 1)
         row.addWidget(browse)
+        second = QHBoxLayout()
+        second.addWidget(self.overwrite)
+        second.addStretch()
+        second.addWidget(QLabel("Qualità:"))
+        second.addWidget(self.quality)
         box = QVBoxLayout()
         box.addLayout(row)
-        box.addWidget(self.overwrite)
+        box.addLayout(second)
         return box
 
     def _build_actions(self) -> QHBoxLayout:
@@ -166,6 +179,7 @@ class MainWindow(QMainWindow):
         self.settings.use_custom_dir = self.custom_dir.isChecked()
         self.settings.custom_dir = Path(self.dir_edit.text()) if self.dir_edit.text() else None
         self.settings.overwrite = self.overwrite.isChecked()
+        self.settings.quality = self.quality.currentData()
 
     def _output_dir(self) -> Path | None:
         if self.custom_dir.isChecked() and self.dir_edit.text().strip():
@@ -179,8 +193,9 @@ class MainWindow(QMainWindow):
         if not rows:
             return
         output_dir, overwrite = self._output_dir(), self.overwrite.isChecked()
+        quality = self.quality.currentData()
         for row in rows:
-            job = self.jobs.submit(row.info.path, row.target, output_dir, overwrite)
+            job = self.jobs.submit(row.info.path, row.target, output_dir, overwrite, quality)
             self._batch[job.id] = job.status
             self.view.attach_job(row, job)
         self._update_buttons()

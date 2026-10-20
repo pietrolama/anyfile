@@ -9,6 +9,7 @@ from PySide6.QtCore import QObject, Signal
 
 from anyfile.core.executor import Executor
 from anyfile.core.jobs import JobQueue
+from anyfile.models.conversion import Quality
 from anyfile.models.job import Job
 
 
@@ -23,8 +24,10 @@ class QtJobQueue(QObject):
     def _forward(self, job: Job) -> None:
         self.job_updated.emit(copy.copy(job))
 
-    def submit(self, source: Path, target: str, output_dir: Path | None, overwrite: bool) -> Job:
-        return self._queue.submit(source, target, output_dir=output_dir, overwrite=overwrite)
+    def submit(self, source: Path, target: str, output_dir: Path | None, overwrite: bool,
+               quality: Quality = Quality.BALANCED) -> Job:
+        return self._queue.submit(source, target, output_dir=output_dir, overwrite=overwrite,
+                                  quality=quality)
 
     def cancel_all(self) -> None:
         self._queue.cancel_all()

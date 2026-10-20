@@ -12,6 +12,7 @@ from anyfile.core.executor import Executor
 from anyfile.core.jobs import JobQueue
 from anyfile.core.planner import available_targets
 from anyfile.core.registry import Registry
+from anyfile.models.conversion import Quality
 from anyfile.models.job import Job, JobStatus
 
 COMMANDS = ("convert", "info", "engines")
@@ -32,6 +33,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("-o", "--output-dir", type=Path, help="cartella di destinazione "
                    "(predefinita: la cartella di ciascun file)")
     p.add_argument("--overwrite", action="store_true", help="sovrascrive i file già esistenti")
+    p.add_argument("-q", "--quality", default="bilanciata",
+                   help="massima, bilanciata (predefinita) o leggera; "
+                        "vale solo per i formati con perdita (JPEG, WebP, MP3, video...)")
 
     p = sub.add_parser("info", help="mostra il formato rilevato e le conversioni possibili")
     p.add_argument("files", nargs="+", type=Path)
@@ -75,8 +79,10 @@ def cmd_info(registry: Registry, files: list[Path]) -> int:
         if info.extension_mismatch:
             print("  Attenzione: l'estensione non corrisponde al contenuto")
         targets = available_targets(info, registry)
-        names = ", ".join(c.target for c in targets) or "nessuna"
-        print(f"  Conversioni: {names}")
+        names = ", ".join(c.target + ("*" if registry.presets(c) else "") for c in targets)
+        print(f"  Conversioni: {names or 'nessuna'}")
+        if any(registry.presets(c) for c in targets):
+            print("  (* con preset di qualità: --quality massima|bilanciata|leggera)")
         for engine, fids in registry.unlockable_targets(info.format.id).items():
             print(f"  Con {engine}: {', '.join(sorted(fids))}")
     return 0
@@ -86,6 +92,12 @@ def cmd_convert(registry: Registry, args: argparse.Namespace) -> int:
     target = formats.resolve(args.to)
     if target is None:
         print(f"anyfile: formato sconosciuto: {args.to}", file=sys.stderr)
+        return 2
+
+    quality = Quality.parse(args.quality)
+    if quality is None:
+        print(f"anyfile: qualità sconosciuta: {args.quality} (massima, bilanciata, leggera)",
+              file=sys.stderr)
         return 2
 
     tty = sys.stdout.isatty()
@@ -109,7 +121,8 @@ def cmd_convert(registry: Registry, args: argparse.Namespace) -> int:
                 print(f"- {name}: annullato", file=sys.stderr)
 
     queue = JobQueue(Executor(registry), on_update)
-    jobs = [queue.submit(f, target.id, output_dir=args.output_dir, overwrite=args.overwrite)
+    jobs = [queue.submit(f, target.id, output_dir=args.output_dir, overwrite=args.overwrite,
+                         quality=quality)
             for f in args.files]
     try:
         queue.wait()

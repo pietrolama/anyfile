@@ -6,6 +6,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 
+from anyfile.models.conversion import Quality
+
 _ids = itertools.count(1)
 
 
@@ -23,6 +25,7 @@ class Job:
     target: str
     output_dir: Path | None = None
     overwrite: bool = False
+    quality: Quality = Quality.BALANCED
     id: int = field(default_factory=lambda: next(_ids))
     status: JobStatus = JobStatus.QUEUED
     # 0..1, oppure None quando il motore non riporta l'avanzamento.

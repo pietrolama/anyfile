@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import ClassVar
 
 from anyfile.core.errors import AnyfileError, ConversionCancelled
-from anyfile.models.conversion import Conversion
+from anyfile.models.conversion import Conversion, Presets, Quality
 
 ProgressFn = Callable[[float | None], None]
 
@@ -112,6 +112,7 @@ class ConversionContext:
     progress: ProgressFn
     # Il file scelto dall'utente; i motori lavorano su un collegamento con nome sicuro.
     original: Path
+    quality: Quality = Quality.BALANCED
 
 
 def pairs(
@@ -173,6 +174,11 @@ class Engine(ABC):
     def probe(self) -> list[Conversion]:
         """Filtra le conversioni dichiarate in base alle capacità della build installata."""
         return self.declared()
+
+    def presets(self, target: str) -> Presets:
+        """Preset di qualità per la destinazione, con la descrizione dei parametri.
+        Vuoto per i formati senza perdita: lì un preset non cambierebbe nulla."""
+        return {}
 
     @abstractmethod
     def declared(self) -> list[Conversion]:

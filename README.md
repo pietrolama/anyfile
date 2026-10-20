@@ -24,12 +24,21 @@ Lo script crea un virtualenv in `~/.local/share/anyfile/venv`, il comando
   raggruppate per categoria. Clic su una fetta per convertire; clic al centro per la
   finestra completa; Esc per chiudere (durante una conversione lunga, Esc la lascia
   proseguire in background con una notifica finale). Funziona anche con frecce e Invio.
+  Con più file selezionati la ruota mostra tutto ciò che si può fare: le fette che
+  valgono solo per una parte dei file indicano quanti (es. «6/9») e convertono solo quelli.
+- **Qualità**: per i formati con perdita (JPEG, WebP, MP3, Ogg, Opus, AAC, video, GIF)
+  ci sono tre preset: *Massima qualità*, *Bilanciata* (predefinita) e *File più leggero*
+  (che riduce anche i video a 720p e toglie i metadati dalle foto). Nella ruota, il clic
+  sulla fetta usa la qualità predefinita; scorrendo verso l'esterno compare l'anello dei
+  preset (o si premono 1-2-3). Per PNG, WAV, FLAC e documenti i preset non compaiono:
+  non cambierebbero nulla. La qualità predefinita si sceglie nella finestra completa.
 - **Menu radiale da terminale**: `anyfile --radial FILE...`
 - **Interfaccia**: `anyfile [FILE...]`, oppure trascina i file nella finestra.
 - **Terminale**:
   ```sh
   anyfile info foto.heic              # formato rilevato e destinazioni possibili
   anyfile convert *.wav -t mp3 -o ~/Musica
+  anyfile convert video.mov -t mp4 -q leggera   # massima | bilanciata | leggera
   anyfile engines                     # motori installati e comando per i mancanti
   ```
 
@@ -84,5 +93,5 @@ python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'
 
 ## Prossimi passi
 
-Preset di qualità, conversioni concatenate (es. DOCX → HTML → EPUB)
+Conversioni concatenate (es. DOCX → HTML → EPUB)
 con valutazione della perdita, cronologia, pacchetto `.deb`/Flatpak.

@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 from anyfile.core import formats
 from anyfile.engines.base import Engine
-from anyfile.models.conversion import Conversion
+from anyfile.models.conversion import Conversion, Presets
 
 
 def default_engines() -> list[Engine]:
@@ -51,6 +51,9 @@ class Registry:
 
     def engine(self, name: str) -> Engine:
         return self._by_name[name]
+
+    def presets(self, conversion: Conversion) -> Presets:
+        return self.engine(conversion.engine).presets(conversion.target)
 
     def find(self, source: str, target: str) -> Conversion | None:
         return self._edges.get((source, target))

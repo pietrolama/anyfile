@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
 )
 
 from anyfile.core.registry import Registry
+from anyfile.models.conversion import Quality
 
 
 class Settings:
@@ -34,6 +35,17 @@ class Settings:
     @custom_dir.setter
     def custom_dir(self, value: Path | None) -> None:
         self._s.setValue("output/dir", str(value) if value else "")
+
+    @property
+    def quality(self) -> Quality:
+        try:
+            return Quality(self._s.value("output/quality", Quality.BALANCED.value, type=str))
+        except ValueError:
+            return Quality.BALANCED
+
+    @quality.setter
+    def quality(self, value: Quality) -> None:
+        self._s.setValue("output/quality", value.value)
 
     @property
     def overwrite(self) -> bool:

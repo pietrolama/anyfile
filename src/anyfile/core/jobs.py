@@ -10,6 +10,7 @@ from pathlib import Path
 
 from anyfile.core.errors import AnyfileError, ConversionCancelled
 from anyfile.core.executor import Executor
+from anyfile.models.conversion import Quality
 from anyfile.models.job import Job, JobStatus
 
 UpdateFn = Callable[[Job], None]
@@ -25,8 +26,8 @@ class JobQueue:
         self._worker.start()
 
     def submit(self, source: Path | str, target: str, *, output_dir: Path | None = None,
-               overwrite: bool = False) -> Job:
-        job = Job(Path(source), target, output_dir=output_dir, overwrite=overwrite)
+               overwrite: bool = False, quality: Quality = Quality.BALANCED) -> Job:
+        job = Job(Path(source), target, output_dir=output_dir, overwrite=overwrite, quality=quality)
         self.jobs.append(job)
         self._notify(job)
         self._queue.put(job)

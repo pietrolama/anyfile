@@ -17,6 +17,11 @@ def clockwise_angle(dx: float, dy: float) -> float:
     return (math.degrees(math.atan2(dy, dx)) + 90.0) % 360.0
 
 
+def in_arc(angle: float, a0: float, a1: float) -> bool:
+    """L'angolo cade nell'arco orario da a0 ad a1 (anche se l'arco attraversa ore 12)."""
+    return (angle - a0) % 360.0 <= (a1 - a0)
+
+
 def polar(angle: float, radius: float) -> tuple[float, float]:
     rad = math.radians(angle - 90.0)
     return radius * math.cos(rad), radius * math.sin(rad)

@@ -47,3 +47,32 @@ class Conversion:
     notes: str = ""
     # Il motore produce più file (es. una immagine per pagina di un PDF).
     multi_output: bool = False
+
+
+class Quality(Enum):
+    """Preset di qualità, offerti solo dove cambiano davvero il risultato (formati con perdita)."""
+
+    MAX = "max"
+    BALANCED = "balanced"
+    SMALL = "small"
+
+    @property
+    def label(self) -> str:
+        return {"max": "Massima qualità", "balanced": "Bilanciata", "small": "File più leggero"}[self.value]
+
+    @property
+    def short(self) -> str:
+        return {"max": "Massima", "balanced": "Bilanciata", "small": "Leggera"}[self.value]
+
+    @classmethod
+    def parse(cls, text: str) -> Quality | None:
+        aliases = {
+            "max": cls.MAX, "massima": cls.MAX, "alta": cls.MAX,
+            "balanced": cls.BALANCED, "bilanciata": cls.BALANCED, "bilanciato": cls.BALANCED,
+            "small": cls.SMALL, "leggera": cls.SMALL, "leggero": cls.SMALL, "piccolo": cls.SMALL,
+        }
+        return aliases.get(text.strip().lower())
+
+
+# Descrizione del preset per una destinazione, mostrata all'utente.
+Presets = dict[Quality, str]

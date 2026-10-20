@@ -13,7 +13,7 @@ from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import QApplication
 
 from anyfile.core import formats
-from anyfile.models.conversion import Conversion
+from anyfile.models.conversion import Conversion, Quality
 from anyfile.ui import radial
 from anyfile.ui.radial import MAX_SLICES, Phase, RadialMenu, build_entries
 from anyfile.ui.radial_geometry import CENTER, polar
@@ -35,6 +35,8 @@ def make_menu(app, registry):
         menu.resize(800, 700)
         menu.show()
         menu._place(QPointF(400, 350))
+        menu._anim.stop()
+        menu.t = 1.0  # animazione di apertura completata: geometria a scala piena
         menus.append(menu)
         return menu
 
@@ -68,11 +70,16 @@ def click(menu, hit):
     menu._activate(menu._hit(pos))
 
 
-def test_too_many_targets_collapse_into_more():
-    convs = [Conversion("png", f.id, "x") for f in formats.FORMATS][:20]
-    entries = build_entries(convs)
+def test_too_many_targets_collapse_into_more(tmp_path):
+    a, b = tmp_path / "a", tmp_path / "b"
+    # Le destinazioni che valgono per più file hanno la precedenza sul resto.
+    options = [(Conversion("x", f.id, "e"), (a, b) if f.id in ("pdf", "zzz") else (a,))
+               for f in formats.FORMATS[:20]]
+    options.append((Conversion("x", "pdf", "e"), (a, b)))
+    entries = build_entries(options[:19] + [options[-1]])
     assert len(entries) == MAX_SLICES
     assert entries[-1].conversion is None
+    assert "pdf" in {e.conversion.target for e in entries[:-1]}
 
 
 def test_entries_follow_the_registry(make_menu, sample):
@@ -81,13 +88,30 @@ def test_entries_follow_the_registry(make_menu, sample):
         c.target for c in menu.registry.targets("png")]
 
 
-def test_multiple_files_get_common_targets(make_menu, sample):
-    menu = make_menu(sample("png"), sample("gif"), sample("wav"))
-    # Immagini e audio non hanno destinazioni in comune: conta solo l'intersezione.
-    assert menu.entries == []
-    menu = make_menu(sample("png"), sample("gif"))
-    targets = {e.conversion.target for e in menu.entries}
-    assert "webp" in targets and "png" not in targets and "gif" not in targets
+def test_mixed_selection_offers_partial_targets(make_menu, sample):
+    png, wav = sample("png"), sample("wav")
+    menu = make_menu(png, wav)
+    by_target = {e.conversion.target: e.paths for e in menu.entries if e.conversion}
+    # Nessun formato è comune a immagini e audio, ma la ruota non resta vuota.
+    assert by_target["jpg"] == (png,)
+    assert by_target["mp3"] == (wav,)
+
+
+def test_same_type_selection_covers_all_files(make_menu, sample):
+    a, b = sample("png"), sample("png", "altra.png")
+    menu = make_menu(a, b)
+    assert all(e.paths == (a, b) for e in menu.entries if e.conversion)
+
+
+@needs("magick", "ffmpeg")
+def test_partial_slice_converts_only_compatible_files(app, make_menu, sample):
+    png, wav = sample("png"), sample("wav")
+    menu = make_menu(png, wav)
+    index = next(i for i, e in enumerate(menu.entries) if e.conversion and e.conversion.target == "webp")
+    menu._activate(index)
+    assert [j.source for j in menu.jobs.values()] == [png]
+    assert wait_until(app, lambda: menu.phase in (Phase.DONE, Phase.FAILED))
+    assert menu.phase is Phase.DONE
 
 
 @needs("magick")
@@ -164,3 +188,61 @@ def test_center_click_while_running_cancels(app, make_menu, tmp_path):
     click(menu, CENTER)
     assert wait_until(app, lambda: finished, timeout=15)
     assert sorted(p.name for p in tmp_path.iterdir()) == ["lungo.wav"]
+
+
+def _preset_point(menu, index, quality):
+    a0, a1 = menu.preset_arc(index)
+    k = menu.preset_order(index).index(quality)
+    third = (a1 - a0) / 3
+    x, y = polar(a0 + (k + 0.5) * third, (radial.SUB_IN + radial.SUB_OUT) / 2)
+    return menu.origin + QPointF(x, y)
+
+
+def test_preset_ring_only_for_lossy_targets(make_menu, sample):
+    menu = make_menu(sample("png"))
+    by_target = {e.conversion.target: i for i, e in enumerate(menu.entries)}
+    assert menu.presets(by_target["jpg"])
+    assert not menu.presets(by_target["tiff"])
+
+
+def test_moving_outward_selects_preset_and_stays_on_slice(make_menu, sample):
+    menu = make_menu(sample("png"))
+    index = next(i for i, e in enumerate(menu.entries) if e.conversion.target == "jpg")
+    x, y = polar(menu.ring.mid_angle(index), 120)
+    menu._update_hover(menu.origin + QPointF(x, y))
+    assert (menu.hover, menu.hover_quality) == (index, None)
+    for quality in Quality:
+        menu._update_hover(_preset_point(menu, index, quality))
+        assert (menu.hover, menu.hover_quality) == (index, quality)
+
+
+def test_max_quality_is_always_left_or_top(make_menu, sample):
+    menu = make_menu(sample("mp4"))
+    checked = 0
+    for i in range(len(menu.entries)):
+        if not menu.presets(i):
+            continue
+        a = menu.ring.mid_angle(i)
+        first, last = _preset_point(menu, i, Quality.MAX), _preset_point(menu, i, Quality.SMALL)
+        if any(abs(a - d) < 1 for d in (45, 135, 225, 315)):
+            # Diagonale esatta: sinistra e alto non coincidono, basta una delle due.
+            assert first.x() < last.x() or first.y() < last.y(), (i, a)
+        elif a < 45 or a > 315 or 135 < a < 225:
+            assert first.x() < last.x(), (i, a)
+        else:
+            assert first.y() < last.y(), (i, a)
+        checked += 1
+    assert checked >= 10
+
+
+@needs("magick")
+def test_clicking_a_preset_converts_with_that_quality(app, make_menu, sample):
+    src = sample("png")
+    menu = make_menu(src)
+    index = next(i for i, e in enumerate(menu.entries) if e.conversion.target == "jpg")
+    x, y = polar(menu.ring.mid_angle(index), 120)
+    menu._update_hover(menu.origin + QPointF(x, y))
+    menu._activate(*menu._target_at(_preset_point(menu, index, Quality.SMALL)))
+    assert [j.quality for j in menu.jobs.values()] == [Quality.SMALL]
+    assert wait_until(app, lambda: menu.phase in (Phase.DONE, Phase.FAILED))
+    assert menu.phase is Phase.DONE
