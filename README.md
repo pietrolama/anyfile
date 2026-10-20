@@ -29,8 +29,15 @@ Poppler).
 
 ### Windows (sperimentale)
 
-Servono Python 3.10+ e i motori desiderati, per esempio con
-`winget install Gyan.FFmpeg ImageMagick.ImageMagick JohnMacFarlane.Pandoc ArtifexSoftware.GhostScript`.
+Servono Python 3.10+ e i motori desiderati, per esempio con winget:
+
+```powershell
+winget install Gyan.FFmpeg
+winget install ImageMagick.ImageMagick
+winget install JohnMacFarlane.Pandoc
+winget install ArtifexSoftware.GhostScript
+```
+
 Poi:
 
 ```powershell
