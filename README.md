@@ -230,3 +230,15 @@ Ubuntu 26.04, nei container puliti.
 
 Prossimi passi: cronologia con ripetizione delle conversioni, pacchetto `.deb`,
 poi Flatpak.
+
+## Licenza
+
+ANYFILE è software libero, distribuito secondo i termini della
+[GNU General Public License](LICENSE), versione 3 o (a tua scelta) qualsiasi versione
+successiva (GPL-3.0-or-later). Puoi usarlo, studiarlo, modificarlo e ridistribuirlo;
+chi distribuisce una versione modificata deve renderne disponibile il codice con la
+stessa licenza. ANYFILE è fornito senza alcuna garanzia.
+
+I motori di conversione (FFmpeg, ImageMagick, Poppler, LibreOffice, Pandoc,
+Ghostscript) sono programmi indipendenti, con le rispettive licenze, avviati come
+processi esterni.
