@@ -23,7 +23,7 @@ Verificata con `packaging/deb/test-clean-install.sh` in container puliti:
 ### Pacchetto .deb (Debian 13, Ubuntu 26.04 e successive)
 
 ```sh
-sudo apt install ./anyfile_0.2.0_all.deb
+sudo apt install ./anyfile_0.3.0_all.deb
 ```
 
 Il pacchetto pesa circa 40 KB e usa Python e PySide6 del sistema. Le dipendenze sono
