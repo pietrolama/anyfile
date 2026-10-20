@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Service
+MimeType=all/allfiles;
+Actions=convertWithAnyfile;
+X-KDE-Priority=TopLevel
+
+[Desktop Action convertWithAnyfile]
+Name=Converti con ANYFILE
+Icon=document-export
+Exec=anyfile --from-dolphin %F

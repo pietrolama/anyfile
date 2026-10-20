@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=ANYFILE
+GenericName=Convertitore di file
+Comment=Converte immagini, audio, video e documenti
+Exec=anyfile %F
+Icon=document-export
+Terminal=false
+Categories=Utility;
+Keywords=convert;converter;converti;formato;

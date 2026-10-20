@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "anyfile"
+version = "0.1.0"
+description = "Convertitore di file locale per Linux, con integrazione KDE Dolphin"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["PySide6>=6.5"]
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[project.scripts]
+anyfile = "anyfile.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+markers = ["slow: conversioni reali lente (LibreOffice, video)"]

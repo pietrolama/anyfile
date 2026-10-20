@@ -1,2 +1,83 @@
-# anyfile
-convert any file
+# ANYFILE
+
+Convertitore di file locale per Linux (KDE Plasma su Debian/Ubuntu), con integrazione
+nel menu contestuale di Dolphin. Si sceglie il risultato, non il motore: ANYFILE
+rileva il formato, mostra solo le conversioni realmente eseguibili con i programmi
+installati, le esegue in sicurezza e verifica il file prodotto.
+
+## Installazione (utente, senza root)
+
+```sh
+sudo apt install ffmpeg imagemagick pandoc libreoffice poppler-utils   # anche solo alcuni
+packaging/install-user.sh
+```
+
+Lo script crea un virtualenv in `~/.local/share/anyfile/venv`, il comando
+`~/.local/bin/anyfile`, la voce nel menu applicazioni e il service menu di Dolphin
+(`~/.local/share/kio/servicemenus/anyfile.desktop`). Per rimuovere tutto:
+`packaging/install-user.sh --uninstall`.
+
+## Uso
+
+- **Dolphin**: tasto destro su uno o più file → *Converti con ANYFILE*.
+- **Interfaccia**: `anyfile [FILE...]`, oppure trascina i file nella finestra.
+- **Terminale**:
+  ```sh
+  anyfile info foto.heic              # formato rilevato e destinazioni possibili
+  anyfile convert *.wav -t mp3 -o ~/Musica
+  anyfile engines                     # motori installati e comando per i mancanti
+  ```
+
+## Motori
+
+| Motore      | Conversioni                                                            |
+| ----------- | ---------------------------------------------------------------------- |
+| FFmpeg      | audio ↔ audio, video ↔ video, estrazione audio, video → GIF            |
+| ImageMagick | PNG, JPEG, WebP, GIF, BMP, TIFF, ICO (lettura AVIF/HEIC), immagini → PDF |
+| Poppler     | PDF → testo, PDF → PNG/JPEG (una immagine per pagina)                  |
+| LibreOffice | DOCX/DOC/ODT/RTF/TXT, XLSX/XLS/ODS/CSV, PPTX/PPT/ODP ↔ e → PDF          |
+| Pandoc      | Markdown, HTML, EPUB, RST, LaTeX ↔ DOCX/ODT; → PDF se c'è LaTeX        |
+
+Le capacità vengono rilevate all'avvio (encoder di FFmpeg, coder di ImageMagick,
+presenza di LaTeX): un motore assente nasconde le sue conversioni e l'app spiega
+cosa installare.
+
+## Architettura
+
+```
+src/anyfile/
+  core/detector.py    firma del contenuto → MIME → estensione
+  core/formats.py     catalogo dei formati
+  core/registry.py    grafo delle conversioni offerte dai motori installati
+  core/planner.py     scelta della conversione (solo dirette, per ora)
+  core/executor.py    esecuzione isolata, file temporanei, collocamento sicuro
+  core/validation.py  verifica dell'output (firma, testo, tracce audio/video)
+  core/jobs.py        coda dei lavori con avanzamento e annullamento
+  engines/            FFmpeg, ImageMagick, LibreOffice + Pandoc, Poppler
+  ui/                 interfaccia PySide6
+  cli.py, app.py      punti di ingresso
+packaging/            .desktop, service menu Dolphin, script di installazione
+```
+
+Scelte di sicurezza:
+
+- i motori sono invocati con argomenti separati, mai tramite shell;
+- il motore legge un collegamento con nome neutro (`input.png`), quindi spazi,
+  parentesi o trattini iniziali nel nome del file non arrivano alla riga di comando;
+- l'output si prepara in una cartella temporanea nella destinazione e viene spostato
+  in modo atomico; senza consenso non si sovrascrive nulla (`nome (1).ext`) e il file
+  sorgente non viene mai sostituito;
+- LibreOffice usa un profilo dedicato, così funziona anche con LibreOffice già aperto;
+- il risultato è verificato nel contenuto, non solo con il codice di uscita.
+
+## Sviluppo
+
+```sh
+python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'
+.venv/bin/pytest            # i test generano piccoli file di esempio con i motori
+```
+
+## Prossimi passi
+
+Menu radiale, preset di qualità, conversioni concatenate (es. DOCX → HTML → EPUB)
+con valutazione della perdita, cronologia, pacchetto `.deb`/Flatpak.
