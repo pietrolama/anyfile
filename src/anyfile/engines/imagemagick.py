@@ -27,7 +27,7 @@ QUALITY: dict[str, dict[Quality, tuple[int, bool]]] = {
     "webp": {Quality.MAX: (95, False), Quality.BALANCED: (80, False), Quality.SMALL: (60, True)},
 }
 
-_FORMAT_LINE = re.compile(r"^\s*([A-Z0-9-]+)\*?\s+\S+\s+([r-])([w-])[+-]")
+_FORMAT_LINE = re.compile(r"^\s*([A-Z0-9-]+)\*?\s+(?:[A-Za-z0-9_-]+\s+)?([r-])([w-])[+-]")
 
 
 def _notes(source: str, target: str) -> str:

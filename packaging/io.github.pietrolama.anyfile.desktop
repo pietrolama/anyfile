@@ -1,0 +1,21 @@
+[Desktop Entry]
+Type=Application
+Name=ANYFILE
+GenericName=File converter
+GenericName[it]=Convertitore di file
+Comment=Convert images, audio, video and documents
+Comment[it]=Converte immagini, audio, video e documenti
+Exec=anyfile %F
+Icon=io.github.pietrolama.anyfile
+Terminal=false
+Categories=Utility;FileTools;Graphics;AudioVideo;
+Keywords=convert;converter;compress;format;
+Keywords[it]=convert;converter;converti;comprimi;formato;
+MimeType=application/pdf;image/png;image/jpeg;image/webp;image/gif;image/bmp;image/tiff;video/mp4;video/webm;video/x-matroska;audio/mpeg;audio/ogg;audio/flac;audio/wav;text/markdown;text/html;
+Actions=history;
+
+[Desktop Action history]
+Name=Conversion history
+Name[it]=Cronologia delle conversioni
+Icon=view-history
+Exec=anyfile --history

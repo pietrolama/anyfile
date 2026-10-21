@@ -13,7 +13,27 @@ import subprocess
 import sys
 from pathlib import Path
 
+from anyfile.i18n import _
+
 IS_WINDOWS = sys.platform == "win32"
+
+
+def is_flatpak() -> bool:
+    """Returns True if running inside a Flatpak container."""
+    return bool(os.environ.get("FLATPAK_ID")) or Path("/.flatpak-info").exists()
+
+
+def install_command(packages: list[str]) -> str:
+    """The command that installs the missing engines; empty inside Flatpak, where the
+    engines come only with the app and nothing installed on the system can help."""
+    if not packages or is_flatpak():
+        return ""
+    return "sudo apt install " + " ".join(packages)
+
+
+def install_hint(packages: list[str]) -> str:
+    """What to do about missing engines, for error messages."""
+    return install_command(packages) or _("not included in the Flatpak version")
 
 # On Windows “convert.exe” is a system command (FAT → NTFS conversion), not
 # ImageMagick: it must never be mistaken for an engine.
@@ -87,14 +107,16 @@ def popen_options() -> dict:
     """The engine starts in its own process group, so it can be stopped together with
     its children (LibreOffice, for example, starts a second process)."""
     if IS_WINDOWS:
-        return {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW}
+        flags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0x00000200) | getattr(subprocess, "CREATE_NO_WINDOW", 0x08000000)
+        return {"creationflags": flags}
     return {"start_new_session": True}
 
 
 def detached_options() -> dict:
     """Programs started and left running (file manager, notifications)."""
     if IS_WINDOWS:
-        return {"creationflags": subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP}
+        flags = getattr(subprocess, "DETACHED_PROCESS", 0x00000008) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0x00000200)
+        return {"creationflags": flags}
     return {"start_new_session": True}
 
 

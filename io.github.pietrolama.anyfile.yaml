@@ -1,0 +1,118 @@
+app-id: io.github.pietrolama.anyfile
+runtime: org.kde.Platform
+runtime-version: '6.11'
+sdk: org.kde.Sdk
+base: io.qt.PySide.BaseApp
+base-version: '6.11'
+command: anyfile
+
+build-options:
+  no-debuginfo: true
+  strip: false
+
+finish-args:
+  - --share=ipc
+  - --socket=fallback-x11
+  - --socket=wayland
+  # Results are written next to the original files, which Dolphin passes as plain paths;
+  # the home folder also holds ~/.local/share/kio/servicemenus for "Integrate with Dolphin".
+  - --filesystem=home
+  - --filesystem=/media
+  - --filesystem=/run/media
+  - --filesystem=/mnt
+  - --talk-name=org.freedesktop.FileManager1
+  - --talk-name=org.freedesktop.Notifications
+
+cleanup:
+  - /include
+  - /lib/pkgconfig
+  - /share/man
+  - /share/doc
+  - /share/gtk-doc
+  - '*.la'
+  - '*.a'
+
+modules:
+  - name: ghostscript
+    buildsystem: autotools
+    build-options:
+      cflags: -std=gnu17 -Wno-error=incompatible-pointer-types
+    config-opts:
+      - CFLAGS=-O2 -g -std=gnu17 -Wno-error=incompatible-pointer-types
+      - --disable-cups
+      - --disable-gtk
+      - --without-x
+      - --without-tesseract
+      - --without-libpaper
+      - --without-pdftoraster
+    sources:
+      - type: archive
+        url: https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs10080/ghostscript-10.08.0.tar.xz
+        sha256: c20492bc8ebb96c87fa2e52a0926e1cda8cde95d66145e018ac713fed5da38cf
+
+  - name: poppler
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DENABLE_UTILS=ON
+      - -DENABLE_QT5=OFF
+      - -DENABLE_QT6=OFF
+      - -DENABLE_GLIB=OFF
+      - -DENABLE_GOBJECT_INTROSPECTION=OFF
+      - -DENABLE_UNSTABLE_API_ABI_HEADERS=OFF
+      - -DENABLE_CPP=OFF
+      - -DENABLE_BOOST=OFF
+      - -DBUILD_CPP_TESTS=OFF
+      - -DBUILD_MANUAL_TESTS=OFF
+      - -DBUILD_GTK_TESTS=OFF
+      - -DENABLE_LIBOPENJPEG=openjpeg2
+    sources:
+      - type: archive
+        url: https://poppler.freedesktop.org/poppler-26.10.0.tar.xz
+        sha256: 6792cb7c69205007ad87d2e936cecc5b3a31fac29ab54ffc3175fdb6b2a6ce35
+
+  - name: imagemagick
+    buildsystem: autotools
+    config-opts:
+      - --disable-docs
+      - --without-x
+      - --with-threads=yes
+      - --with-modules=no
+      - --with-png=yes
+      - --with-jpeg=yes
+      - --with-tiff=yes
+      - --with-webp=yes
+      - --with-openjp2=yes
+      - --with-lcms=yes
+      - --with-freetype=yes
+      - --with-fontconfig=yes
+      - --with-xml=yes
+      - --with-zlib=yes
+    sources:
+      - type: archive
+        url: https://github.com/ImageMagick/ImageMagick/releases/download/7.1.2-34/ImageMagick-7.1.2-34.tar.xz
+        sha256: 55fe0ec246245b46c429f9e6bc65294ad4a78a66b88abd9817971ca157856323
+
+  - name: pandoc
+    buildsystem: simple
+    build-commands:
+      - install -Dm755 bin/pandoc /app/bin/pandoc
+    sources:
+      - type: archive
+        only-arches: [x86_64]
+        url: https://github.com/jgm/pandoc/releases/download/3.12.1/pandoc-3.12.1-linux-amd64.tar.gz
+        sha256: d0c90410e90204c9ca83b8539fac5c7aed01fd537207e4585849f8abc5df20b8
+      - type: archive
+        only-arches: [aarch64]
+        url: https://github.com/jgm/pandoc/releases/download/3.12.1/pandoc-3.12.1-linux-arm64.tar.gz
+        sha256: 445d96fd08801fe636cab1158b4f017ee320ac3b7446328b4fe2f902117b19b9
+
+  - name: anyfile
+    buildsystem: simple
+    build-commands:
+      - pip3 install --no-index --no-build-isolation --no-deps --prefix=/app .
+      - install -Dm644 packaging/io.github.pietrolama.anyfile.desktop /app/share/applications/io.github.pietrolama.anyfile.desktop
+      - install -Dm644 packaging/io.github.pietrolama.anyfile.metainfo.xml /app/share/metainfo/io.github.pietrolama.anyfile.metainfo.xml
+      - install -Dm644 packaging/icons/io.github.pietrolama.anyfile.svg /app/share/icons/hicolor/scalable/apps/io.github.pietrolama.anyfile.svg
+    sources:
+      - type: dir
+        path: .

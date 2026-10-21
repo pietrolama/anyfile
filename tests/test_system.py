@@ -97,3 +97,75 @@ def test_kill_tree_stops_process_and_children():
     system.kill_tree(proc)
     assert proc.poll() is not None
     assert time.monotonic() - started < 10
+
+
+def test_is_flatpak(monkeypatch, tmp_path):
+    monkeypatch.delenv("FLATPAK_ID", raising=False)
+    monkeypatch.setattr(Path, "exists", lambda self: False if str(self) == "/.flatpak-info" else True)
+    assert not system.is_flatpak()
+
+    monkeypatch.setenv("FLATPAK_ID", "io.github.pietrolama.anyfile")
+    assert system.is_flatpak()
+
+
+def test_dolphin_integration_lifecycle(monkeypatch, tmp_path):
+    from anyfile.ui import desktop
+
+    fake_menu = tmp_path / "kio" / "servicemenus" / "anyfile.desktop"
+    monkeypatch.setattr(desktop, "dolphin_servicemenu_path", lambda: fake_menu)
+    monkeypatch.setattr(desktop, "_refresh_kde_sycoca", lambda: None)
+    monkeypatch.delenv("FLATPAK_ID", raising=False)
+
+    assert not desktop.is_dolphin_integrated()
+
+    path = desktop.integrate_dolphin()
+    assert path == fake_menu
+    assert desktop.is_dolphin_integrated()
+    content = path.read_text(encoding="utf-8")
+    assert "Type=Service" in content
+    assert "Convert with ANYFILE" in content
+    assert "--radial %F" in content
+
+    # Test flatpak exec generation
+    monkeypatch.setenv("FLATPAK_ID", "io.github.pietrolama.anyfile")
+    desktop.integrate_dolphin()
+    content_flatpak = path.read_text(encoding="utf-8")
+    assert "Exec=flatpak run io.github.pietrolama.anyfile --radial %F" in content_flatpak
+
+    # Test removal
+    desktop.remove_dolphin_integration()
+    assert not desktop.is_dolphin_integrated()
+    assert not fake_menu.exists()
+
+
+def test_reveal_calls(monkeypatch, tmp_path):
+    from anyfile.ui import desktop
+
+    target = tmp_path / "test.png"
+    target.touch()
+
+    # 1. On Windows
+    commands = []
+    monkeypatch.setattr(system, "IS_WINDOWS", True)
+    monkeypatch.setattr(subprocess, "Popen", lambda cmd, **kw: commands.append(cmd))
+    desktop.reveal(target)
+    assert any("explorer" in cmd[0] for cmd in commands)
+
+    # 2. On Linux fallback to dolphin
+    commands.clear()
+    monkeypatch.setattr(system, "IS_WINDOWS", False)
+    monkeypatch.setattr(desktop, "_reveal_dbus", lambda path: False)
+    monkeypatch.setattr(shutil, "which", lambda name: "/usr/bin/dolphin" if name == "dolphin" else None)
+    desktop.reveal(target)
+    assert any("dolphin" in cmd[0] for cmd in commands)
+
+
+def test_install_hint_inside_and_outside_flatpak(monkeypatch):
+    monkeypatch.setattr(system, "is_flatpak", lambda: False)
+    assert system.install_command(["ffmpeg", "pandoc"]) == "sudo apt install ffmpeg pandoc"
+    assert system.install_command([]) == ""
+    assert system.install_hint(["pandoc"]) == "sudo apt install pandoc"
+
+    monkeypatch.setattr(system, "is_flatpak", lambda: True)
+    assert system.install_command(["pandoc"]) == ""
+    assert "Flatpak" in system.install_hint(["pandoc"])

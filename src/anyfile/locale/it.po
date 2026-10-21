@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: anyfile\n"
 "Report-Msgid-Bugs-To: https://github.com/pietrolama/anyfile/issues\n"
-"POT-Creation-Date: 2026-10-20 13:27+0200\n"
+"POT-Creation-Date: 2026-10-21 09:43+0200\n"
 "PO-Revision-Date: 2026-10-20 12:00+0200\n"
 "Last-Translator: pietrolama\n"
 "Language-Team: Italian\n"
@@ -324,12 +324,8 @@ msgstr "Formato di destinazione sconosciuto: {format}"
 
 #: src/anyfile/core/planner.py:49
 #, python-brace-format
-msgid ""
-"Compressing {format} requires {engine}, which is not installed (sudo apt "
-"install {package})"
-msgstr ""
-"Per comprimere un {format} serve {engine}, che non è installato (sudo apt "
-"install {package})"
+msgid "Compressing {format} requires {engine}, which is not installed ({hint})"
+msgstr "Per comprimere un {format} serve {engine}, che non è installato ({hint})"
 
 #: src/anyfile/core/planner.py:52
 #, python-brace-format
@@ -344,15 +340,19 @@ msgstr ""
 #, python-brace-format
 msgid ""
 "Converting {source} → {target} requires {engine}, which is not installed "
-"(sudo apt install {package})"
+"({hint})"
 msgstr ""
 "La conversione {source} → {target} richiede {engine}, che non è installato "
-"(sudo apt install {package})"
+"({hint})"
 
-#: src/anyfile/core/planner.py:60
+#: src/anyfile/core/planner.py:61
 #, python-brace-format
 msgid "Converting {source} → {target} is not supported"
 msgstr "La conversione {source} → {target} non è supportata"
+
+#: src/anyfile/core/system.py:36
+msgid "not included in the Flatpak version"
+msgstr "non è incluso nella versione Flatpak"
 
 #: src/anyfile/core/validation.py:23 src/anyfile/core/validation.py:32
 msgid "The engine produced no file"
@@ -405,8 +405,8 @@ msgstr "Stesso formato, file più leggero; l'originale resta intatto"
 
 #: src/anyfile/engines/base.py:153
 #, python-brace-format
-msgid "{engine} is not installed (sudo apt install {package})"
-msgstr "{engine} non è installato (sudo apt install {package})"
+msgid "{engine} is not installed ({hint})"
+msgstr "{engine} non è installato ({hint})"
 
 #: src/anyfile/engines/documents.py:13
 msgid "The layout may differ slightly from the original"
@@ -607,7 +607,9 @@ msgstr "In corso"
 msgid "Done"
 msgstr "Fatto"
 
-#: src/anyfile/models/job.py:19 src/anyfile/ui/radial.py:652
+#: src/anyfile/models/job.py:19 src/anyfile/ui/main_window.py:292
+#: src/anyfile/ui/main_window.py:298 src/anyfile/ui/main_window.py:310
+#: src/anyfile/ui/radial.py:652
 msgid "Error"
 msgstr "Errore"
 
@@ -639,7 +641,7 @@ msgstr "Formato rilevato"
 msgid "Convert to"
 msgstr "Converti in"
 
-#: src/anyfile/ui/conversion_view.py:91 src/anyfile/ui/settings.py:70
+#: src/anyfile/ui/conversion_view.py:91 src/anyfile/ui/settings.py:71
 msgid "Status"
 msgstr "Stato"
 
@@ -714,7 +716,8 @@ msgstr "Mostra risultato"
 msgid "Repeat on other files…"
 msgstr "Ripeti su altri file…"
 
-#: src/anyfile/ui/history_window.py:75 src/anyfile/ui/main_window.py:76
+#: src/anyfile/ui/history_window.py:75 src/anyfile/ui/main_window.py:77
+#: src/anyfile/ui/main_window.py:284
 msgid "Remove"
 msgstr "Rimuovi"
 
@@ -798,14 +801,14 @@ msgid_plural "{n} conversions repeated"
 msgstr[0] "{n} conversione ripetuta"
 msgstr[1] "{n} conversioni ripetute"
 
-#: src/anyfile/ui/history_window.py:238 src/anyfile/ui/main_window.py:235
+#: src/anyfile/ui/history_window.py:238 src/anyfile/ui/main_window.py:241
 #, python-brace-format
 msgid "{n} with errors"
 msgid_plural "{n} with errors"
 msgstr[0] "{n} con errori"
 msgstr[1] "{n} con errori"
 
-#: src/anyfile/ui/main_window.py:48
+#: src/anyfile/ui/main_window.py:49
 msgid ""
 "Drop the files to convert here\n"
 "or use “Add files…”"
@@ -813,43 +816,51 @@ msgstr ""
 "Trascina qui i file da convertire\n"
 "oppure usa «Aggiungi file…»"
 
-#: src/anyfile/ui/main_window.py:68
+#: src/anyfile/ui/main_window.py:69
 msgid "Main"
 msgstr "Principale"
 
-#: src/anyfile/ui/main_window.py:73
+#: src/anyfile/ui/main_window.py:74
 msgid "Add files…"
 msgstr "Aggiungi file…"
 
-#: src/anyfile/ui/main_window.py:79
+#: src/anyfile/ui/main_window.py:80
 msgid "Clear list"
 msgstr "Svuota elenco"
 
-#: src/anyfile/ui/main_window.py:81
+#: src/anyfile/ui/main_window.py:82
 msgid "Engines…"
 msgstr "Motori…"
 
-#: src/anyfile/ui/main_window.py:83
+#: src/anyfile/ui/main_window.py:84
 msgid "History"
 msgstr "Cronologia"
 
 #: src/anyfile/ui/main_window.py:97
+msgid "Integrate with Dolphin"
+msgstr "Integra con Dolphin"
+
+#: src/anyfile/ui/main_window.py:98
+msgid "Add “Convert with ANYFILE” to Dolphin's context menu"
+msgstr "Aggiunge «Converti con ANYFILE» al menu di Dolphin"
+
+#: src/anyfile/ui/main_window.py:103
 msgid "Save next to the original file"
 msgstr "Salva accanto al file originale"
 
-#: src/anyfile/ui/main_window.py:98
+#: src/anyfile/ui/main_window.py:104
 msgid "Save in:"
 msgstr "Salva in:"
 
-#: src/anyfile/ui/main_window.py:103
+#: src/anyfile/ui/main_window.py:109
 msgid "Browse…"
 msgstr "Sfoglia…"
 
-#: src/anyfile/ui/main_window.py:105
+#: src/anyfile/ui/main_window.py:111
 msgid "Overwrite existing files (otherwise: “name (1).ext”)"
 msgstr "Sovrascrivi i file esistenti (altrimenti: «nome (1).ext»)"
 
-#: src/anyfile/ui/main_window.py:110
+#: src/anyfile/ui/main_window.py:116
 msgid ""
 "Applies to lossy formats (JPEG, WebP, MP3, Opus, video, GIF).\n"
 "For PNG, WAV, FLAC and documents it changes nothing."
@@ -857,71 +868,103 @@ msgstr ""
 "Vale per i formati con perdita (JPEG, WebP, MP3, Opus, video, GIF).\n"
 "Per PNG, WAV, FLAC e documenti non cambia nulla."
 
-#: src/anyfile/ui/main_window.py:132
+#: src/anyfile/ui/main_window.py:138
 msgid "Quality:"
 msgstr "Qualità:"
 
-#: src/anyfile/ui/main_window.py:142
+#: src/anyfile/ui/main_window.py:148
 msgid "Show results"
 msgstr "Mostra risultati"
 
-#: src/anyfile/ui/main_window.py:144 src/anyfile/ui/radial.py:641
+#: src/anyfile/ui/main_window.py:150 src/anyfile/ui/radial.py:641
 msgid "Cancel"
 msgstr "Annulla"
 
-#: src/anyfile/ui/main_window.py:146
+#: src/anyfile/ui/main_window.py:152
 msgid "Convert"
 msgstr "Converti"
 
-#: src/anyfile/ui/main_window.py:167
+#: src/anyfile/ui/main_window.py:173
 msgid "Choose the files to convert"
 msgstr "Scegli i file da convertire"
 
-#: src/anyfile/ui/main_window.py:183
+#: src/anyfile/ui/main_window.py:189
 msgid "Destination folder"
 msgstr "Cartella di destinazione"
 
-#: src/anyfile/ui/main_window.py:230 src/anyfile/ui/radial.py:467
+#: src/anyfile/ui/main_window.py:236 src/anyfile/ui/radial.py:467
 #, python-brace-format
 msgid "{n} file converted"
 msgid_plural "{n} files converted"
 msgstr[0] "{n} file convertito"
 msgstr[1] "{n} file convertiti"
 
-#: src/anyfile/ui/main_window.py:232
+#: src/anyfile/ui/main_window.py:238
 #, python-brace-format
 msgid "{n} already compact"
 msgid_plural "{n} already compact"
 msgstr[0] "{n} già compatto"
 msgstr[1] "{n} già compatti"
 
-#: src/anyfile/ui/main_window.py:238 src/anyfile/ui/radial.py:453
+#: src/anyfile/ui/main_window.py:244 src/anyfile/ui/radial.py:453
 msgid "Conversion complete"
 msgstr "Conversione completata"
 
-#: src/anyfile/ui/main_window.py:238
+#: src/anyfile/ui/main_window.py:244
 msgid "Conversion finished with errors"
 msgstr "Conversione terminata con errori"
 
-#: src/anyfile/ui/main_window.py:278
+#: src/anyfile/ui/main_window.py:281 src/anyfile/ui/main_window.py:304
+msgid "Dolphin integration"
+msgstr "Integrazione con Dolphin"
+
+#: src/anyfile/ui/main_window.py:282
+msgid "“Convert with ANYFILE” is currently installed in Dolphin."
+msgstr "«Converti con ANYFILE» è già installato in Dolphin."
+
+#: src/anyfile/ui/main_window.py:283
+msgid "Reinstall"
+msgstr "Reinstalla"
+
+#: src/anyfile/ui/main_window.py:290
+msgid "Dolphin integration updated."
+msgstr "Integrazione con Dolphin aggiornata."
+
+#: src/anyfile/ui/main_window.py:296
+msgid "Dolphin integration removed."
+msgstr "Integrazione con Dolphin rimossa."
+
+#: src/anyfile/ui/main_window.py:305
+msgid ""
+"Added “Convert with ANYFILE” to Dolphin's context menu.\n"
+"Right-click any file in Dolphin to open the radial menu."
+msgstr ""
+"«Converti con ANYFILE» è stato aggiunto al menu di Dolphin.\n"
+"Fai clic destro su qualsiasi file in Dolphin per aprire il menu radiale."
+
+#: src/anyfile/ui/main_window.py:308
+msgid "Dolphin integration installed."
+msgstr "Integrazione con Dolphin installata."
+
+#: src/anyfile/ui/main_window.py:322
 #, python-brace-format
 msgid "Missing engines: {engines}"
 msgstr "Motori mancanti: {engines}"
 
-#: src/anyfile/ui/main_window.py:280
+#: src/anyfile/ui/main_window.py:324
 #, python-brace-format
 msgid "{n} engines available"
 msgstr "{n} motori disponibili"
 
-#: src/anyfile/ui/main_window.py:281
+#: src/anyfile/ui/main_window.py:325
 msgid "details"
 msgstr "dettagli"
 
-#: src/anyfile/ui/main_window.py:286
+#: src/anyfile/ui/main_window.py:330
 msgid "Conversions in progress"
 msgstr "Conversioni in corso"
 
-#: src/anyfile/ui/main_window.py:287
+#: src/anyfile/ui/main_window.py:331
 msgid "Some conversions are still running. Cancel them and quit?"
 msgstr "Ci sono conversioni in corso. Vuoi annullarle e uscire?"
 
@@ -1054,23 +1097,23 @@ msgstr "L'originale resta intatto"
 msgid "move outwards for “Small”"
 msgstr "scorri verso l'esterno per «Leggera»"
 
-#: src/anyfile/ui/settings.py:66
+#: src/anyfile/ui/settings.py:67
 msgid "Conversion engines"
 msgstr "Motori di conversione"
 
-#: src/anyfile/ui/settings.py:70
+#: src/anyfile/ui/settings.py:71
 msgid "Engine"
 msgstr "Motore"
 
-#: src/anyfile/ui/settings.py:70
+#: src/anyfile/ui/settings.py:71
 msgid "Conversions"
 msgstr "Conversioni"
 
-#: src/anyfile/ui/settings.py:74
+#: src/anyfile/ui/settings.py:75
 msgid "Copy install command"
 msgstr "Copia comando di installazione"
 
-#: src/anyfile/ui/settings.py:78
+#: src/anyfile/ui/settings.py:79
 msgid "Check again"
 msgstr "Ricontrolla"
 
@@ -1088,5 +1131,9 @@ msgid "To enable more conversions, install the missing engines:"
 msgstr "Per abilitare altre conversioni installa i motori mancanti:"
 
 #: src/anyfile/ui/settings.py:105
+msgid "The missing engines are not included in the Flatpak version."
+msgstr "I motori mancanti non sono inclusi nella versione Flatpak."
+
+#: src/anyfile/ui/settings.py:107
 msgid "All the engines are installed."
 msgstr "Tutti i motori sono installati."

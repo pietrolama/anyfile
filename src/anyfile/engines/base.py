@@ -150,8 +150,8 @@ class Engine(ABC):
     def binary(self, index: int = 0) -> str:
         path = self.which(*self.requires[index])
         if not path:
-            raise EngineError(_("{engine} is not installed (sudo apt install {package})").format(
-                engine=self.label, package=self.package))
+            raise EngineError(_("{engine} is not installed ({hint})").format(
+                engine=self.label, hint=system.install_hint([self.package])))
         return path
 
     def missing(self) -> list[str]:

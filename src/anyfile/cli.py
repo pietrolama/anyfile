@@ -7,7 +7,7 @@ import threading
 from pathlib import Path
 
 from anyfile import __version__
-from anyfile.core import formats
+from anyfile.core import formats, system
 from anyfile.core import history as hist
 from anyfile.core.detector import detect
 from anyfile.core.executor import Executor
@@ -128,9 +128,9 @@ def cmd_engines(registry: Registry) -> int:
         else:
             print(f"  ✗ {s.label:<12} " + _("missing: {programs}").format(programs=", ".join(s.missing)))
             missing_packages.append(s.package)
-    if missing_packages:
+    if command := system.install_command(missing_packages):
         print("\n" + _("To install the missing engines:"))
-        print(f"  sudo apt install {' '.join(missing_packages)}")
+        print(f"  {command}")
     return 0
 
 

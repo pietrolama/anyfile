@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
     QMessageBox, QPushButton, QRadioButton, QSizePolicy, QStackedWidget, QToolBar, QVBoxLayout, QWidget,
 )
 
+from anyfile.core import system
 from anyfile.core.executor import Executor
 from anyfile.core.history import History
 from anyfile.core.registry import Registry
@@ -92,6 +93,11 @@ class MainWindow(QMainWindow):
         bar.addWidget(spacer)
         bar.addAction(history)
         bar.addAction(engines)
+        if not system.IS_WINDOWS:
+            self.dolphin_action = QAction(QIcon.fromTheme("system-file-manager"), _("Integrate with Dolphin"), self)
+            self.dolphin_action.setToolTip(_("Add “Convert with ANYFILE” to Dolphin's context menu"))
+            self.dolphin_action.triggered.connect(self._integrate_dolphin)
+            bar.addAction(self.dolphin_action)
 
     def _build_output_options(self) -> QVBoxLayout:
         self.same_dir = QRadioButton(_("Save next to the original file"))
@@ -264,6 +270,44 @@ class MainWindow(QMainWindow):
         self.history_window.show()
         self.history_window.raise_()
         self.history_window.activateWindow()
+
+    def _integrate_dolphin(self) -> None:
+        from anyfile.ui.desktop import (
+            integrate_dolphin, is_dolphin_integrated, remove_dolphin_integration,
+        )
+        if is_dolphin_integrated():
+            msg = QMessageBox(self)
+            msg.setIcon(QMessageBox.Icon.Information)
+            msg.setWindowTitle(_("Dolphin integration"))
+            msg.setText(_("“Convert with ANYFILE” is currently installed in Dolphin."))
+            reinstall_btn = msg.addButton(_("Reinstall"), QMessageBox.ButtonRole.AcceptRole)
+            remove_btn = msg.addButton(_("Remove"), QMessageBox.ButtonRole.DestructiveRole)
+            msg.addButton(QMessageBox.StandardButton.Cancel)
+            msg.exec()
+            if msg.clickedButton() == reinstall_btn:
+                try:
+                    integrate_dolphin()
+                    self.statusBar().showMessage(_("Dolphin integration updated."), 5000)
+                except Exception as e:
+                    QMessageBox.warning(self, _("Error"), str(e))
+            elif msg.clickedButton() == remove_btn:
+                try:
+                    remove_dolphin_integration()
+                    self.statusBar().showMessage(_("Dolphin integration removed."), 5000)
+                except Exception as e:
+                    QMessageBox.warning(self, _("Error"), str(e))
+        else:
+            try:
+                integrate_dolphin()
+                QMessageBox.information(
+                    self,
+                    _("Dolphin integration"),
+                    _("Added “Convert with ANYFILE” to Dolphin's context menu.\n"
+                      "Right-click any file in Dolphin to open the radial menu."),
+                )
+                self.statusBar().showMessage(_("Dolphin integration installed."), 5000)
+            except Exception as e:
+                QMessageBox.warning(self, _("Error"), str(e))
 
     def _show_engines(self) -> None:
         EnginesDialog(self.registry, self).exec()

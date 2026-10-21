@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from anyfile.core import formats
+from anyfile.core import formats, system
 from anyfile.core.errors import AnyfileError
 from anyfile.core.registry import Registry
 from anyfile.i18n import _
@@ -47,16 +47,17 @@ def plan(info: FileInfo, target: str, registry: Registry) -> Plan:
         if missing := registry.missing_engines_for(src.id, src.id):
             engine = missing[0]
             raise PlanError(_("Compressing {format} requires {engine}, which is not installed "
-                              "(sudo apt install {package})").format(
-                format=src.label, engine=engine.label, package=engine.package))
+                              "({hint})").format(
+                format=src.label, engine=engine.label, hint=system.install_hint([engine.package])))
         raise PlanError(_("“{name}” is already {format} and cannot be compressed further "
                           "without changing format").format(name=info.name, format=src.label))
 
     if missing := registry.missing_engines_for(src.id, target_fmt.id):
         engine = missing[0]
         raise PlanError(_("Converting {source} → {target} requires {engine}, which is not "
-                          "installed (sudo apt install {package})").format(
-            source=src.label, target=target_fmt.label, engine=engine.label, package=engine.package))
+                          "installed ({hint})").format(
+            source=src.label, target=target_fmt.label, engine=engine.label,
+            hint=system.install_hint([engine.package])))
     raise PlanError(_("Converting {source} → {target} is not supported").format(
         source=src.label, target=target_fmt.label))
 

@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from anyfile.core import system
 from anyfile.core.registry import Registry
 from anyfile.i18n import _
 from anyfile.models.conversion import Quality
@@ -87,8 +88,7 @@ class EnginesDialog(QDialog):
         self._populate()
 
     def _install_command(self) -> str:
-        packages = [s.package for s in self.registry.status() if not s.available]
-        return f"sudo apt install {' '.join(packages)}" if packages else ""
+        return system.install_command([s.package for s in self.registry.status() if not s.available])
 
     def _populate(self) -> None:
         self.tree.clear()
@@ -101,6 +101,8 @@ class EnginesDialog(QDialog):
         command = self._install_command()
         if command:
             self.hint.setText(_("To enable more conversions, install the missing engines:") + f"\n{command}")
+        elif not all(s.available for s in self.registry.status()):
+            self.hint.setText(_("The missing engines are not included in the Flatpak version."))
         else:
             self.hint.setText(_("All the engines are installed."))
         self.copy_button.setVisible(bool(command))

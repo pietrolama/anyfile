@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.pietrolama.anyfile</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>ANYFILE</name>
+  <summary>Local file converter with a radial menu for KDE Dolphin</summary>
+  <summary xml:lang="it">Convertitore di file locale con menu radiale per KDE Dolphin</summary>
+
+  <developer id="io.github.pietrolama">
+    <name>Pietro Lama</name>
+  </developer>
+
+  <description>
+    <p>
+      ANYFILE is a local file converter for Linux, specifically designed for KDE Plasma and Dolphin.
+      Right-click a file in Dolphin to open a circular radial menu directly under the pointer to
+      convert, compress, or adjust quality in a single click.
+    </p>
+    <p xml:lang="it">
+      ANYFILE è un convertitore di file locale per Linux, progettato specificamente per KDE Plasma e Dolphin.
+      Fai clic destro su un file in Dolphin per aprire una ruota radiale direttamente sotto il puntatore per
+      convertire, comprimere o regolare la qualità con un solo clic.
+    </p>
+    <p>
+      Key features:
+    </p>
+    <p xml:lang="it">
+      Caratteristiche principali:
+    </p>
+    <ul>
+      <li>Radial wheel menu placed right under the mouse cursor</li>
+      <li xml:lang="it">Menu radiale circolare posizionato direttamente sotto il puntatore</li>
+      <li>Converts images, audio, video, PDFs, and documents</li>
+      <li xml:lang="it">Converte immagini, audio, video, PDF e documenti</li>
+      <li>Safe local processing without uploading any files</li>
+      <li xml:lang="it">Elaborazione locale sicura senza caricare alcun file su server esterni</li>
+      <li>Automatic chained conversions when intermediate steps are needed</li>
+      <li xml:lang="it">Conversioni concatenate automatiche con passaggio intermedio quando necessario</li>
+      <li>Lossless and lossy compression presets</li>
+      <li xml:lang="it">Preset di compressione con e senza perdita</li>
+      <li>Conversion history with repeat and retry functionality</li>
+      <li xml:lang="it">Cronologia delle conversioni con ripetizione e riprova</li>
+      <li>Deep integration with KDE Dolphin file manager</li>
+      <li xml:lang="it">Integrazione profonda con il file manager KDE Dolphin</li>
+    </ul>
+    <p>
+      Word, Excel and PowerPoint documents need LibreOffice, which is not included in this
+      package: the other conversions work out of the box.
+    </p>
+    <p xml:lang="it">
+      I documenti Word, Excel e PowerPoint richiedono LibreOffice, che non è incluso in questo
+      pacchetto: le altre conversioni funzionano subito.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">io.github.pietrolama.anyfile.desktop</launchable>
+
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/pietrolama/anyfile/main/packaging/screenshots/radial.png</image>
+      <caption>The radial menu appearing under the pointer for quick conversions</caption>
+      <caption xml:lang="it">Il menu radiale sotto il puntatore per conversioni rapide</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/pietrolama/anyfile/main/packaging/screenshots/window.png</image>
+      <caption>Main window with batch conversion queue</caption>
+      <caption xml:lang="it">Finestra principale con coda di conversione in batch</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/pietrolama/anyfile/main/packaging/screenshots/history.png</image>
+      <caption>Conversion history with repeat and retry actions</caption>
+      <caption xml:lang="it">Cronologia delle conversioni con ripetizione e riprova</caption>
+    </screenshot>
+  </screenshots>
+
+  <url type="homepage">https://github.com/pietrolama/anyfile</url>
+  <url type="bugtracker">https://github.com/pietrolama/anyfile/issues</url>
+  <url type="vcs-browser">https://github.com/pietrolama/anyfile</url>
+
+  <content_rating type="oars-1.1"/>
+
+  <releases>
+    <release version="0.3.0" date="2026-10-20">
+      <description>
+        <p>Release 0.3.0: radial menu, batch queue, Dolphin integration, and conversion history.</p>
+        <p xml:lang="it">Versione 0.3.0: menu radiale, coda di conversione, integrazione Dolphin e cronologia.</p>
+      </description>
+    </release>
+  </releases>
+
+  <provides>
+    <binary>anyfile</binary>
+  </provides>
+</component>

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1d99f3"/>
+      <stop offset="100%" stop-color="#0e6bb8"/>
+    </linearGradient>
+    <linearGradient id="foldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.2"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <!-- Base Document Sheet with Shadow -->
+  <g filter="url(#shadow)">
+    <!-- Main page body with folded corner at top-right -->
+    <path d="M 28 16 L 76 16 L 100 40 L 100 112 C 100 115.3 97.3 118 94 118 L 28 118 C 24.7 118 22 115.3 22 112 L 22 22 C 22 18.7 24.7 16 28 16 Z"
+          fill="url(#bgGrad)"/>
+    <!-- Folded corner flap -->
+    <path d="M 76 16 L 100 40 L 78 40 C 76.9 40 76 39.1 76 38 L 76 16 Z"
+          fill="url(#foldGrad)"/>
+  </g>
+
+  <!-- Central Radial Arrows Motif (representing ANYFILE wheel & conversion) -->
+  <g fill="none" stroke="#ffffff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Upper right arc arrow -->
+    <path d="M 44 68 A 20 20 0 0 1 76 52"/>
+    <polyline points="74,45 82,53 74,61" stroke-width="5" fill="none"/>
+
+    <!-- Lower left arc arrow -->
+    <path d="M 80 72 A 20 20 0 0 1 48 88"/>
+    <polyline points="50,95 42,87 50,79" stroke-width="5" fill="none"/>
+  </g>
+
+  <!-- Center core dot -->
+  <circle cx="62" cy="70" r="4.5" fill="#ffffff"/>
+</svg>
