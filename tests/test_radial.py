@@ -349,3 +349,32 @@ def test_mixed_selection_offers_each_tool_for_its_files(make_menu, sample):
     _open_tools(menu)
     by_tool = {e.tool.id: e.paths for e in menu.entries}
     assert by_tool["resize"] == (png,) and by_tool["normalize"] == (wav,)
+
+
+@needs("pdfunite", "magick")
+def test_merge_with_one_file_asks_for_the_others_and_keeps_the_wheel(app, make_menu, sample, monkeypatch):
+    src, extra = sample("png"), sample("png", "second.png")
+    menu = make_menu(src)
+    finished = []
+    menu.finished.connect(lambda: finished.append(True))
+    asked = []
+
+    def pick(parent, *args):
+        asked.append(parent)
+        return [str(extra)], ""
+    monkeypatch.setattr(radial.QFileDialog, "getOpenFileNames", pick)
+    _open_tools(menu)
+    merge = next(i for i, e in enumerate(menu.entries) if e.tool.id == "merge")
+    click(menu, merge)
+    assert asked == [menu] and menu.isVisible() and menu.phase in (Phase.RUNNING, Phase.DONE)
+    assert wait_until(app, lambda: finished)
+    assert src.with_name("image-merged.pdf").is_file()
+
+
+@needs("pdfunite", "magick")
+def test_cancelling_the_file_choice_goes_back_to_the_wheel(make_menu, sample, monkeypatch):
+    menu = make_menu(sample("png"))
+    monkeypatch.setattr(radial.QFileDialog, "getOpenFileNames", lambda *a: ([], ""))
+    _open_tools(menu)
+    click(menu, next(i for i, e in enumerate(menu.entries) if e.tool.id == "merge"))
+    assert menu.phase is Phase.CHOOSING and menu.in_tools and not menu.jobs

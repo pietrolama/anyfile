@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: anyfile\n"
 "Report-Msgid-Bugs-To: https://github.com/pietrolama/anyfile/issues\n"
-"POT-Creation-Date: 2026-10-21 16:40+0200\n"
+"POT-Creation-Date: 2026-10-21 18:10+0200\n"
 "PO-Revision-Date: 2026-10-20 12:00+0200\n"
 "Last-Translator: pietrolama\n"
 "Language-Team: Italian\n"
@@ -187,8 +187,8 @@ msgid "Warning: the extension does not match the content"
 msgstr "Attenzione: l'estensione non corrisponde al contenuto"
 
 #: src/anyfile/cli.py:173 src/anyfile/core/history.py:137
-#: src/anyfile/ui/conversion_view.py:66 src/anyfile/ui/radial.py:660
-#: src/anyfile/ui/radial.py:862
+#: src/anyfile/ui/conversion_view.py:66 src/anyfile/ui/radial.py:676
+#: src/anyfile/ui/radial.py:887
 #, python-brace-format
 msgid "via {formats}"
 msgstr "via {formats}"
@@ -292,17 +292,22 @@ msgstr "«{name}» non si può usare per {tool}"
 msgid "“{name}”: this edit is not available for {format}"
 msgstr "«{name}»: questa modifica non è disponibile per {format}"
 
-#: src/anyfile/core/executor.py:185
+#: src/anyfile/core/executor.py:184
+#, python-brace-format
+msgid "{tool} needs at least two files"
+msgstr "{tool} richiede almeno due file"
+
+#: src/anyfile/core/executor.py:187
 #, python-brace-format
 msgid "Unknown option “{option}” for {tool}: use {choices}"
 msgstr "Opzione «{option}» sconosciuta per {tool}: usa {choices}"
 
-#: src/anyfile/core/executor.py:209
+#: src/anyfile/core/executor.py:211
 #, python-brace-format
 msgid "Cannot create the folder {folder}: {error}"
 msgstr "Impossibile creare la cartella {folder}: {error}"
 
-#: src/anyfile/core/executor.py:212
+#: src/anyfile/core/executor.py:214
 #, python-brace-format
 msgid "Cannot write to {folder}: choose another destination folder"
 msgstr ""
@@ -331,7 +336,7 @@ msgstr "ieri {time}"
 msgid "%Y-%m-%d %H:%M"
 msgstr "%d/%m/%Y %H:%M"
 
-#: src/anyfile/core/history.py:131 src/anyfile/ui/radial.py:922
+#: src/anyfile/core/history.py:131 src/anyfile/ui/radial.py:949
 #, python-brace-format
 msgid "Compress {format}"
 msgstr "Comprimi {format}"
@@ -857,17 +862,17 @@ msgstr "In coda"
 msgid "Running"
 msgstr "In corso"
 
-#: src/anyfile/models/job.py:18 src/anyfile/ui/radial.py:779
+#: src/anyfile/models/job.py:18 src/anyfile/ui/radial.py:804
 msgid "Done"
 msgstr "Fatto"
 
 #: src/anyfile/models/job.py:19 src/anyfile/ui/main_window.py:292
 #: src/anyfile/ui/main_window.py:298 src/anyfile/ui/main_window.py:310
-#: src/anyfile/ui/radial.py:783
+#: src/anyfile/ui/radial.py:808
 msgid "Error"
 msgstr "Errore"
 
-#: src/anyfile/models/job.py:21 src/anyfile/ui/radial.py:781
+#: src/anyfile/models/job.py:21 src/anyfile/ui/radial.py:806
 msgid "Already compact"
 msgstr "Già compatto"
 
@@ -1130,7 +1135,7 @@ msgstr "Qualità:"
 msgid "Show results"
 msgstr "Mostra risultati"
 
-#: src/anyfile/ui/main_window.py:150 src/anyfile/ui/radial.py:772
+#: src/anyfile/ui/main_window.py:150 src/anyfile/ui/radial.py:797
 msgid "Cancel"
 msgstr "Annulla"
 
@@ -1146,7 +1151,7 @@ msgstr "Scegli i file da convertire"
 msgid "Destination folder"
 msgstr "Cartella di destinazione"
 
-#: src/anyfile/ui/main_window.py:236 src/anyfile/ui/radial.py:568
+#: src/anyfile/ui/main_window.py:236 src/anyfile/ui/radial.py:584
 #, python-brace-format
 msgid "{n} file converted"
 msgid_plural "{n} files converted"
@@ -1160,7 +1165,7 @@ msgid_plural "{n} already compact"
 msgstr[0] "{n} già compatto"
 msgstr[1] "{n} già compatti"
 
-#: src/anyfile/ui/main_window.py:244 src/anyfile/ui/radial.py:552
+#: src/anyfile/ui/main_window.py:244 src/anyfile/ui/radial.py:568
 msgid "Conversion complete"
 msgstr "Conversione completata"
 
@@ -1242,156 +1247,170 @@ msgstr "Strumenti"
 msgid "TOOLS"
 msgstr "STRUMENTI"
 
-#: src/anyfile/ui/radial.py:543
+#: src/anyfile/ui/radial.py:523
+#, python-brace-format
+msgid "Files to add after “{name}”"
+msgstr "File da aggiungere dopo «{name}»"
+
+#: src/anyfile/ui/radial.py:524
+#, python-brace-format
+msgid "Supported files ({patterns})"
+msgstr "File supportati ({patterns})"
+
+#: src/anyfile/ui/radial.py:559
 #, python-brace-format
 msgid "{failed} of {total} not converted."
 msgstr "{failed} di {total} non convertiti."
 
-#: src/anyfile/ui/radial.py:547
+#: src/anyfile/ui/radial.py:563
 msgid "Conversion failed"
 msgstr "Conversione non riuscita"
 
-#: src/anyfile/ui/radial.py:564
+#: src/anyfile/ui/radial.py:580
 #, python-brace-format
 msgid "{n} file edited"
 msgid_plural "{n} files edited"
 msgstr[0] "{n} file modificato"
 msgstr[1] "{n} file modificati"
 
-#: src/anyfile/ui/radial.py:566
+#: src/anyfile/ui/radial.py:582
 #, python-brace-format
 msgid "{n} file compressed"
 msgid_plural "{n} files compressed"
 msgstr[0] "{n} file compresso"
 msgstr[1] "{n} file compressi"
 
-#: src/anyfile/ui/radial.py:570
+#: src/anyfile/ui/radial.py:586
 #, python-brace-format
 msgid "{n} already compact (original unchanged)"
 msgid_plural "{n} already compact (originals unchanged)"
 msgstr[0] "{n} già compatto (originale invariato)"
 msgstr[1] "{n} già compatti (originali invariati)"
 
-#: src/anyfile/ui/radial.py:753 src/anyfile/ui/radial.py:766
+#: src/anyfile/ui/radial.py:778 src/anyfile/ui/radial.py:791
 msgid "Formats"
 msgstr "Formati"
 
-#: src/anyfile/ui/radial.py:755
+#: src/anyfile/ui/radial.py:780
 msgid "Full"
 msgstr "Finestra"
 
-#: src/anyfile/ui/radial.py:755
+#: src/anyfile/ui/radial.py:780
 msgid "window"
 msgstr "completa"
 
-#: src/anyfile/ui/radial.py:809
+#: src/anyfile/ui/radial.py:834
 msgid "Unknown format"
 msgstr "Formato sconosciuto"
 
-#: src/anyfile/ui/radial.py:812 src/anyfile/ui/radial.py:869
+#: src/anyfile/ui/radial.py:837 src/anyfile/ui/radial.py:894
 #, python-brace-format
 msgid "{n} file"
 msgid_plural "{n} files"
 msgstr[0] "{n} file"
 msgstr[1] "{n} file"
 
-#: src/anyfile/ui/radial.py:814
+#: src/anyfile/ui/radial.py:839
 msgid "different formats"
 msgstr "formati diversi"
 
-#: src/anyfile/ui/radial.py:848
+#: src/anyfile/ui/radial.py:873
 #, python-brace-format
 msgid "Tools: {names}"
 msgstr "Strumenti: {names}"
 
-#: src/anyfile/ui/radial.py:848
+#: src/anyfile/ui/radial.py:873
 msgid "Tab switches wheel"
 msgstr "Tab cambia ruota"
 
-#: src/anyfile/ui/radial.py:852
+#: src/anyfile/ui/radial.py:877
 msgid "Show all the conversions in the full window"
 msgstr "Mostra tutte le conversioni nella finestra completa"
 
-#: src/anyfile/ui/radial.py:864
+#: src/anyfile/ui/radial.py:889
 #, python-brace-format
 msgid "{format} for {n} of {total} files"
 msgstr "{format} per {n} file su {total}"
 
-#: src/anyfile/ui/radial.py:866
+#: src/anyfile/ui/radial.py:891
 msgid "the others cannot be converted to this format"
 msgstr "gli altri non si convertono in questo formato"
 
-#: src/anyfile/ui/radial.py:878
+#: src/anyfile/ui/radial.py:903
 #, python-brace-format
 msgid "Move outwards (or press {keys}) to change quality"
 msgstr "Scorri verso l'esterno (o premi {keys}) per cambiare qualità"
 
-#: src/anyfile/ui/radial.py:882
+#: src/anyfile/ui/radial.py:907
 msgid "No file recognized. Click the centre for details."
 msgstr "Nessun file riconosciuto. Clic al centro per i dettagli."
 
-#: src/anyfile/ui/radial.py:883
+#: src/anyfile/ui/radial.py:908
 msgid "No conversion available for these files."
 msgstr "Nessuna conversione disponibile per questi file."
 
-#: src/anyfile/ui/radial.py:885
+#: src/anyfile/ui/radial.py:910
 msgid "Click a tool · Esc or the centre: back to the formats"
 msgstr "Clic su uno strumento · Esc o il centro: torna ai formati"
 
-#: src/anyfile/ui/radial.py:886
+#: src/anyfile/ui/radial.py:911
 msgid "Click a format to convert · Esc to close"
 msgstr "Clic su un formato per convertire · Esc per chiudere"
 
-#: src/anyfile/ui/radial.py:888
+#: src/anyfile/ui/radial.py:913
 #, python-brace-format
 msgid "{n} unrecognized file will be ignored"
 msgid_plural "{n} unrecognized files will be ignored"
 msgstr[0] "{n} file non riconosciuto sarà ignorato"
 msgstr[1] "{n} file non riconosciuti saranno ignorati"
 
-#: src/anyfile/ui/radial.py:892
+#: src/anyfile/ui/radial.py:917
 msgid "Esc: continue in the background · Centre: cancel"
 msgstr "Esc: continua in background · Centro: annulla"
 
-#: src/anyfile/ui/radial.py:895
+#: src/anyfile/ui/radial.py:920
 msgid "Click the centre for details"
 msgstr "Clic al centro per i dettagli"
 
-#: src/anyfile/ui/radial.py:908
+#: src/anyfile/ui/radial.py:933
 #, python-brace-format
 msgid "{n} file does not support it"
 msgid_plural "{n} files do not support it"
 msgstr[0] "{n} file non la supporta"
 msgstr[1] "{n} file non la supportano"
 
-#: src/anyfile/ui/radial.py:910 src/anyfile/ui/radial.py:933
+#: src/anyfile/ui/radial.py:935 src/anyfile/ui/radial.py:960
 msgid "The originals stay untouched"
 msgstr "Gli originali restano intatti"
 
-#: src/anyfile/ui/radial.py:911 src/anyfile/ui/radial.py:934
+#: src/anyfile/ui/radial.py:936 src/anyfile/ui/radial.py:961
 msgid "The original stays untouched"
 msgstr "L'originale resta intatto"
 
-#: src/anyfile/ui/radial.py:913
+#: src/anyfile/ui/radial.py:938
+msgid "click to choose the files to add after this one"
+msgstr "clic per scegliere i file da aggiungere dopo questo"
+
+#: src/anyfile/ui/radial.py:940
 #, python-brace-format
 msgid "move outwards to choose: {options}"
 msgstr "sposta verso l'esterno per scegliere: {options}"
 
-#: src/anyfile/ui/radial.py:925
+#: src/anyfile/ui/radial.py:952
 #, python-brace-format
 msgid "Compress {n} file ({formats})"
 msgid_plural "Compress {n} files ({formats})"
 msgstr[0] "Comprimi {n} file ({formats})"
 msgstr[1] "Comprimi {n} file ({formats})"
 
-#: src/anyfile/ui/radial.py:930
+#: src/anyfile/ui/radial.py:957
 #, python-brace-format
 msgid "{n} cannot be compressed without changing format"
 msgid_plural "{n} cannot be compressed without changing format"
 msgstr[0] "{n} non comprimibile senza cambiare formato"
 msgstr[1] "{n} non comprimibili senza cambiare formato"
 
-#: src/anyfile/ui/radial.py:936
+#: src/anyfile/ui/radial.py:963
 msgid "move outwards for “Small”"
 msgstr "scorri verso l'esterno per «Leggera»"
 

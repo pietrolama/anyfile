@@ -20,7 +20,7 @@ from PySide6.QtGui import (
     QColor, QCursor, QEnterEvent, QFont, QFontMetricsF, QGuiApplication, QIcon, QKeyEvent,
     QMouseEvent, QPainter, QPainterPath, QPaintEvent, QPen, QRadialGradient,
 )
-from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QFileDialog, QWidget
 
 from anyfile.core import formats
 from anyfile.core.detector import detect
@@ -158,9 +158,9 @@ def tool_entries(infos: list[FileInfo], registry: Registry) -> list[Entry]:
             continue
         for tool in registry.tools(info.format.id):
             found.setdefault(tool.id, (tool, info.format.category, []))[2].append(info.path)
-    # Combining needs at least two files.
-    ordered = sorted((t for t in found.values() if not t[0].multi_input or len(t[2]) > 1),
-                     key=lambda t: t[1].order)
+    # A tool that combines files is offered with a single file too: the other files are
+    # then chosen in a file dialog.
+    ordered = sorted(found.values(), key=lambda t: t[1].order)
     return [Entry(None, tool.label, tool.label.upper(), category.label, CATEGORY_COLORS[category],
                   tuple(paths), tool=tool)
             for tool, category, paths in ordered]
@@ -503,11 +503,27 @@ class RadialMenu(QWidget):
     def _start_tool(self, entry: Entry, option: str | None) -> None:
         assert entry.tool is not None
         # The format of each result is decided by the executor (usually the file's own).
-        # A tool that combines files gets them all in one job, in the selection's order.
+        # A tool that combines files gets them all in one job, in the selection's order;
+        # with a single file the others are chosen now, while the wheel stays open.
         others = entry.paths[1:] if entry.tool.multi_input else ()
+        if entry.tool.multi_input and not others:
+            others = self._pick_files_to_add(entry)
+            if not others:
+                return  # cancelled: back to the wheel
         self._submit(entry, lambda _path: dict(target="", quality=self.default_quality,
                                                tool=entry.tool.id, option=option, others=others),
                      entry.paths[:1] if others else entry.paths)
+
+    def _pick_files_to_add(self, entry: Entry) -> tuple[Path, ...]:
+        first = entry.paths[0]
+        patterns = " ".join(f"*.{ext}" for fid in entry.tool.formats if (fmt := formats.BY_ID.get(fid))
+                            for ext in fmt.extensions)
+        # Parented to the wheel, so it opens above it and the wheel stays on screen.
+        names, _filter = QFileDialog.getOpenFileNames(
+            self, _("Files to add after “{name}”").format(name=first.name), str(first.parent),
+            _("Supported files ({patterns})").format(patterns=patterns))
+        self.activateWindow()
+        return tuple(Path(n) for n in names)
 
     def _submit(self, entry: Entry, job_args, paths: tuple[Path, ...] | None = None) -> None:
         self.phase, self.chosen, self.hover, self.hover_option = Phase.RUNNING, entry, None, None
@@ -918,6 +934,8 @@ class RadialMenu(QWidget):
                                      others).format(n=others)
         text += "\n" + (_("The originals stay untouched") if len(entry.paths) > 1
                         else _("The original stays untouched"))
+        if tool.multi_input and len(entry.paths) == 1:
+            text += " · " + _("click to choose the files to add after this one")
         if tool.options and self.hover_option is None:
             text += " · " + _("move outwards to choose: {options}").format(
                 options=" · ".join(o.label for o in tool.options))

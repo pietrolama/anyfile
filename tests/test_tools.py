@@ -239,3 +239,9 @@ def test_overlay_pages_follow_the_original_size_and_rotation(tmp_path):
     data = path.read_bytes()
     assert data.startswith(b"%PDF-1.4") and data.count(b"/Type /Page ") == 2
     assert b"/MediaBox [0.00 0.00 842.00 595.00] /Rotate 90" in data and b"/ca 0.3" in data
+
+
+@needs("pdfunite")
+def test_merge_alone_needs_another_file(registry, pdf3):
+    with pytest.raises(AnyfileError, match="needs at least two files"):
+        edit(registry, pdf3, "merge")

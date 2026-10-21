@@ -180,6 +180,8 @@ class Executor:
         if tool is None:
             raise AnyfileError(_("“{name}”: this edit is not available for {format}").format(
                 name=info.name, format=info.format.label if info.format else "?"))
+        if tool.multi_input and not job.others:
+            raise AnyfileError(_("{tool} needs at least two files").format(tool=tool.label))
         option = tool.option(job.option)
         if tool.options and option is None:
             raise AnyfileError(_("Unknown option “{option}” for {tool}: use {choices}").format(
