@@ -33,6 +33,10 @@ class Job:
     output_dir: Path | None = None
     overwrite: bool = False
     quality: Quality = Quality.BALANCED
+    # An edit instead of a conversion (e.g. "resize"), with its option (e.g. "50").
+    # target is then the format of the result.
+    tool: str | None = None
+    option: str | None = None
     id: int = field(default_factory=lambda: next(_ids))
     status: JobStatus = JobStatus.QUEUED
     # 0..1, or None when the engine does not report progress.

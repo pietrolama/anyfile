@@ -18,7 +18,7 @@ from anyfile.i18n import _
 from anyfile.models.conversion import Quality
 from anyfile.models.job import Job, JobStatus
 
-COMMANDS = ("convert", "info", "engines", "history", "repeat")
+COMMANDS = ("convert", "edit", "info", "engines", "history", "repeat")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -41,6 +41,17 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("-q", "--quality", default="balanced",
                    help=_("max, balanced (default) or small; only applies to lossy formats "
                           "(JPEG, WebP, MP3, video...)"))
+
+    p = sub.add_parser("edit", help=_("edit one or more files: resize, rotate, remove audio..."))
+    p.add_argument("files", nargs="+", type=Path)
+    p.add_argument("-t", "--tool", required=True,
+                   help=_("the edit to apply (see “anyfile info FILE” for those available)"))
+    p.add_argument("--option", help=_("the edit's option, e.g. 50 for resize (default: the usual one)"))
+    p.add_argument("-o", "--output-dir", type=Path,
+                   help=_("destination folder (default: the folder of each file)"))
+    p.add_argument("--overwrite", action="store_true", help=_("overwrite existing files"))
+    p.add_argument("-q", "--quality", default="balanced",
+                   help=_("max, balanced (default) or small, when the file has to be re-encoded"))
 
     p = sub.add_parser("info", help=_("show the detected format and the possible conversions"))
     p.add_argument("files", nargs="+", type=Path)
@@ -75,6 +86,8 @@ def main(argv: list[str]) -> int:
         return cmd_history(args)
     if args.command == "repeat":
         return cmd_repeat(registry, args.ids)
+    if args.command == "edit":
+        return cmd_edit(registry, args)
     return cmd_convert(registry, args)
 
 
@@ -162,6 +175,10 @@ def cmd_info(registry: Registry, files: list[Path]) -> int:
         print("  " + _("Conversions: {targets}").format(targets=names or _("none")))
         if any(registry.presets(c) for c in targets):
             print("  " + _("(* with quality presets: --quality max|balanced|small)"))
+        tools = registry.tools(info.format.id)
+        if tools:
+            print("  " + _("Edits: {tools}").format(tools=", ".join(
+                t.id + (f" ({'|'.join(o.id for o in t.options)})" if t.options else "") for t in tools)))
         for engine, fids in registry.unlockable_targets(info.format.id).items():
             print("  " + _("With {engine}: {formats}").format(engine=engine, formats=", ".join(sorted(fids))))
     return 0
@@ -184,6 +201,24 @@ def cmd_convert(registry: Registry, args: argparse.Namespace) -> int:
     return _run_jobs(registry, _open_history(), jobs_args, sys.stdout.isatty())
 
 
+def cmd_edit(registry: Registry, args: argparse.Namespace) -> int:
+    known = {t.id for e in registry.engines for t in e.declared_tools()}
+    if args.tool not in known:
+        print(_("anyfile: unknown edit: {tool} ({tools})").format(
+            tool=args.tool, tools=", ".join(sorted(known))), file=sys.stderr)
+        return 2
+    quality = Quality.parse(args.quality)
+    if quality is None:
+        print(_("anyfile: unknown quality: {quality} (max, balanced, small)").format(
+            quality=args.quality), file=sys.stderr)
+        return 2
+    # The format of the result depends on each file: the executor fills it in.
+    jobs_args = [(f, "", {"output_dir": args.output_dir, "overwrite": args.overwrite,
+                          "quality": quality, "tool": args.tool, "option": args.option})
+                 for f in args.files]
+    return _run_jobs(registry, _open_history(), jobs_args, sys.stdout.isatty())
+
+
 def _run_jobs(registry: Registry, history: hist.History | None, jobs_args: list, tty: bool) -> int:
     lock = threading.Lock()
 
@@ -193,7 +228,7 @@ def _run_jobs(registry: Registry, history: hist.History | None, jobs_args: list,
             if job.status is JobStatus.RUNNING:
                 if tty:
                     pct = f"{job.progress:4.0%}" if job.progress is not None else " ..."
-                    print(f"\r  {name} → {job.target} {pct}", end="", flush=True)
+                    print(f"\r  {name} → {job.tool or job.target} {pct}", end="", flush=True)
                 return
             if tty:
                 print("\r\033[K", end="")

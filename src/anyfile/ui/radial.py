@@ -31,6 +31,7 @@ from anyfile.i18n import _, ngettext
 from anyfile.models.conversion import Category, Presets, Quality, Route
 from anyfile.models.file_info import FileInfo
 from anyfile.models.job import Job, JobStatus
+from anyfile.models.tool import Tool
 from anyfile.ui.desktop import human_size, notify
 from anyfile.ui.job_queue import QtJobQueue
 from anyfile.ui.radial_geometry import (
@@ -50,6 +51,7 @@ CATEGORY_COLORS = {
 }
 MORE_COLOR = "#7f8c8d"
 COMPRESS_COLOR = "#6c5ce7"
+TOOLS_COLOR = "#1abc9c"
 # Key of the “Compress” slice: every file stays in its own format.
 COMPRESS = "="
 OK_COLOR = "#27ae60"
@@ -78,7 +80,8 @@ class Phase(Enum):
 
 @dataclass(frozen=True)
 class Entry:
-    # None: the “More…” entry, which opens the full window.
+    # A conversion, an edit (tool), the switch to the edits wheel (tools=True), or
+    # none of them: the “More…” entry, which opens the full window.
     conversion: Route | None
     label: str
     short: str
@@ -86,6 +89,12 @@ class Entry:
     color: str
     # Files of the selection the target applies to.
     paths: tuple[Path, ...] = ()
+    tool: Tool | None = None
+    tools: bool = False
+
+    @property
+    def is_more(self) -> bool:
+        return self.conversion is None and self.tool is None and not self.tools
 
 
 Option = tuple[Route, tuple[Path, ...]]
@@ -114,13 +123,16 @@ def _category_order(option: Option) -> tuple[int, int, str]:
     return (0 if conv.is_compression else 1), fmt.category.order, fmt.label.lower()
 
 
-def build_entries(options: list[Option]) -> list[Entry]:
-    truncated = len(options) > MAX_SLICES
+def build_entries(options: list[Option], tools: tuple[Path, ...] = ()) -> list[Entry]:
+    """The formats wheel; `tools` are the files that can also be edited, which adds the
+    slice that opens the tools wheel."""
+    room = MAX_SLICES - (1 if tools else 0)
+    truncated = len(options) > room
     if truncated:
         # Keep the targets that apply to the most files; the others are in the window.
         # With equal coverage, direct conversions come before chains.
         options = sorted(options, key=lambda o: (-len(o[1]), o[0].is_chain, *_category_order(o)))
-        options = options[:MAX_SLICES - 1]
+        options = options[:room - 1]
     entries = []
     for conv, paths in sorted(options, key=_category_order):
         fmt = formats.get(conv.target)
@@ -131,7 +143,25 @@ def build_entries(options: list[Option]) -> list[Entry]:
                                  CATEGORY_COLORS[fmt.category], paths))
     if truncated:
         entries.append(Entry(None, _("More formats"), "…", "", MORE_COLOR))
+    if tools:
+        # Last, so it sits at the top next to “Compress”.
+        entries.append(Entry(None, _("Tools"), _("TOOLS"), _("Tools"), TOOLS_COLOR, tools, tools=True))
     return entries
+
+
+def tool_entries(infos: list[FileInfo], registry: Registry) -> list[Entry]:
+    """The tools wheel: every edit available for at least one file of the selection,
+    grouped by the kind of file it applies to."""
+    found: dict[str, tuple[Tool, Category, list[Path]]] = {}
+    for info in infos:
+        if info.format is None:
+            continue
+        for tool in registry.tools(info.format.id):
+            found.setdefault(tool.id, (tool, info.format.category, []))[2].append(info.path)
+    ordered = sorted(found.values(), key=lambda t: t[1].order)
+    return [Entry(None, tool.label, tool.label.upper(), category.label, CATEGORY_COLORS[category],
+                  tuple(paths), tool=tool)
+            for tool, category, paths in ordered]
 
 
 def mix(a: QColor, b: QColor, t: float) -> QColor:
@@ -175,12 +205,16 @@ class RadialMenu(QWidget):
         self.infos = [detect(p) for p in paths]
         self.recognized = [i for i in self.infos if i.format]
         options = selection_targets(self.infos, registry)
-        self.entries = build_entries(options)
+        self.tool_entries = tool_entries(self.infos, registry)
+        editable = tuple(dict.fromkeys(p for e in self.tool_entries for p in e.paths))
+        self.format_entries = build_entries(options, editable)
+        self.entries = self.format_entries
         self.ring = Ring(INNER, OUTER, len(self.entries))
 
         self.phase = Phase.CHOOSING
         self.hover: int | None = None
-        self.hover_quality: Quality | None = None
+        # Value of the outer ring under the pointer: a Quality, or a tool option id.
+        self.hover_option: Quality | str | None = None
         self.default_quality = self.settings.quality
         self.chosen: Entry | None = None
         self.jobs: dict[int, Job] = {}
@@ -265,9 +299,20 @@ class RadialMenu(QWidget):
     # --- interaction --------------------------------------------------------
 
     def presets(self, index: int | None) -> Presets:
+        """Quality presets of a conversion slice (empty for tools and the other slices)."""
         if index is None or index == CENTER or self.entries[index].conversion is None:
             return {}
         return self.registry.presets(self.entries[index].conversion)
+
+    def options(self, index: int | None) -> list[tuple[Quality | str, str]]:
+        """Values of the outer ring for the slice, in their natural order, with their
+        short labels: quality presets for a conversion, the options of a tool."""
+        if index is None or index == CENTER:
+            return []
+        entry = self.entries[index]
+        if entry.tool:
+            return [(o.id, o.label) for o in entry.tool.options]
+        return [(q, q.short) for q in self.presets(index)]
 
     def preset_arc(self, index: int) -> tuple[float, float]:
         """Arc of the preset ring: centred on the slice, at least SUB_MIN_SPAN wide."""
@@ -276,11 +321,11 @@ class RadialMenu(QWidget):
         mid = (a0 + a1) / 2
         return mid - span / 2, mid + span / 2
 
-    def preset_order(self, index: int) -> list[Quality]:
-        """Presets clockwise along the arc, with “Maximum” always on the left or at the top.
-        At the bottom and on the left, clockwise runs right to left or bottom to top,
-        so the order is reversed there."""
-        order = list(self.presets(index))
+    def preset_order(self, index: int) -> list[Quality | str]:
+        """Ring values clockwise along the arc, with the first one (e.g. “Maximum”)
+        always on the left or at the top. At the bottom and on the left, clockwise runs
+        right to left or bottom to top, so the order is reversed there."""
+        order = [value for value, _label in self.options(index)]
         return order[::-1] if 135 < self.ring.mid_angle(index) < 315 else order
 
     def default_for(self, index: int | None) -> Quality:
@@ -290,13 +335,22 @@ class RadialMenu(QWidget):
             return self.default_quality
         return Quality.BALANCED
 
-    def _target_at(self, pos: QPointF) -> tuple[int | None, Quality | None]:
-        """Slice (or CENTER/None) and preset under the point."""
+    def default_option(self, index: int | None) -> Quality | str | None:
+        """Ring value used by a direct click on the slice."""
+        if index is None or index == CENTER:
+            return None
+        entry = self.entries[index]
+        if entry.tool:
+            return entry.tool.default or None
+        return self.default_for(index)
+
+    def _target_at(self, pos: QPointF) -> tuple[int | None, Quality | str | None]:
+        """Slice (or CENTER/None) and ring value under the point."""
         if self.origin is None:
             return None, None
         s = self._scale()
         dx, dy = (pos.x() - self.origin.x()) / s, (pos.y() - self.origin.y()) / s
-        if self.phase is Phase.CHOOSING and self.presets(self.hover):
+        if self.phase is Phase.CHOOSING and self.options(self.hover):
             r, angle = math.hypot(dx, dy), clockwise_angle(dx, dy)
             a0, a1 = self.preset_arc(self.hover)
             # Beyond the ring and within the preset arc the slice stays locked, even when
@@ -313,11 +367,11 @@ class RadialMenu(QWidget):
         return self._target_at(pos)[0]
 
     def _update_hover(self, pos: QPointF) -> None:
-        hit, quality = self._target_at(pos)
+        hit, option = self._target_at(pos)
         if self.phase is not Phase.CHOOSING and hit != CENTER:
             hit = None
-        if (hit, quality) != (self.hover, self.hover_quality):
-            self.hover, self.hover_quality = hit, quality
+        if (hit, option) != (self.hover, self.hover_option):
+            self.hover, self.hover_option = hit, option
             self.setCursor(Qt.CursorShape.PointingHandCursor if hit is not None
                            else Qt.CursorShape.ArrowCursor)
             self.update()
@@ -337,34 +391,64 @@ class RadialMenu(QWidget):
 
     def keyPressEvent(self, event: QKeyEvent) -> None:  # noqa: N802
         key = event.key()
+        choosing = self.phase is Phase.CHOOSING
         if key == Qt.Key.Key_Escape:
-            self._dismiss()
-        elif self.phase is Phase.CHOOSING and key in (Qt.Key.Key_Right, Qt.Key.Key_Down, Qt.Key.Key_Tab):
-            self.hover, self.hover_quality = step(self.hover, 1, len(self.entries)), None
+            if choosing and self.in_tools:
+                self._show_wheel(tools=False)
+            else:
+                self._dismiss()
+        elif choosing and key in (Qt.Key.Key_Tab, Qt.Key.Key_Backtab):
+            if self.tool_entries:
+                self._show_wheel(tools=not self.in_tools)
+        elif choosing and key in (Qt.Key.Key_Right, Qt.Key.Key_Down):
+            self.hover, self.hover_option = step(self.hover, 1, len(self.entries)), None
             self.update()
-        elif self.phase is Phase.CHOOSING and key in (Qt.Key.Key_Left, Qt.Key.Key_Up, Qt.Key.Key_Backtab):
-            self.hover, self.hover_quality = step(self.hover, -1, len(self.entries)), None
+        elif choosing and key in (Qt.Key.Key_Left, Qt.Key.Key_Up):
+            self.hover, self.hover_option = step(self.hover, -1, len(self.entries)), None
             self.update()
         elif key in (Qt.Key.Key_Return, Qt.Key.Key_Enter, Qt.Key.Key_Space):
-            self._activate(self.hover if self.hover is not None else CENTER, self.hover_quality)
-        elif key in (Qt.Key.Key_1, Qt.Key.Key_2, Qt.Key.Key_3) and self.presets(self.hover):
-            # 1 = maximum, 2 = balanced, 3 = small (if the slice offers it)
-            quality = list(Quality)[key - Qt.Key.Key_1]
-            if quality in self.presets(self.hover):
-                self._activate(self.hover, quality)
+            self._activate(self.hover if self.hover is not None else CENTER, self.hover_option)
+        elif Qt.Key.Key_1 <= key <= Qt.Key.Key_9 and self.options(self.hover):
+            # 1, 2, 3...: the values of the ring in their natural order (for quality:
+            # 1 = maximum, 2 = balanced, 3 = small, when the slice offers them).
+            entry = self.entries[self.hover]
+            values = ([o.id for o in entry.tool.options] if entry.tool else list(Quality))
+            n = key - Qt.Key.Key_1
+            if n < len(values) and values[n] in dict(self.options(self.hover)):
+                self._activate(self.hover, values[n])
         else:
             super().keyPressEvent(event)
 
-    def _activate(self, hit: int | None, quality: Quality | None = None) -> None:
+    @property
+    def in_tools(self) -> bool:
+        return self.entries is self.tool_entries
+
+    def _show_wheel(self, tools: bool) -> None:
+        """Switches between the formats wheel and the tools wheel."""
+        self.entries = self.tool_entries if tools else self.format_entries
+        self.ring = Ring(INNER, OUTER, len(self.entries))
+        self.hover, self.hover_option = None, None
+        self.t = min(self.t, 0.75)
+        self._animate(1.0, 160, QEasingCurve.Type.OutCubic)
+        self.update()
+
+    def _activate(self, hit: int | None, option: Quality | str | None = None) -> None:
         if self.phase is Phase.CHOOSING:
             if hit is None:
                 self._dismiss()
             elif hit == CENTER:
+                if self.in_tools:
+                    self._show_wheel(tools=False)
+                else:
+                    self._to_window()
+            elif self.entries[hit].tools:
+                self._show_wheel(tools=True)
+            elif self.entries[hit].is_more:
                 self._to_window()
-            elif self.entries[hit].conversion is None:
-                self._to_window()
+            elif self.entries[hit].tool:
+                self._start_tool(self.entries[hit], option or self.default_option(hit))
             else:
-                self._start(self.entries[hit], quality or self.default_for(hit))
+                self._start(self.entries[hit], option or self.default_for(hit))
         elif self.phase is Phase.RUNNING:
             if hit == CENTER:
                 self.queue.cancel_all()
@@ -409,14 +493,24 @@ class RadialMenu(QWidget):
 
     def _start(self, entry: Entry, quality: Quality) -> None:
         assert entry.conversion is not None
-        self.phase, self.chosen, self.hover, self.hover_quality = Phase.RUNNING, entry, None, None
+        formats_by_path = {i.path: i.format.id for i in self.recognized}
+        self._submit(entry, lambda path: dict(
+            target=formats_by_path[path] if entry.conversion.is_compression else entry.conversion.target,
+            quality=quality))
+
+    def _start_tool(self, entry: Entry, option: str | None) -> None:
+        assert entry.tool is not None
+        # The format of each result is decided by the executor (usually the file's own).
+        self._submit(entry, lambda _path: dict(target="", quality=self.default_quality,
+                                               tool=entry.tool.id, option=option))
+
+    def _submit(self, entry: Entry, job_args) -> None:
+        self.phase, self.chosen, self.hover, self.hover_option = Phase.RUNNING, entry, None, None
         self.setCursor(Qt.CursorShape.ArrowCursor)
         output_dir = self.settings.custom_dir if self.settings.use_custom_dir else None
-        formats_by_path = {i.path: i.format.id for i in self.recognized}
         for path in entry.paths:
-            target = formats_by_path[path] if entry.conversion.is_compression else entry.conversion.target
-            job = self.queue.submit(path, target, output_dir,
-                                    self.settings.overwrite, quality)
+            args = job_args(path)
+            job = self.queue.submit(path, args.pop("target"), output_dir, self.settings.overwrite, **args)
             self.jobs[job.id] = job
         self._spinner.start()
         self.update()
@@ -461,7 +555,9 @@ class RadialMenu(QWidget):
         unchanged = [j for j in jobs if j.status is JobStatus.UNCHANGED]
         if len(jobs) == 1:
             return done[0].output.name if done else unchanged[0].message
-        if self.chosen and self.chosen.conversion.is_compression:
+        if self.chosen and self.chosen.tool:
+            text = ngettext("{n} file edited", "{n} files edited", len(done)).format(n=len(done))
+        elif self.chosen and self.chosen.conversion.is_compression:
             text = ngettext("{n} file compressed", "{n} files compressed", len(done)).format(n=len(done))
         else:
             text = ngettext("{n} file converted", "{n} files converted", len(done)).format(n=len(done))
@@ -560,12 +656,25 @@ class RadialMenu(QWidget):
             elif (entry.conversion is not None and entry.short not in entry.label.upper()
                   and QFontMetricsF(small).horizontalAdvance(entry.label) <= arc_width - 16):
                 second = entry.label
+            lines = self._slice_lines(entry.short, arc_width - 12)
+            # Text box as wide as the slice allows (wide slices when there are few of them).
+            half = max(60.0, (arc_width - 12) / 2)
             if second:
                 p.drawText(QRectF(cx - 60, cy - 17, 120, 20), Qt.AlignmentFlag.AlignCenter, entry.short)
                 p.setFont(small)
                 p.drawText(QRectF(cx - 60, cy + 2, 120, 16), Qt.AlignmentFlag.AlignCenter, second)
+            elif len(lines) == 2:
+                # Two words that do not fit side by side (“REMOVE METADATA”): one per line.
+                title = self._font(1.0, bold=True)
+                widest = max(QFontMetricsF(title).horizontalAdvance(line) for line in lines)
+                if widest > arc_width - 12:
+                    title.setPointSizeF(max(title.pointSizeF() * (arc_width - 12) / widest, 6.5))
+                p.setFont(title)
+                h = QFontMetricsF(title).height()
+                for k, line in enumerate(lines):
+                    p.drawText(QRectF(cx - half, cy - h + k * h, 2 * half, h), Qt.AlignmentFlag.AlignCenter, line)
             else:
-                p.drawText(QRectF(cx - 40, cy - 10, 80, 20), Qt.AlignmentFlag.AlignCenter, entry.short)
+                p.drawText(QRectF(cx - half, cy - 10, 2 * half, 20), Qt.AlignmentFlag.AlignCenter, entry.short)
 
         p.setOpacity(self.t * dim)
         for key, start, end in groups([e.category_label for e in self.entries]):
@@ -579,25 +688,35 @@ class RadialMenu(QWidget):
             self._paint_group_label(p, key, (a0 + a1) / 2, color)
         p.setOpacity(self.t)
 
+    def _slice_lines(self, text: str, width: float) -> list[str]:
+        """The label on one line, or split in two at the space nearest the middle when it
+        does not fit the slice."""
+        if " " not in text or QFontMetricsF(self._font(1.15, bold=True)).horizontalAdvance(text) <= width:
+            return [text]
+        spaces = [i for i, c in enumerate(text) if c == " "]
+        cut = min(spaces, key=lambda i: abs(i - len(text) / 2))
+        return [text[:cut], text[cut + 1:]]
+
     def _paint_presets(self, p: QPainter) -> None:
-        presets = self.presets(self.hover) if self.phase is Phase.CHOOSING else {}
-        if not presets:
+        options = dict(self.options(self.hover)) if self.phase is Phase.CHOOSING else {}
+        if not options:
             return
         color = QColor(self.entries[self.hover].color)
         a0, a1 = self.preset_arc(self.hover)
         order = self.preset_order(self.hover)
-        third = (a1 - a0) / len(order)
-        for k, quality in enumerate(order):
-            b0 = a0 + k * third
-            active = quality is (self.hover_quality or None)
+        part = (a1 - a0) / len(order)
+        default = self.default_option(self.hover)
+        for k, value in enumerate(order):
+            b0 = a0 + k * part
+            active = value == self.hover_option
             p.setPen(QPen(mix(self.c_base, color, 0.5), 1))
             p.setBrush(color if active else mix(self.c_base, color, 0.12))
-            p.drawPath(sector(b0, b0 + third, SUB_IN, SUB_OUT))
-            x, y = polar(b0 + third / 2, (SUB_IN + SUB_OUT) / 2)
-            is_default = quality is self.default_for(self.hover)
+            p.drawPath(sector(b0, b0 + part, SUB_IN, SUB_OUT))
+            x, y = polar(b0 + part / 2, (SUB_IN + SUB_OUT) / 2)
+            is_default = value == default
             p.setFont(self._font(0.8, bold=active or is_default))
             p.setPen(QColor("white") if active else self.c_text)
-            label = quality.short + (" •" if is_default and not active else "")
+            label = options[value] + (" •" if is_default and not active else "")
             p.drawText(QRectF(x - 50, y - 9, 100, 18), Qt.AlignmentFlag.AlignCenter, label)
 
     def _paint_group_label(self, p: QPainter, text: str, angle: float, color: QColor) -> None:
@@ -625,14 +744,21 @@ class RadialMenu(QWidget):
         p.drawEllipse(QPointF(0, 0), r, r)
 
         if self.phase is Phase.CHOOSING:
-            if hovered:
+            if hovered and self.in_tools:
+                self._center_lines(p, "←", _("Formats"), "")
+            elif hovered:
                 self._center_lines(p, "⤢", _("Full"), _("window"))
             elif self.hover is not None:
                 entry = self.entries[self.hover]
-                quality = self.hover_quality or self.default_for(self.hover)
-                self._center_lines(p, entry.short, entry.label if entry.conversion else "",
-                                   quality.short if self.presets(self.hover) else "",
-                                   accent=QColor(entry.color))
+                value = self.hover_option or self.default_option(self.hover)
+                ring = dict(self.options(self.hover))
+                if entry.tool:
+                    self._center_lines(p, entry.label, ring.get(value, ""), "", accent=QColor(entry.color))
+                else:
+                    self._center_lines(p, entry.short, entry.label if entry.conversion else "",
+                                       ring.get(value, ""), accent=QColor(entry.color))
+            elif self.in_tools:
+                self._center_lines(p, "←", _("Formats"), "", accent=self.c_muted)
             else:
                 self._paint_file_summary(p)
         elif self.phase is Phase.RUNNING:
@@ -654,7 +780,11 @@ class RadialMenu(QWidget):
     def _center_lines(self, p: QPainter, big: str, line1: str, line2: str,
                       accent: QColor | None = None) -> None:
         p.setPen(accent or self.c_text)
-        p.setFont(self._font(1.9 if len(big) <= 4 else 1.4, bold=True))
+        font = self._font(1.9 if len(big) <= 4 else 1.4, bold=True)
+        width = QFontMetricsF(font).horizontalAdvance(big)
+        if width > 108:
+            font.setPointSizeF(max(font.pointSizeF() * 108 / width, 7.0))
+        p.setFont(font)
         p.drawText(QRectF(-56, -34, 112, 36), Qt.AlignmentFlag.AlignCenter, big)
         p.setPen(self.c_text)
         p.setFont(self._font(0.85))
@@ -708,6 +838,11 @@ class RadialMenu(QWidget):
         if self.phase is Phase.CHOOSING:
             if self.hover is not None and self.hover != CENTER:
                 entry = self.entries[self.hover]
+                if entry.tools:
+                    names = ", ".join(e.label for e in self.tool_entries)
+                    return _("Tools: {names}").format(names=names) + "\n" + _("Tab switches wheel"), None
+                if entry.tool:
+                    return self._tool_caption(entry), None
                 if entry.conversion is None:
                     return _("Show all the conversions in the full window"), None
                 kinds = {i.format.label for i in self.recognized if i.path in entry.paths}
@@ -731,9 +866,9 @@ class RadialMenu(QWidget):
                 presets = self.presets(self.hover)
                 if not presets:
                     return text, None
-                quality = self.hover_quality or self.default_for(self.hover)
+                quality = self.hover_option or self.default_for(self.hover)
                 text = f"{text} · {quality.label}: {presets[quality]}"
-                if self.hover_quality is None:
+                if self.hover_option is None:
                     keys = "-".join(str(list(Quality).index(q) + 1) for q in presets)
                     text += "\n" + _("Move outwards (or press {keys}) to change quality").format(keys=keys)
                 return text, None
@@ -742,7 +877,8 @@ class RadialMenu(QWidget):
                     return _("No file recognized. Click the centre for details."), None
                 return _("No conversion available for these files."), None
             skipped = len(self.infos) - len(self.recognized)
-            hint = _("Click a format to convert · Esc to close")
+            hint = (_("Click a tool · Esc or the centre: back to the formats") if self.in_tools
+                    else _("Click a format to convert · Esc to close"))
             if skipped:
                 hint = ngettext("{n} unrecognized file will be ignored",
                                 "{n} unrecognized files will be ignored", skipped).format(n=skipped)
@@ -753,8 +889,28 @@ class RadialMenu(QWidget):
             return self.outcome_text(), None
         return f"{self.error_text}\n" + _("Click the centre for details"), QColor(ERROR_COLOR)
 
+    def _tool_caption(self, entry: Entry) -> str:
+        tool = entry.tool
+        kinds = sorted({i.format.label for i in self.recognized if i.path in entry.paths})
+        text = f"{tool.label} · {', '.join(kinds)}"
+        option = tool.option(self.hover_option if isinstance(self.hover_option, str) else None)
+        if option:
+            text += f" · {option.label}"
+        if tool.notes:
+            text += f" · {_(tool.notes)}"
+        others = len(self.recognized) - len(entry.paths)
+        if others:
+            text += " · " + ngettext("{n} file does not support it", "{n} files do not support it",
+                                     others).format(n=others)
+        text += "\n" + (_("The originals stay untouched") if len(entry.paths) > 1
+                        else _("The original stays untouched"))
+        if tool.options and self.hover_option is None:
+            text += " · " + _("move outwards to choose: {options}").format(
+                options=" · ".join(o.label for o in tool.options))
+        return text
+
     def _compress_caption(self, entry: Entry, kinds: set[str]) -> str:
-        quality = self.hover_quality or self.default_for(self.hover)
+        quality = self.hover_option or self.default_for(self.hover)
         presets = self.presets(self.hover)
         if len(kinds) == 1:
             # The parameters belong to one format: with different formats they are not shown.
@@ -771,7 +927,7 @@ class RadialMenu(QWidget):
                                      others).format(n=others)
         text += "\n" + (_("The originals stay untouched") if len(entry.paths) > 1
                         else _("The original stays untouched"))
-        if self.hover_quality is None:
+        if self.hover_option is None:
             text += " · " + _("move outwards for “Small”")
         return text
 

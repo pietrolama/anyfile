@@ -125,6 +125,23 @@ WebP photos, lossy audio and video, PDF (with Ghostscript). The result is
 smaller it is discarded and the wheel shows “Already compact”. PNG, WAV, FLAC and
 documents do not get this slice: there is nothing to gain in the same format.
 
+### Tools
+
+The **Tools** slice, at the top next to Compress, turns the wheel into the tools wheel:
+edits that keep the format. The outer ring holds each tool's option, and a plain click
+uses the usual one (•). The centre, Esc or Tab go back to the formats.
+
+| Files | Tools (options) |
+|---|---|
+| Images | Resize (75, 50, 25%), Rotate (right, 180°, left), Mirror (horizontal, vertical), Black & white, Remove metadata |
+| Video | Remove audio (copied, no re-encoding), Resize, Rotate, First frame (PNG) |
+| Audio | Normalize volume (EBU R128, −16 LUFS, same sample rate), Mono |
+| PDF | Split pages (one PDF per page) |
+
+The result is a new file next to the original: `photo-resized.jpg`, `clip-silent.mp4`.
+Animated GIFs keep every frame. With several files the wheel offers every tool that
+applies to at least one of them, grouped by kind of file.
+
 ### Quality
 
 Lossy formats have three presets, with parameters suited to each format:
@@ -207,6 +224,7 @@ anyfile info document.docx                    # detected format and possible tar
 anyfile convert *.wav -t mp3 -o ~/Music        # conversion, several files too
 anyfile convert video.mov -t mp4 -q small      # quality: max | balanced | small
 anyfile convert photo.jpg -t jpg               # same format = compress
+anyfile edit -t resize --option 25 *.jpg       # tools: resize, rotate, mute, split...
 anyfile engines                                # installed and missing engines
 anyfile history [-n 20] [--failed]             # history (--clear to delete it)
 anyfile repeat 42 43                           # repeat history entries 42 and 43

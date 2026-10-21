@@ -128,6 +128,24 @@ foto JPEG e WebP, audio e video con perdita, PDF (con Ghostscript). Il risultato
 è più leggera viene scartata e la ruota mostra «Già compatto». PNG, WAV, FLAC e
 documenti non hanno questa fetta: nello stesso formato non c'è nulla da guadagnare.
 
+### Strumenti
+
+La fetta **Strumenti**, in alto accanto a Comprimi, trasforma la ruota in quella degli
+strumenti: modifiche che mantengono il formato. L'anello esterno contiene le opzioni di
+ogni strumento e un clic diretto usa quella abituale (•). Il centro, Esc o Tab tornano
+ai formati.
+
+| File | Strumenti (opzioni) |
+|---|---|
+| Immagini | Ridimensiona (75, 50, 25%), Ruota (destra, 180°, sinistra), Specchia (orizzontale, verticale), Bianco e nero, Togli metadati |
+| Video | Togli audio (copiato, senza ricodifica), Ridimensiona, Ruota, Primo fotogramma (PNG) |
+| Audio | Normalizza volume (EBU R128, −16 LUFS, stessa frequenza di campionamento), Mono |
+| PDF | Dividi pagine (un PDF per pagina) |
+
+Il risultato è un file nuovo accanto all'originale: `foto-ridimensionato.jpg`,
+`clip-senza-audio.mp4`. Le GIF animate mantengono tutti i fotogrammi. Con più file la
+ruota offre ogni strumento valido per almeno uno di essi, raggruppati per tipo di file.
+
 ### Qualità
 
 Per i formati con perdita ci sono tre preset, con parametri adatti a ciascun formato:
@@ -211,6 +229,7 @@ anyfile info documento.docx                   # formato rilevato e destinazioni 
 anyfile convert *.wav -t mp3 -o ~/Musica       # conversione, anche di più file
 anyfile convert video.mov -t mp4 -q small      # qualità: max | balanced | small
 anyfile convert foto.jpg -t jpg                # stesso formato = comprimi
+anyfile edit -t resize --option 25 *.jpg       # strumenti: resize, rotate, mute, split...
 anyfile engines                                # motori installati e mancanti
 anyfile history [-n 20] [--failed]             # cronologia (--clear per cancellarla)
 anyfile repeat 42 43                           # ripete le voci 42 e 43 della cronologia

@@ -1,6 +1,7 @@
 """Behaviour of the radial menu, run without a display (offscreen Qt platform)."""
 
 import os
+import subprocess
 import time
 from types import SimpleNamespace
 
@@ -85,7 +86,7 @@ def test_too_many_targets_collapse_into_more(tmp_path):
 
 def test_entries_follow_the_registry(make_menu, sample):
     menu = make_menu(sample("png"))
-    assert [e.conversion.target for e in menu.entries] == [
+    assert [e.conversion.target for e in menu.entries if e.conversion] == [
         c.target for c in menu.registry.targets("png")]
 
 
@@ -121,7 +122,7 @@ def test_click_on_slice_converts(app, make_menu, sample):
     menu = make_menu(src)
     finished = []
     menu.finished.connect(lambda: finished.append(True))
-    index = next(i for i, e in enumerate(menu.entries) if e.conversion.target == "webp")
+    index = next(i for i, e in enumerate(menu.entries) if e.conversion and e.conversion.target == "webp")
     click(menu, index)
     assert menu.phase in (Phase.RUNNING, Phase.DONE)
     assert wait_until(app, lambda: finished)
@@ -158,7 +159,6 @@ def test_keyboard_navigation(make_menu, sample):
 
 @needs("ffmpeg")
 def test_escape_while_running_continues_in_background(app, make_menu, tmp_path, monkeypatch):
-    import subprocess
     wav = tmp_path / "long.wav"
     subprocess.run(["ffmpeg", "-v", "error", "-f", "lavfi", "-i", "sine=d=120", str(wav)], check=True)
     notifications = []
@@ -167,7 +167,7 @@ def test_escape_while_running_continues_in_background(app, make_menu, tmp_path, 
     menu = make_menu(wav)
     finished = []
     menu.finished.connect(lambda: finished.append(True))
-    click(menu, next(i for i, e in enumerate(menu.entries) if e.conversion.target == "mp3"))
+    click(menu, next(i for i, e in enumerate(menu.entries) if e.conversion and e.conversion.target == "mp3"))
     menu.keyPressEvent(QKeyEvent(QKeyEvent.Type.KeyPress, Qt.Key.Key_Escape,
                                  Qt.KeyboardModifier.NoModifier))
     assert menu.in_background and menu.phase is Phase.RUNNING
@@ -178,13 +178,12 @@ def test_escape_while_running_continues_in_background(app, make_menu, tmp_path, 
 
 @needs("ffmpeg")
 def test_center_click_while_running_cancels(app, make_menu, tmp_path):
-    import subprocess
     wav = tmp_path / "long.wav"
     subprocess.run(["ffmpeg", "-v", "error", "-f", "lavfi", "-i", "sine=d=900", str(wav)], check=True)
     menu = make_menu(wav)
     finished = []
     menu.finished.connect(lambda: finished.append(True))
-    click(menu, next(i for i, e in enumerate(menu.entries) if e.conversion.target == "opus"))
+    click(menu, next(i for i, e in enumerate(menu.entries) if e.conversion and e.conversion.target == "opus"))
     assert wait_until(app, lambda: any(j.status.name == "RUNNING" for j in menu.jobs.values()))
     click(menu, CENTER)
     assert wait_until(app, lambda: finished, timeout=15)
@@ -201,20 +200,20 @@ def _preset_point(menu, index, quality):
 
 def test_preset_ring_only_for_lossy_targets(make_menu, sample):
     menu = make_menu(sample("png"))
-    by_target = {e.conversion.target: i for i, e in enumerate(menu.entries)}
+    by_target = {e.conversion.target: i for i, e in enumerate(menu.entries) if e.conversion}
     assert menu.presets(by_target["jpg"])
     assert not menu.presets(by_target["tiff"])
 
 
 def test_moving_outward_selects_preset_and_stays_on_slice(make_menu, sample):
     menu = make_menu(sample("png"))
-    index = next(i for i, e in enumerate(menu.entries) if e.conversion.target == "jpg")
+    index = next(i for i, e in enumerate(menu.entries) if e.conversion and e.conversion.target == "jpg")
     x, y = polar(menu.ring.mid_angle(index), 120)
     menu._update_hover(menu.origin + QPointF(x, y))
-    assert (menu.hover, menu.hover_quality) == (index, None)
+    assert (menu.hover, menu.hover_option) == (index, None)
     for quality in Quality:
         menu._update_hover(_preset_point(menu, index, quality))
-        assert (menu.hover, menu.hover_quality) == (index, quality)
+        assert (menu.hover, menu.hover_option) == (index, quality)
 
 
 def test_max_quality_is_always_left_or_top(make_menu, sample):
@@ -240,7 +239,7 @@ def test_max_quality_is_always_left_or_top(make_menu, sample):
 def test_clicking_a_preset_converts_with_that_quality(app, make_menu, sample):
     src = sample("png")
     menu = make_menu(src)
-    index = next(i for i, e in enumerate(menu.entries) if e.conversion.target == "jpg")
+    index = next(i for i, e in enumerate(menu.entries) if e.conversion and e.conversion.target == "jpg")
     x, y = polar(menu.ring.mid_angle(index), 120)
     menu._update_hover(menu.origin + QPointF(x, y))
     menu._activate(*menu._target_at(_preset_point(menu, index, Quality.SMALL)))
@@ -250,7 +249,6 @@ def test_clicking_a_preset_converts_with_that_quality(app, make_menu, sample):
 
 
 def test_compress_is_first_and_merged_for_mixed_selection(make_menu, sample, tmp_path):
-    import subprocess
     jpg = tmp_path / "photo.jpg"
     subprocess.run(["magick", "-size", "200x100", "plasma:", str(jpg)], check=True)
     mp4 = sample("mp4")
@@ -264,7 +262,6 @@ def test_compress_is_first_and_merged_for_mixed_selection(make_menu, sample, tmp
 
 @needs("magick", "ffmpeg")
 def test_compress_slice_keeps_each_file_format(app, make_menu, sample, tmp_path):
-    import subprocess
     jpg = tmp_path / "photo.jpg"
     subprocess.run(["magick", "-size", "600x400", "plasma:", "-quality", "98", str(jpg)], check=True)
     mp4 = sample("mp4")
@@ -274,3 +271,81 @@ def test_compress_slice_keeps_each_file_format(app, make_menu, sample, tmp_path)
     assert all(j.quality is Quality.BALANCED for j in menu.jobs.values())
     assert wait_until(app, lambda: menu.phase in (Phase.DONE, Phase.FAILED))
     assert (tmp_path / "photo-compressed.jpg").is_file()
+
+
+# --- tools wheel --------------------------------------------------------------
+
+def _ring_point(menu, index, value):
+    a0, a1 = menu.preset_arc(index)
+    order = menu.preset_order(index)
+    part = (a1 - a0) / len(order)
+    x, y = polar(a0 + (order.index(value) + 0.5) * part, (radial.SUB_IN + radial.SUB_OUT) / 2)
+    return menu.origin + QPointF(x, y)
+
+
+def _settle(menu):
+    menu._anim.stop()
+    menu.t = 1.0
+
+
+def _open_tools(menu):
+    tools = next(i for i, e in enumerate(menu.entries) if e.tools)
+    click(menu, tools)
+    _settle(menu)
+    assert menu.in_tools
+
+
+@needs("magick")
+def test_tools_slice_opens_the_tools_wheel_and_the_centre_goes_back(make_menu, sample):
+    menu = make_menu(sample("png"))
+    assert menu.entries[-1].tools
+    _open_tools(menu)
+    assert {"resize", "rotate"} <= {e.tool.id for e in menu.entries}
+    click(menu, CENTER)
+    _settle(menu)
+    assert not menu.in_tools and menu.phase is Phase.CHOOSING
+
+
+@needs("magick")
+def test_tab_and_escape_switch_wheels(make_menu, sample):
+    menu = make_menu(sample("png"))
+    tab = QKeyEvent(QKeyEvent.Type.KeyPress, Qt.Key.Key_Tab, Qt.KeyboardModifier.NoModifier)
+    esc = QKeyEvent(QKeyEvent.Type.KeyPress, Qt.Key.Key_Escape, Qt.KeyboardModifier.NoModifier)
+    menu.keyPressEvent(tab)
+    assert menu.in_tools
+    menu.keyPressEvent(esc)
+    assert not menu.in_tools and menu.isVisible()
+
+
+def test_no_tools_slice_when_nothing_can_be_edited(make_menu, sample):
+    menu = make_menu(sample("txt"))
+    assert not any(e.tools for e in menu.entries)
+
+
+@needs("magick")
+def test_tool_option_from_the_outer_ring(app, make_menu, sample):
+    src = sample("png")  # 64x48
+    menu = make_menu(src)
+    finished = []
+    menu.finished.connect(lambda: finished.append(True))
+    _open_tools(menu)
+    index = next(i for i, e in enumerate(menu.entries) if e.tool.id == "resize")
+    menu._update_hover(menu.origin + QPointF(*polar(menu.ring.mid_angle(index), 120)))
+    point = _ring_point(menu, index, "25")
+    menu._update_hover(point)
+    assert (menu.hover, menu.hover_option) == (index, "25")
+    menu._activate(*menu._target_at(point))
+    assert wait_until(app, lambda: finished)
+    out = src.with_name("image-resized.png")
+    size = subprocess.run(["magick", "identify", "-format", "%wx%h", str(out)],
+                          capture_output=True, text=True).stdout
+    assert size == "16x12"
+
+
+@needs("magick", "ffmpeg")
+def test_mixed_selection_offers_each_tool_for_its_files(make_menu, sample):
+    png, wav = sample("png"), sample("wav")
+    menu = make_menu(png, wav)
+    _open_tools(menu)
+    by_tool = {e.tool.id: e.paths for e in menu.entries}
+    assert by_tool["resize"] == (png,) and by_tool["normalize"] == (wav,)

@@ -17,8 +17,10 @@ from anyfile.core.registry import Registry
 from anyfile.core.validation import validate_output
 from anyfile.i18n import _
 from anyfile.engines.base import ConversionContext, ProgressFn, Runner
-from anyfile.models.conversion import Quality
+from anyfile.models.conversion import Format, Quality
+from anyfile.models.file_info import FileInfo
 from anyfile.models.job import Job
+from anyfile.models.tool import Tool, ToolOption
 
 
 class Executor:
@@ -33,11 +35,15 @@ class Executor:
         info = detect(src)
         job.source_size = info.size
         job.source_format = info.format.id if info.format else None
-        p = plan(info, job.target, self.registry)
+        if job.tool:
+            tool, option = self._tool(job, info)
+            target, route = formats.get(tool.target(info.format.id)), None
+            job.target = target.id
+        else:
+            p = plan(info, job.target, self.registry)
+            tool, option, target, route = None, None, p.target_format, p.route
+            job.via = route.via
         assert info.format is not None
-        target = p.target_format
-        route = p.route
-        job.via = route.via
 
         out_dir = job.output_dir or src.parent
         try:
@@ -60,10 +66,25 @@ class Executor:
             link = input_dir / f"input.{info.format.ext}"
             system.link_or_copy(src, link)
 
-            multi = route.multi_output
+            multi = tool.multi_output if tool else route.multi_output
             produced = work_dir / ("out" if multi else f"output.{target.ext}")
             if multi:
                 produced.mkdir()
+
+            if tool:
+                ctx = ConversionContext(Runner(job.cancel_event), progress, src, job.quality,
+                                        info.format.id)
+                try:
+                    self.registry.engine(tool.engine).apply(tool, option, link, produced, ctx)
+                    if job.cancel_event.is_set():
+                        raise ConversionCancelled()
+                    validate_output(produced, target)
+                except AnyfileError as e:
+                    e.message = e.message.replace(str(link), src.name)
+                    e.details = e.details.replace(str(link), str(src))
+                    raise
+                name = tool.result_name(src.stem)
+                return self._place(job, produced, multi, out_dir, target, name, name)
 
             quality = job.quality
             if route.is_compression and quality is Quality.MAX:
@@ -81,7 +102,7 @@ class Executor:
                 ctx = ConversionContext(
                     Runner(job.cancel_event), _step_progress(progress, n, total), src,
                     # Quality only matters for the result: intermediate files are lossless.
-                    quality if last else Quality.BALANCED,
+                    quality if last else Quality.BALANCED, step.source,
                 )
                 try:
                     self.registry.engine(step.engine).convert(step, current, dst, ctx)
@@ -107,22 +128,37 @@ class Executor:
                           "smaller ({after} instead of {before})").format(
                             name=src.name, after=_kb(after), before=_kb(before)))
 
-            if multi:
-                files = sorted(f for f in produced.iterdir() if f.is_file())
-                if len(files) == 1:
-                    produced, multi = files[0], False
-            if route.is_compression:
-                name = _("{name}-compressed").format(name=src.stem) + f".{target.ext}"
-            elif multi:
-                name = _("{name}-pages").format(name=src.stem)
-            else:
-                name = f"{src.stem}.{target.ext}"
-            final = out_dir / name
-            output = place(produced, final, overwrite=job.overwrite, protect=src)
-            job.output_size = _size(output)
-            return output
+            stem = _("{name}-compressed").format(name=src.stem) if route.is_compression else src.stem
+            return self._place(job, produced, multi, out_dir, target, stem,
+                               _("{name}-pages").format(name=src.stem))
         finally:
             shutil.rmtree(work_dir, ignore_errors=True)
+
+    def _tool(self, job: Job, info: FileInfo) -> tuple[Tool, ToolOption | None]:
+        tool = self.registry.tool(job.tool, info.format.id) if info.format else None
+        if tool is None:
+            raise AnyfileError(_("“{name}”: this edit is not available for {format}").format(
+                name=info.name, format=info.format.label if info.format else "?"))
+        option = tool.option(job.option)
+        if tool.options and option is None:
+            raise AnyfileError(_("Unknown option “{option}” for {tool}: use {choices}").format(
+                option=job.option, tool=tool.label, choices=", ".join(o.id for o in tool.options)))
+        job.option = option.id if option else None
+        return tool, option
+
+    @staticmethod
+    def _place(job: Job, produced: Path, multi: bool, out_dir: Path, target: Format,
+               stem: str, folder: str) -> Path:
+        """Moves the result into out_dir: a file named stem, or a folder named folder when
+        several files were produced (a single one is placed as a file)."""
+        if multi:
+            files = sorted(f for f in produced.iterdir() if f.is_file())
+            if len(files) == 1:
+                produced, multi = files[0], False
+        final = out_dir / (folder if multi else f"{stem}.{target.ext}")
+        output = place(produced, final, overwrite=job.overwrite, protect=job.source)
+        job.output_size = _size(output)
+        return output
 
 
 def _step_progress(progress: ProgressFn, n: int, total: int) -> ProgressFn:

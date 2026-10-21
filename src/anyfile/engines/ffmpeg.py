@@ -5,7 +5,10 @@ from pathlib import Path
 
 from anyfile.engines.base import ConversionContext, Engine, EngineError, Runner, compressions, pairs
 from anyfile.i18n import N_, _
+from dataclasses import replace
+
 from anyfile.models.conversion import Conversion, Presets, Quality
+from anyfile.models.tool import Tool, ToolOption
 
 AUDIO = ("mp3", "wav", "flac", "ogg", "opus", "m4a", "aac")
 VIDEO = ("mp4", "mkv", "webm", "mov", "avi")
@@ -113,6 +116,43 @@ VIDEO_PRESETS: dict[str, dict[Quality, Preset]] = {
     },
 }
 
+# --- tools ------------------------------------------------------------------------
+
+_PERCENT = (ToolOption("75", N_("75%")), ToolOption("50", N_("50%")), ToolOption("25", N_("25%")))
+
+TOOLS = [
+    Tool("mute", N_("Remove audio"), N_("{name}-silent"), VIDEO, "ffmpeg",
+         notes=N_("The video is copied as it is, without re-encoding")),
+    Tool("resize", N_("Resize"), N_("{name}-resized"), VIDEO, "ffmpeg", _PERCENT, default="50"),
+    Tool("rotate", N_("Rotate"), N_("{name}-rotated"), VIDEO, "ffmpeg",
+         (ToolOption("right", N_("Right")), ToolOption("180", N_("180°")), ToolOption("left", N_("Left"))),
+         default="right"),
+    Tool("frame", N_("First frame"), N_("{name}-frame"), VIDEO, "ffmpeg", output="png"),
+    Tool("normalize", N_("Normalize volume"), N_("{name}-normalized"), AUDIO, "ffmpeg",
+         notes=N_("Even loudness (EBU R128, −16 LUFS)")),
+    Tool("mono", N_("Mono"), N_("{name}-mono"), AUDIO, "ffmpeg"),
+]
+# Video filters of the tools that change the picture.
+_VIDEO_FILTERS = {
+    ("resize", "75"): "scale=trunc(iw*0.75/2)*2:-2", ("resize", "50"): "scale=trunc(iw*0.5/2)*2:-2",
+    ("resize", "25"): "scale=trunc(iw*0.25/2)*2:-2",
+    ("rotate", "right"): "transpose=1", ("rotate", "left"): "transpose=2",
+    ("rotate", "180"): "hflip,vflip",
+}
+_AUDIO_FILTERS = {
+    "normalize": ["-af", "loudnorm=I=-16:TP=-1.5:LRA=11"],
+    "mono": ["-ac", "1"],
+}
+
+
+def _with_video_filter(args: list[str], vf: str) -> list[str]:
+    """Puts the tool's filter before the preset's own one (e.g. the even-size scale)."""
+    if "-vf" in args:
+        i = args.index("-vf")
+        return [*args[:i], "-vf", f"{vf},{args[i + 1]}", *args[i + 2:]]
+    return [*args, "-vf", vf]
+
+
 LOSSY = {"mp3", "ogg", "opus", "m4a", "aac", "mp4", "mkv", "webm", "mov", "avi"}
 
 
@@ -141,17 +181,54 @@ class FFmpegEngine(Engine):
             *compressions(self.name, [*AUDIO_PRESETS, *(v for v in VIDEO_PRESETS if v != "gif")]),
         ]
 
-    def probe(self) -> list[Conversion]:
+    def _encoders(self) -> set[str]:
         try:
             out = subprocess.run(
                 [self.binary(), "-hide_banner", "-encoders"],
                 capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=15, check=False,
             ).stdout
         except (OSError, subprocess.TimeoutExpired):
-            return []
-        encoders = {line.split()[1] for line in out.splitlines()
-                    if len(line.split()) > 1 and line.startswith(" ") and "=" not in line}
+            return set()
+        return {line.split()[1] for line in out.splitlines()
+                if len(line.split()) > 1 and line.startswith(" ") and "=" not in line}
+
+    def probe(self) -> list[Conversion]:
+        encoders = self._encoders()
         return [c for c in self.declared() if set(ENCODERS[c.target]) <= encoders]
+
+    def declared_tools(self) -> list[Tool]:
+        return TOOLS
+
+    def probe_tools(self) -> list[Tool]:
+        encoders = self._encoders()
+        out = []
+        for tool in TOOLS:
+            if tool.output and not set(ENCODERS.get(tool.output, (tool.output,))) <= encoders:
+                continue
+            usable = tuple(f for f in tool.formats
+                           if tool.id == "mute" or set(ENCODERS[f]) <= encoders)
+            if usable:
+                out.append(replace(tool, formats=usable))
+        return out
+
+    def apply(self, tool: Tool, option: ToolOption | None, src: Path, dst: Path,
+              ctx: ConversionContext) -> None:
+        source, quality = ctx.source_format, ctx.quality
+        if tool.id == "mute":
+            # Every stream except the audio ones, copied as they are.
+            args = ["-map", "0", "-map", "-0:a", "-c", "copy"]
+        elif tool.id == "frame":
+            args = ["-frames:v", "1", "-an", "-update", "1"]
+        elif source in AUDIO:
+            codec = LOSSLESS_AUDIO.get(source) or AUDIO_PRESETS[source][quality][0]
+            args = ["-vn", *_AUDIO_FILTERS[tool.id], *codec]
+            # loudnorm works at 192 kHz and keeps that rate unless told otherwise.
+            if rate := self._sample_rate(src, source, ctx.runner):
+                args += ["-ar", rate]
+        else:
+            vf = _VIDEO_FILTERS[(tool.id, option.id if option else "")]
+            args = _with_video_filter(VIDEO_PRESETS[source][quality][0], vf)
+        self._encode(src, source, dst, ctx, args)
 
     def presets(self, target: str) -> Presets:
         table = AUDIO_PRESETS.get(target) or VIDEO_PRESETS.get(target) or {}
@@ -167,6 +244,15 @@ class FFmpegEngine(Engine):
         except (EngineError, ValueError, IndexError):
             return None
         return value if value > 0 else None
+
+    def _sample_rate(self, src: Path, source: str, runner: Runner) -> str | None:
+        try:
+            out = runner.run([self.binary(1), "-v", "error", *input_args(source), "-select_streams", "a:0",
+                              "-show_entries", "stream=sample_rate", "-of", "csv=p=0", src])
+        except EngineError:
+            return None
+        rate = out.strip().splitlines()[0] if out.strip() else ""
+        return rate if rate.isdigit() else None
 
     def _has_audio(self, src: Path, source: str, runner: Runner) -> bool:
         try:
@@ -186,7 +272,10 @@ class FFmpegEngine(Engine):
             codec_args = ["-vn", *AUDIO_PRESETS[target][quality][0]]
         else:
             codec_args = VIDEO_PRESETS[target][quality][0]
+        self._encode(src, source, dst, ctx, codec_args)
 
+    def _encode(self, src: Path, source: str, dst: Path, ctx: ConversionContext,
+                codec_args: list[str]) -> None:
         duration = self._duration(src, source, ctx.runner)
         ctx.progress(0.0 if duration else None)
 

@@ -30,8 +30,10 @@ class JobQueue:
         self._worker.start()
 
     def submit(self, source: Path | str, target: str, *, output_dir: Path | None = None,
-               overwrite: bool = False, quality: Quality = Quality.BALANCED) -> Job:
-        job = Job(Path(source), target, output_dir=output_dir, overwrite=overwrite, quality=quality)
+               overwrite: bool = False, quality: Quality = Quality.BALANCED,
+               tool: str | None = None, option: str | None = None) -> Job:
+        job = Job(Path(source), target, output_dir=output_dir, overwrite=overwrite, quality=quality,
+                  tool=tool, option=option)
         self.jobs.append(job)
         self._notify(job)
         self._queue.put(job)

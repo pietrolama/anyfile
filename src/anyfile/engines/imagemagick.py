@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import re
 import subprocess
+from dataclasses import replace
 from pathlib import Path
 
 from anyfile.engines.base import ConversionContext, Engine, compressions, pairs
 from anyfile.i18n import N_, _
 from anyfile.models.conversion import Conversion, Presets, Quality
+from anyfile.models.tool import Tool, ToolOption
 
 # id ANYFILE → nome del coder ImageMagick
 CODERS = {
@@ -31,6 +33,34 @@ QUALITY: dict[str, dict[Quality, tuple[int, bool]]] = {
 # files or URLs, bounded resources. ImageMagick reads it from MAGICK_CONFIGURE_PATH.
 POLICY_ENV = {"MAGICK_CONFIGURE_PATH": str(Path(__file__).parent / "data" / "imagemagick")}
 
+# Images that can be edited: everything readable and writable except icons, which hold
+# several sizes of the same picture.
+EDITABLE = tuple(f for f in IMAGES if f != "ico")
+
+TOOLS = [
+    Tool("resize", N_("Resize"), N_("{name}-resized"), EDITABLE, "imagemagick",
+         (ToolOption("75", N_("75%")), ToolOption("50", N_("50%")), ToolOption("25", N_("25%"))),
+         default="50"),
+    Tool("rotate", N_("Rotate"), N_("{name}-rotated"), EDITABLE, "imagemagick",
+         (ToolOption("right", N_("Right")), ToolOption("180", N_("180°")), ToolOption("left", N_("Left"))),
+         default="right"),
+    Tool("mirror", N_("Mirror"), N_("{name}-mirrored"), EDITABLE, "imagemagick",
+         (ToolOption("horizontal", N_("Horizontal")), ToolOption("vertical", N_("Vertical"))),
+         default="horizontal"),
+    Tool("grayscale", N_("Black & white"), N_("{name}-bw"), EDITABLE, "imagemagick"),
+    Tool("strip", N_("Remove metadata"), N_("{name}-clean"), EDITABLE, "imagemagick",
+         notes=N_("Removes EXIF, GPS position and camera data")),
+]
+TOOL_ARGS = {
+    ("resize", "75"): ["-resize", "75%"], ("resize", "50"): ["-resize", "50%"],
+    ("resize", "25"): ["-resize", "25%"],
+    ("rotate", "right"): ["-rotate", "90"], ("rotate", "180"): ["-rotate", "180"],
+    ("rotate", "left"): ["-rotate", "-90"],
+    ("mirror", "horizontal"): ["-flop"], ("mirror", "vertical"): ["-flip"],
+    ("grayscale", None): ["-colorspace", "Gray"],
+    ("strip", None): ["-strip"],
+}
+
 _FORMAT_LINE = re.compile(r"^\s*([A-Z0-9-]+)\*?\s+(?:[A-Za-z0-9_-]+\s+)?([r-])([w-])[+-]")
 
 
@@ -52,6 +82,8 @@ class ImageMagickEngine(Engine):
     package = "imagemagick"
     # ImageMagick 7 usa "magick", la 6 (Ubuntu 22.04/24.04) "convert".
     requires = (("magick", "convert"),)
+    # Formats this build can both read and write, found by probe().
+    _editable: frozenset[str] = frozenset()
 
     def declared(self) -> list[Conversion]:
         return [*pairs(self.name, IMAGES, [*IMAGES, "pdf"], _notes),
@@ -72,8 +104,38 @@ class ImageMagickEngine(Engine):
                     readable.add(m.group(1))
                 if m.group(3) == "w":
                     writable.add(m.group(1))
+        self._editable = frozenset(f for f in EDITABLE if CODERS[f] in readable and CODERS[f] in writable)
         return [c for c in self.declared()
                 if CODERS[c.source] in readable and CODERS[c.target] in writable]
+
+    def declared_tools(self) -> list[Tool]:
+        return TOOLS
+
+    def probe_tools(self) -> list[Tool]:
+        self.conversions()  # the probe also finds the editable formats
+        out = []
+        for tool in TOOLS:
+            usable = tuple(f for f in tool.formats if f in self._editable)
+            if usable:
+                out.append(replace(tool, formats=usable))
+        return out
+
+    def apply(self, tool: Tool, option: ToolOption | None, src: Path, dst: Path,
+              ctx: ConversionContext) -> None:
+        ctx.progress(None)
+        fmt = ctx.source_format
+        coder = CODERS[fmt]
+        # Animations and multi-page files keep every frame; -coalesce makes each frame a
+        # whole picture, so geometry changes apply to all of them alike.
+        if fmt in MULTI_FRAME:
+            args = [self.binary(), f"{coder}:{src}", "-coalesce"]
+        else:
+            args = [self.binary(), f"{coder}:{src}[0]"]
+        args += ["-auto-orient", *TOOL_ARGS[(tool.id, option.id if option else None)]]
+        if fmt == "gif":
+            args += ["-layers", "Optimize"]
+        args.append(f"{coder}:{dst}")
+        ctx.runner.run(args, tool="ImageMagick", env=POLICY_ENV)
 
     def presets(self, target: str) -> Presets:
         return {

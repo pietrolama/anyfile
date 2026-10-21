@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from anyfile.core import formats
 from anyfile.engines.base import Engine
 from anyfile.models.conversion import Category, Conversion, Presets, Quality, Route
+from anyfile.models.tool import Tool
 
 
 # An image contains no extractable text (that would need OCR): a chain taking it to a
@@ -54,11 +55,16 @@ class Registry:
         self._edges: dict[tuple[str, str], Conversion] = {}
         self._missing: dict[tuple[str, str], list[Engine]] = {}
         self._routes: dict[str, list[Route]] = {}
+        # (tool id, format) → tool; as for conversions, the first engine wins.
+        self._tools: dict[tuple[str, str], Tool] = {}
         for engine in self.engines:
             engine.reset()
             if engine.available:
                 for c in engine.conversions():
                     self._edges.setdefault((c.source, c.target), c)
+                for t in engine.tools():
+                    for f in t.formats:
+                        self._tools.setdefault((t.id, f), t)
             else:
                 for c in engine.declared():
                     self._missing.setdefault((c.source, c.target), []).append(engine)
@@ -113,6 +119,13 @@ class Registry:
                 if target not in best or cost < best[target][0]:
                     best[target] = (cost, Route((first, second)))
         return [route for _cost, route in best.values()]
+
+    def tools(self, source: str) -> list[Tool]:
+        """Edits available for a format, in the order the engines declare them."""
+        return [t for (_tid, f), t in self._tools.items() if f == source]
+
+    def tool(self, tool_id: str, source: str) -> Tool | None:
+        return self._tools.get((tool_id, source))
 
     def missing_engines_for(self, source: str, target: str) -> list[Engine]:
         if (source, target) in self._edges:

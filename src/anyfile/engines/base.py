@@ -14,6 +14,7 @@ from anyfile.core import system
 from anyfile.core.errors import AnyfileError, ConversionCancelled
 from anyfile.i18n import N_, _
 from anyfile.models.conversion import Conversion, Presets, Quality
+from anyfile.models.tool import Tool, ToolOption
 
 ProgressFn = Callable[[float | None], None]
 
@@ -105,6 +106,8 @@ class ConversionContext:
     # The file chosen by the user; engines work on a link with a safe name.
     original: Path
     quality: Quality = Quality.BALANCED
+    # Detected format of the file the engine reads (id).
+    source_format: str = ""
 
 
 COMPRESS_NOTE = N_("Same format, smaller file; the original stays untouched")
@@ -142,6 +145,7 @@ class Engine(ABC):
 
     def __init__(self) -> None:
         self._conversions: list[Conversion] | None = None
+        self._tools: list[Tool] | None = None
 
     def which(self, *names: str) -> str | None:
         for n in names:
@@ -169,8 +173,15 @@ class Engine(ABC):
             self._conversions = self.probe() if self.available else []
         return self._conversions
 
+    def tools(self) -> list[Tool]:
+        """Edits that can really be carried out on this system."""
+        if self._tools is None:
+            self._tools = self.probe_tools() if self.available else []
+        return self._tools
+
     def reset(self) -> None:
         self._conversions = None
+        self._tools = None
 
     def probe(self) -> list[Conversion]:
         """Filters the declared conversions by what the installed build can do."""
@@ -180,6 +191,19 @@ class Engine(ABC):
         """Quality presets for the target, with a description of the parameters.
         Empty for lossless formats: there a preset would change nothing."""
         return {}
+
+    def declared_tools(self) -> list[Tool]:
+        """All the edits the engine offers when it is installed."""
+        return []
+
+    def probe_tools(self) -> list[Tool]:
+        """Filters the declared edits by what the installed build can do."""
+        return self.declared_tools()
+
+    def apply(self, tool: Tool, option: ToolOption | None, src: Path, dst: Path,
+              ctx: ConversionContext) -> None:
+        """Applies the edit to src, writing dst. For multi_output tools dst is a folder."""
+        raise NotImplementedError(tool.id)
 
     @abstractmethod
     def declared(self) -> list[Conversion]:

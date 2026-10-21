@@ -62,10 +62,13 @@ class Entry:
     output_size: int | None
     output_dir: Path | None
     overwrite: bool
+    # An edit (e.g. "resize") and its option (e.g. "50"), or None for a conversion.
+    tool: str | None = None
+    option: str | None = None
 
     @property
     def is_compression(self) -> bool:
-        return self.source_format == self.target
+        return not self.tool and self.source_format == self.target
 
     @property
     def saved(self) -> int | None:
@@ -76,8 +79,11 @@ class Entry:
 
     def submit_args(self) -> dict:
         """Arguments to repeat the operation with the same settings."""
-        return {"output_dir": self.output_dir, "overwrite": self.overwrite,
+        args = {"output_dir": self.output_dir, "overwrite": self.overwrite,
                 "quality": self.quality or Quality.BALANCED}
+        if self.tool:
+            args.update(tool=self.tool, option=self.option)
+        return args
 
 
 # --- presentation, shared by the window and the command line --------------------
@@ -112,7 +118,12 @@ def describe(entry: Entry) -> str:
         fmt = formats.BY_ID.get(fid or "")
         return fmt.label if fmt else (fid or "?").upper()
 
-    if entry.is_compression:
+    if entry.tool:
+        tool_label, option_label = _tool_labels(entry.tool, entry.option)
+        parts = [f"{tool_label} {label(entry.source_format)}"]
+        if option_label:
+            parts.append(option_label)
+    elif entry.is_compression:
         parts = [_("Compress {format}").format(format=label(entry.target))]
     else:
         parts = [f"{label(entry.source_format)} → {label(entry.target)}"]
@@ -121,6 +132,18 @@ def describe(entry: Entry) -> str:
     if entry.via:
         parts.append(_("via {formats}").format(formats="/".join(label(v) for v in entry.via)))
     return " · ".join(parts)
+
+
+def _tool_labels(tool_id: str, option_id: str | None) -> tuple[str, str]:
+    """Translated names of an edit and its option, from what the engines declare."""
+    from anyfile.core.registry import default_engines
+
+    for engine in default_engines():
+        for tool in engine.declared_tools():
+            if tool.id == tool_id:
+                option = tool.option(option_id) if option_id else None
+                return tool.label, option.label if option else ""
+    return tool_id, option_id or ""
 
 
 def describe_result(entry: Entry) -> str:
@@ -194,12 +217,13 @@ class History:
             job.applied_quality.value if job.applied_quality else None, job.status.name,
             job.message, job.details, str(job.output) if job.output else None, job.output_size,
             str(job.output_dir) if job.output_dir else None, int(job.overwrite),
+            job.tool, job.option,
         )
         with self._connect() as db:
             cursor = db.execute(
                 "INSERT INTO conversions (time, source, source_format, source_size, target, via,"
-                " quality, status, message, details, output, output_size, output_dir, overwrite)"
-                " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", values)
+                " quality, status, message, details, output, output_size, output_dir, overwrite,"
+                " tool, tool_option) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", values)
             db.execute("DELETE FROM conversions WHERE id <= ?", (cursor.lastrowid - MAX_ENTRIES,))
             return cursor.lastrowid
 
@@ -241,7 +265,8 @@ class History:
 
 
 def _migrate_schema(db: sqlite3.Connection) -> None:
-    """Moves entries from the Italian schema of versions up to 0.3 (same column order)."""
+    """Moves entries from the Italian schema of versions up to 0.3 (same column order),
+    then adds the columns of later versions."""
     tables = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
     if "conversioni" in tables:
         db.execute("INSERT INTO conversions SELECT * FROM conversioni")
@@ -250,14 +275,19 @@ def _migrate_schema(db: sqlite3.Connection) -> None:
         db.execute("INSERT OR REPLACE INTO settings SELECT 'enabled', valore FROM impostazioni"
                    " WHERE chiave = 'attiva'")
         db.execute("DROP TABLE impostazioni")
+    # 0.5: edits (tool and option) next to conversions.
+    columns = {row[1] for row in db.execute("PRAGMA table_info(conversions)")}
+    for column in ("tool", "tool_option"):
+        if column not in columns:
+            db.execute(f"ALTER TABLE conversions ADD COLUMN {column} TEXT")
 
 
 def _entry(row: tuple) -> Entry:
     (id_, when, source, src_fmt, src_size, target, via, quality, status, message, details,
-     output, out_size, out_dir, overwrite) = row
+     output, out_size, out_dir, overwrite, tool, option) = row
     return Entry(
         id_, datetime.fromisoformat(when), Path(source), src_fmt, src_size, target,
         tuple(via.split(",")) if via else (), Quality(quality) if quality else None,
         JobStatus[status], message, details, Path(output) if output else None, out_size,
-        Path(out_dir) if out_dir else None, bool(overwrite),
+        Path(out_dir) if out_dir else None, bool(overwrite), tool, option,
     )
