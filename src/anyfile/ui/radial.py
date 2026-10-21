@@ -719,9 +719,18 @@ class RadialMenu(QWidget):
             p.drawPath(sector(b0, b0 + part, SUB_IN, SUB_OUT))
             x, y = polar(b0 + part / 2, (SUB_IN + SUB_OUT) / 2)
             is_default = value == default
-            p.setFont(self._font(0.8, bold=active or is_default))
-            p.setPen(QColor("white") if active else self.c_text)
             label = options[value] + (" •" if is_default and not active else "")
+            # Horizontal room: the arc's length at the top and bottom, only the ring's
+            # thickness on the sides, where the ring runs vertically.
+            mid = math.radians(b0 + part / 2)
+            arc = math.radians(part) * (SUB_IN + SUB_OUT) / 2
+            room = arc * abs(math.cos(mid)) + (SUB_OUT - SUB_IN) * abs(math.sin(mid)) - 6
+            font = self._font(0.8, bold=active or is_default)
+            width = QFontMetricsF(font).horizontalAdvance(label)
+            if width > room:
+                font.setPointSizeF(max(font.pointSizeF() * room / width, 6.0))
+            p.setFont(font)
+            p.setPen(QColor("white") if active else self.c_text)
             p.drawText(QRectF(x - 50, y - 9, 100, 18), Qt.AlignmentFlag.AlignCenter, label)
 
     def _paint_group_label(self, p: QPainter, text: str, angle: float, color: QColor) -> None:
