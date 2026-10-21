@@ -34,7 +34,7 @@ Ghostscript, Poppler).
 Download it from the [releases](https://github.com/pietrolama/anyfile/releases), then:
 
 ```sh
-sudo apt install ./anyfile_0.3.0_all.deb
+sudo apt install ./anyfile_0.4.0_all.deb
 ```
 
 The package is about 40 KB and uses the system's Python and PySide6. Dependencies are

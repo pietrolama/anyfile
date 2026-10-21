@@ -18,9 +18,12 @@ from anyfile.i18n import _
 IS_WINDOWS = sys.platform == "win32"
 
 
+_FLATPAK_INFO = Path("/.flatpak-info")
+
+
 def is_flatpak() -> bool:
     """Returns True if running inside a Flatpak container."""
-    return bool(os.environ.get("FLATPAK_ID")) or Path("/.flatpak-info").exists()
+    return bool(os.environ.get("FLATPAK_ID")) or _FLATPAK_INFO.exists()
 
 
 def install_command(packages: list[str]) -> str:

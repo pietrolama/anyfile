@@ -101,7 +101,7 @@ def test_kill_tree_stops_process_and_children():
 
 def test_is_flatpak(monkeypatch, tmp_path):
     monkeypatch.delenv("FLATPAK_ID", raising=False)
-    monkeypatch.setattr(Path, "exists", lambda self: False if str(self) == "/.flatpak-info" else True)
+    monkeypatch.setattr(system, "_FLATPAK_INFO", tmp_path / "missing")
     assert not system.is_flatpak()
 
     monkeypatch.setenv("FLATPAK_ID", "io.github.pietrolama.anyfile")

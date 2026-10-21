@@ -81,6 +81,14 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.4.0" date="2026-10-21">
+      <description>
+        <p>English interface with Italian translation, a button to add ANYFILE to Dolphin's
+          context menu, and the first Flatpak package.</p>
+        <p xml:lang="it">Interfaccia in inglese con traduzione italiana, un pulsante per aggiungere
+          ANYFILE al menu di Dolphin e il primo pacchetto Flatpak.</p>
+      </description>
+    </release>
     <release version="0.3.0" date="2026-10-20">
       <description>
         <p>Release 0.3.0: radial menu, batch queue, Dolphin integration, and conversion history.</p>
