@@ -81,6 +81,15 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.5.0" date="2026-10-21">
+      <description>
+        <p>A tools wheel for edits that keep the format: resize, rotate and clean up images and
+          videos; merge, rotate, number, watermark and repair PDFs.</p>
+        <p xml:lang="it">Una ruota degli strumenti per le modifiche che mantengono il formato:
+          ridimensiona, ruota e ripulisci immagini e video; unisci, ruota, numera, filigrana e
+          ripara i PDF.</p>
+      </description>
+    </release>
     <release version="0.4.0" date="2026-10-21">
       <description>
         <p>English interface with Italian translation, a button to add ANYFILE to Dolphin's

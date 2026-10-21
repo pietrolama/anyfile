@@ -49,7 +49,7 @@ pubblicato da `.github/workflows/flatpak.yml` a ogni release.
 Scaricalo dalle [release](https://github.com/pietrolama/anyfile/releases), poi:
 
 ```sh
-sudo apt install ./anyfile_0.4.0_all.deb
+sudo apt install ./anyfile_0.5.0_all.deb
 ```
 
 Il pacchetto pesa circa 40 KB e usa Python e PySide6 del sistema. Le dipendenze sono
