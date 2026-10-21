@@ -1,0 +1,91 @@
+name: Flatpak
+
+# Builds the Flatpak of each release and publishes it as a signed Flatpak repository
+# on GitHub Pages: https://pietrolama.github.io/anyfile/
+# The runtime (KDE) still comes from Flathub; only ANYFILE is served from here.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: flatpak-pages
+  cancel-in-progress: false
+
+env:
+  APP_ID: io.github.pietrolama.anyfile
+  SITE_URL: https://pietrolama.github.io/anyfile
+
+jobs:
+  build:
+    name: Build and sign
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:kde-6.11
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/cache@v4
+        with:
+          path: .flatpak-builder
+          key: flatpak-builder-${{ hashFiles('io.github.pietrolama.anyfile.yaml') }}
+          restore-keys: flatpak-builder-
+      - name: Signing key
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.FLATPAK_GPG_PRIVATE_KEY }}
+        run: |
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --import
+          echo "GPG_KEY=$(gpg --list-secret-keys --with-colons | awk -F: '/^fpr/{print $10; exit}')" >> "$GITHUB_ENV"
+      - name: Build
+        run: |
+          mkdir -p site
+          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          flatpak-builder --user --install-deps-from=flathub --disable-rofiles-fuse --force-clean \
+            --default-branch=stable --repo=site/repo --gpg-sign="$GPG_KEY" \
+            builddir "$APP_ID.yaml"
+          flatpak build-update-repo --generate-static-deltas --prune --title=ANYFILE \
+            --default-branch=stable --gpg-sign="$GPG_KEY" site/repo
+      - name: Repository files
+        run: |
+          KEY=$(base64 -w0 packaging/flatpak-repo.gpg)
+          cat > site/anyfile.flatpakrepo <<EOF
+          [Flatpak Repo]
+          Title=ANYFILE
+          Url=$SITE_URL/repo/
+          Homepage=https://github.com/pietrolama/anyfile
+          Comment=Local file converter with a radial menu for KDE Dolphin
+          GPGKey=$KEY
+          EOF
+          cat > "site/$APP_ID.flatpakref" <<EOF
+          [Flatpak Ref]
+          Name=$APP_ID
+          Branch=stable
+          Title=ANYFILE
+          Url=$SITE_URL/repo/
+          SuggestRemoteName=anyfile
+          RuntimeRepo=https://dl.flathub.org/repo/flathub.flatpakrepo
+          IsRuntime=false
+          GPGKey=$KEY
+          EOF
+          cp packaging/flatpak-site/index.html site/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    name: Publish on GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

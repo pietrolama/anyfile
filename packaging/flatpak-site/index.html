@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ANYFILE Flatpak</title>
+<style>
+  :root { color-scheme: light dark; --bg: #fafafa; --fg: #1d1f24; --muted: #5d6370; --code: #eceef2; --accent: #2b7fd0; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #1d1f24; --fg: #e6e8ec; --muted: #9aa1ad; --code: #2a2d34; --accent: #5aa7f0; } }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.55 system-ui, sans-serif; }
+  main { max-width: 44rem; margin: 0 auto; padding: 2.5rem 1rem; }
+  h1 { margin: 0 0 .25rem; font-size: 2rem; }
+  p.lead { margin-top: 0; color: var(--muted); }
+  pre { background: var(--code); padding: .8rem 1rem; border-radius: 6px; overflow-x: auto; }
+  a { color: var(--accent); }
+  .button { display: inline-block; padding: .6rem 1.1rem; border-radius: 6px; background: var(--accent); color: #fff; text-decoration: none; font-weight: 600; }
+</style>
+</head>
+<body>
+<main>
+  <h1>ANYFILE</h1>
+  <p class="lead">Local file converter with a radial menu for KDE Dolphin.</p>
+
+  <p><a class="button" href="io.github.pietrolama.anyfile.flatpakref">Install with Discover</a></p>
+
+  <p>Or from a terminal:</p>
+  <pre>flatpak install --user https://pietrolama.github.io/anyfile/io.github.pietrolama.anyfile.flatpakref</pre>
+
+  <p>Updates arrive through Discover or <code>flatpak update</code>. The KDE runtime is
+    downloaded from Flathub. Then open ANYFILE and press <strong>Integrate with Dolphin</strong>
+    to add “Convert with ANYFILE” to Dolphin's right-click menu.</p>
+
+  <p>The Flatpak does not include LibreOffice, so Word, Excel and PowerPoint documents are
+    not converted. For those, use the <code>.deb</code> package from the
+    <a href="https://github.com/pietrolama/anyfile/releases">releases</a>.</p>
+
+  <p>Repository signing key fingerprint:<br><code>1B20 5824 C619 DE44 2766 270B 0C2D 414D 72C1 2491</code></p>
+  <p><a href="https://github.com/pietrolama/anyfile">Source code and documentation</a></p>
+</main>
+</body>
+</html>

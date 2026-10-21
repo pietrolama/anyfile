@@ -23,11 +23,26 @@ Verificata con `packaging/deb/test-clean-install.sh` in container puliti:
 | Debian 13 (trixie) | pacchetto `.deb` | installazione, suite completa sul pacchetto installato, aggiornamento e rimozione senza residui |
 | Ubuntu 26.04 LTS | pacchetto `.deb` | come sopra |
 | Ubuntu 24.04 LTS | `packaging/install-user.sh` | conversioni e ruota funzionanti (anche con ImageMagick 6). Il `.deb` non si installa perché la 24.04 non ha PySide6 nei repository |
+| Flatpak | `flatpak install` dal repository del progetto | conversioni, ruota e integrazione con Dolphin verificate su KDE Plasma 6 (Debian 13); senza LibreOffice |
 | Windows 10/11 | `pip install` dai sorgenti | sperimentale: motore, terminale, finestra e ruota funzionano e sono testati a ogni push. Mancano ancora il menu contestuale di Explorer e un installer |
 
 A ogni push GitHub Actions esegue l'intera suite su **Debian 13** (con tutti i motori,
 LibreOffice compreso) e su **Windows** (FFmpeg, ImageMagick, Pandoc, Ghostscript,
 Poppler).
+
+### Flatpak (qualsiasi distribuzione Linux)
+
+```sh
+flatpak install --user https://pietrolama.github.io/anyfile/io.github.pietrolama.anyfile.flatpakref
+```
+
+Oppure apri [pietrolama.github.io/anyfile](https://pietrolama.github.io/anyfile/) e fai clic
+su *Install with Discover*. Gli aggiornamenti arrivano da Discover o con `flatpak update`; il
+runtime KDE arriva da Flathub. Tutti i motori sono inclusi tranne LibreOffice, quindi nel
+Flatpak i documenti Office non si convertono. Dopo l'installazione premi **Integra con
+Dolphin** nella finestra per aggiungere la voce al clic destro. Il repository è firmato con
+la chiave `1B20 5824 C619 DE44 2766 270B 0C2D 414D 72C1 2491`, e viene compilato e
+pubblicato da `.github/workflows/flatpak.yml` a ogni release.
 
 ### Pacchetto .deb (Debian 13, Ubuntu 26.04 e successive)
 

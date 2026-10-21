@@ -8,7 +8,14 @@ command: anyfile
 
 build-options:
   no-debuginfo: true
-  strip: false
+  strip: true
+  env:
+    # Read by /app/cleanup-BaseApp.sh: ANYFILE uses neither QtWebEngine nor numpy.
+    BASEAPP_REMOVE_WEBENGINE: '1'
+    BASEAPP_DISABLE_NUMPY: '1'
+
+cleanup-commands:
+  - /app/cleanup-BaseApp.sh
 
 finish-args:
   - --share=ipc
@@ -25,6 +32,12 @@ finish-args:
 
 cleanup:
   - /include
+  # Only needed to build PySide bindings
+  - /lib/libclang*
+  - /lib/libLLVM*
+  - /lib/python3*/site-packages/shiboken6_generator
+  - /lib/python3*/site-packages/OpenGL
+  - /bin/event_rpcgen.py
   - /lib/pkgconfig
   - /share/man
   - /share/doc
