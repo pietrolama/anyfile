@@ -255,13 +255,26 @@ missing engine hides its conversions, and the app says what to install.
   is never replaced.
 - The result is checked in its content (format signature, text, audio/video tracks),
   not only by the engine's exit code.
-- LibreOffice uses a dedicated profile, so it works even when it is already open.
+- LibreOffice uses a dedicated profile, so it works even when it is already open. In that
+  profile document macros never run and links to other files are never updated.
+- Each engine is told the format found in the content, so a crafted file cannot pass for
+  something else. ImageMagick gets the input coder (`PNG:`, `JPEG:`…) and a private policy
+  that refuses external programs, `@file` lists and the coders that read other files or
+  URLs (MVG, MSL, SVG, TEXT, PostScript…), with limits on memory and image size. FFmpeg
+  gets the demuxer, so a video cannot act as a playlist that pulls in other files, and
+  opens local files only.
+- Pandoc keeps only images inside the document's folder: remote images and paths that
+  leave the folder are dropped, so a document can neither embed another file of yours nor
+  reach the network. LaTeX (Markdown → PDF) cannot read files outside the folder or run
+  programs.
 - Ghostscript runs with `-dSAFER`.
+- `tests/test_security.py` keeps these defences checked with crafted files.
 
 ANYFILE is **not a sandbox**. The engines run with your permissions: a file crafted to
 exploit a vulnerability in FFmpeg, ImageMagick, LibreOffice or Ghostscript could act
 like any program you start. With files from untrusted sources, keep the engines up to
-date. Real isolation (bubblewrap, Flatpak) is a possible future step.
+date. The Flatpak runs everything inside its sandbox, which still reaches your home folder
+and removable drives; isolating each engine on its own (bubblewrap) is a possible next step.
 
 ## Architecture
 

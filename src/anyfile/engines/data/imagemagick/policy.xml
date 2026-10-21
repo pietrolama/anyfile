@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- ANYFILE's ImageMagick policy, loaded through MAGICK_CONFIGURE_PATH.
+     ANYFILE always names the input coder itself (PNG:, JPEG:...), so ImageMagick never
+     guesses it from the file. This policy also refuses what a crafted file could use to
+     read other files, reach the network or run programs, and bounds resource use. -->
+<policymap>
+  <policy domain="resource" name="memory" value="2GiB"/>
+  <policy domain="resource" name="map" value="4GiB"/>
+  <policy domain="resource" name="disk" value="8GiB"/>
+  <policy domain="resource" name="width" value="64KP"/>
+  <policy domain="resource" name="height" value="64KP"/>
+  <policy domain="resource" name="time" value="600"/>
+  <!-- No external programs (Ghostscript, curl, html2ps...). -->
+  <policy domain="delegate" rights="none" pattern="*"/>
+  <!-- No "@file" arguments that read a list of names from a file. -->
+  <policy domain="path" rights="none" pattern="@*"/>
+  <!-- Coders that draw from scripts or text, read other files or URLs, or need delegates. -->
+  <policy domain="coder" rights="none" pattern="{MVG,MSL,SVG,MSVG,RSVG,TEXT,TXT,LABEL,CAPTION,PANGO,URL,HTTP,HTTPS,FTP,FILE,EPHEMERAL,INLINE,SHOW,WIN,X,PLT,PS,PS2,PS3,EPS,EPI,EPSF,EPSI,EPT,XPS,PCL}"/>
+  <!-- PDF is only written (images to PDF); reading PDF goes through Poppler. -->
+  <policy domain="coder" rights="write" pattern="PDF"/>
+</policymap>

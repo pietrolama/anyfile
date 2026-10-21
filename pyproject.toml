@@ -22,8 +22,8 @@ anyfile = "anyfile.main:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-# Translations are read at runtime from the .po files.
-anyfile = ["locale/*.po"]
+# Translations (.po, read at runtime) and engine hardening files.
+anyfile = ["locale/*.po", "engines/data/*", "engines/data/*/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

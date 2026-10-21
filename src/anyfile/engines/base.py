@@ -36,6 +36,7 @@ class Runner:
         on_line: Callable[[str], None] | None = None,
         cwd: Path | None = None,
         tool: str | None = None,
+        env: dict[str, str] | None = None,
     ) -> str:
         if self.cancel_event.is_set():
             raise ConversionCancelled()
@@ -44,7 +45,8 @@ class Runner:
         try:
             proc = subprocess.Popen(
                 argv, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                text=True, encoding="utf-8", errors="replace", cwd=cwd, **system.popen_options(),
+                text=True, encoding="utf-8", errors="replace", cwd=cwd,
+                env={**os.environ, **env} if env else None, **system.popen_options(),
             )
         except OSError as e:
             raise EngineError(_("Cannot start {tool}: {error}").format(tool=tool, error=e.strerror)) from e

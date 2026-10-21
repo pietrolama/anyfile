@@ -62,7 +62,7 @@ def _check_streams(path: Path, kind: str) -> None:
         return
     try:
         out = subprocess.run(
-            [ffprobe, "-v", "error", "-show_entries", "stream=codec_type",
+            [ffprobe, "-v", "error", "-protocol_whitelist", "file", "-show_entries", "stream=codec_type",
              "-of", "default=noprint_wrappers=1:nokey=1", str(path)],
             capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=30, check=False,
         )

@@ -31,6 +31,39 @@ def _office_notes(source: str, target: str) -> str:
     return LAYOUT_NOTE
 
 
+# Settings of the private LibreOffice profile: document macros never run and links to
+# other files or URLs are never updated (Writer: 0 = never, Calc: 1 = never).
+PROFILE_SETTINGS = (
+    ("/org.openoffice.Office.Common/Security/Scripting", "DisableMacrosExecution", "true"),
+    ("/org.openoffice.Office.Common/Security/Scripting", "MacroSecurityLevel", "3"),
+    ("/org.openoffice.Office.Common/Security/Scripting", "BlockUntrustedRefererLinks", "true"),
+    ("/org.openoffice.Office.Writer/Content/Update", "Link", "0"),
+    ("/org.openoffice.Office.Calc/Content/Update", "Link", "1"),
+)
+
+
+def _harden_profile(profile: Path) -> None:
+    """Writes the settings into the profile, keeping whatever LibreOffice stored there."""
+    xcu = profile / "user" / "registrymodifications.xcu"
+    text = xcu.read_text(encoding="utf-8") if xcu.is_file() else ""
+    # LibreOffice rewrites the file on exit, possibly in another order: one item at a time.
+    items = "".join(item for item in (
+        f'<item oor:path="{path}"><prop oor:name="{name}" oor:op="fuse"><value>{value}</value></prop></item>\n'
+        for path, name, value in PROFILE_SETTINGS) if item.strip() not in text)
+    if not items:
+        return
+    if "</oor:items>" in text:
+        text = text.replace("</oor:items>", items + "</oor:items>")
+    else:
+        text = ('<?xml version="1.0" encoding="UTF-8"?>\n'
+                '<oor:items xmlns:oor="http://openoffice.org/2001/registry" '
+                'xmlns:xs="http://www.w3.org/2001/XMLSchema" '
+                'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">\n'
+                + items + "</oor:items>\n")
+    xcu.parent.mkdir(parents=True, exist_ok=True)
+    xcu.write_text(text, encoding="utf-8")
+
+
 class LibreOfficeEngine(Engine):
     name = "libreoffice"
     label = "LibreOffice"
@@ -51,6 +84,7 @@ class LibreOfficeEngine(Engine):
         # Dedicated profile: a LibreOffice already open for the user does not block conversion.
         profile = system.cache_dir() / "libreoffice-profile"
         profile.mkdir(parents=True, exist_ok=True)
+        _harden_profile(profile)
         args = [
             self.binary(), f"-env:UserInstallation={profile.as_uri()}",
             "--headless", "--invisible", "--nologo", "--norestore", "--nodefault", "--nolockcheck",
@@ -80,6 +114,12 @@ PANDOC_WRITE = {"md": "markdown", "html": "html", "docx": "docx", "odt": "odt",
 MARKUP = {"md", "html", "epub", "rst", "tex", "txt"}
 PDF_SOURCES = ("md", "rst", "tex")
 LATEX_ENGINES = ("xelatex", "lualatex", "pdflatex")
+DATA = Path(__file__).parent / "data"
+# Keeps only images inside the original's folder; see the file for why.
+SAFE_FILTER = DATA / "pandoc-safe.lua"
+# LaTeX (Markdown → PDF) may only read and write in the working folder and never runs
+# programs, whatever the document asks for (\input{/...}, \write18).
+LATEX_ENV = {"openin_any": "p", "openout_any": "p", "shell_escape": "f"}
 
 
 def _pandoc_notes(source: str, target: str) -> str:
@@ -121,5 +161,6 @@ class PandocEngine(Engine):
         if target == "html":
             args += ["--metadata", f"pagetitle={ctx.original.stem}"]
         # Relative resources (e.g. images in Markdown) are looked up next to the original.
-        args += [f"--resource-path={ctx.original.parent}", "-o", dst, src]
-        ctx.runner.run(args, cwd=ctx.original.parent, tool="Pandoc")
+        args += [f"--lua-filter={SAFE_FILTER}", f"--resource-path={ctx.original.parent}", "-o", dst, src]
+        ctx.runner.run(args, cwd=ctx.original.parent, tool="Pandoc",
+                       env=LATEX_ENV if target == "pdf" else None)

@@ -28,6 +28,20 @@ LOSSLESS_AUDIO: dict[str, list[str]] = {
 
 Preset = tuple[list[str], str]  # (arguments, description for the user)
 
+# Demuxer for each detected format. Naming it means a crafted file cannot be read as a
+# playlist (HLS, concat) that pulls in other files; only local files are opened.
+DEMUXERS = {
+    "mp3": "mp3", "wav": "wav", "flac": "flac", "ogg": "ogg", "opus": "ogg", "m4a": "mov",
+    "aac": "aac", "mp4": "mov", "mov": "mov", "mkv": "matroska", "webm": "matroska",
+    "avi": "avi", "gif": "gif",
+}
+
+
+def input_args(source: str) -> list[str]:
+    """Options to put before -i for a file of the given detected format."""
+    demuxer = ["-f", DEMUXERS[source]] if source in DEMUXERS else []
+    return ["-protocol_whitelist", "file", *demuxer]
+
 
 def _audio(codec: str, flag: str, values: tuple[str, str, str], descr: tuple[str, str, str]) -> dict:
     return {q: (["-c:a", codec, flag, v], d) for q, v, d in zip(Q, values, descr)}
@@ -143,10 +157,10 @@ class FFmpegEngine(Engine):
         table = AUDIO_PRESETS.get(target) or VIDEO_PRESETS.get(target) or {}
         return {q: _(descr) for q, (_args, descr) in table.items()}
 
-    def _duration(self, src: Path, runner: Runner) -> float | None:
+    def _duration(self, src: Path, source: str, runner: Runner) -> float | None:
         try:
             out = runner.run([
-                self.binary(1), "-v", "error", "-show_entries", "format=duration",
+                self.binary(1), "-v", "error", *input_args(source), "-show_entries", "format=duration",
                 "-of", "default=noprint_wrappers=1:nokey=1", src,
             ])
             value = float(out.strip().splitlines()[0])
@@ -154,17 +168,17 @@ class FFmpegEngine(Engine):
             return None
         return value if value > 0 else None
 
-    def _has_audio(self, src: Path, runner: Runner) -> bool:
+    def _has_audio(self, src: Path, source: str, runner: Runner) -> bool:
         try:
-            out = runner.run([self.binary(1), "-v", "error", "-select_streams", "a",
+            out = runner.run([self.binary(1), "-v", "error", *input_args(source), "-select_streams", "a",
                               "-show_entries", "stream=index", "-of", "csv=p=0", src])
         except EngineError:
             return True  # when in doubt FFmpeg decides, with its own message
         return bool(out.strip())
 
     def convert(self, conversion: Conversion, src: Path, dst: Path, ctx: ConversionContext) -> None:
-        target, quality = conversion.target, ctx.quality
-        if target in AUDIO and not self._has_audio(src, ctx.runner):
+        source, target, quality = conversion.source, conversion.target, ctx.quality
+        if target in AUDIO and not self._has_audio(src, source, ctx.runner):
             raise EngineError(_("“{name}” has no audio track to extract").format(name=ctx.original.name))
         if target in LOSSLESS_AUDIO:
             codec_args = ["-vn", *LOSSLESS_AUDIO[target]]
@@ -173,7 +187,7 @@ class FFmpegEngine(Engine):
         else:
             codec_args = VIDEO_PRESETS[target][quality][0]
 
-        duration = self._duration(src, ctx.runner)
+        duration = self._duration(src, source, ctx.runner)
         ctx.progress(0.0 if duration else None)
 
         def on_line(line: str) -> None:
@@ -183,7 +197,7 @@ class FFmpegEngine(Engine):
                     ctx.progress(min(int(value) / 1_000_000 / duration, 1.0))
 
         ctx.runner.run(
-            [self.binary(), "-hide_banner", "-nostdin", "-y", "-i", src, *codec_args,
+            [self.binary(), "-hide_banner", "-nostdin", "-y", *input_args(source), "-i", src, *codec_args,
              "-progress", "pipe:1", "-nostats", dst],
             on_line=on_line, tool="FFmpeg",
         )

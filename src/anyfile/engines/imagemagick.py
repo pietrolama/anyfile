@@ -27,6 +27,10 @@ QUALITY: dict[str, dict[Quality, tuple[int, bool]]] = {
     "webp": {Quality.MAX: (95, False), Quality.BALANCED: (80, False), Quality.SMALL: (60, True)},
 }
 
+# Private policy (data/imagemagick/policy.xml): no delegates, no coders that read other
+# files or URLs, bounded resources. ImageMagick reads it from MAGICK_CONFIGURE_PATH.
+POLICY_ENV = {"MAGICK_CONFIGURE_PATH": str(Path(__file__).parent / "data" / "imagemagick")}
+
 _FORMAT_LINE = re.compile(r"^\s*([A-Z0-9-]+)\*?\s+(?:[A-Za-z0-9_-]+\s+)?([r-])([w-])[+-]")
 
 
@@ -81,8 +85,10 @@ class ImageMagickEngine(Engine):
     def convert(self, conversion: Conversion, src: Path, dst: Path, ctx: ConversionContext) -> None:
         target = conversion.target
         ctx.progress(None)
+        # The input coder comes from the detected content: ImageMagick never guesses it.
         # src is a link with a safe name: the [0] syntax cannot clash with the file name.
-        args = [self.binary(), str(src) if target in MULTI_FRAME else f"{src}[0]", "-auto-orient"]
+        source = f"{CODERS[conversion.source]}:{src}"
+        args = [self.binary(), source if target in MULTI_FRAME else f"{source}[0]", "-auto-orient"]
         if target in NO_ALPHA:
             args += ["-background", "white", "-alpha", "remove", "-alpha", "off"]
         if target in QUALITY:
@@ -93,4 +99,4 @@ class ImageMagickEngine(Engine):
         if target == "ico":
             args += ["-define", "icon:auto-resize=256,128,64,48,32,16"]
         args.append(f"{CODERS[target]}:{dst}")
-        ctx.runner.run(args, tool="ImageMagick")
+        ctx.runner.run(args, tool="ImageMagick", env=POLICY_ENV)

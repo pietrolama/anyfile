@@ -263,14 +263,28 @@ installare.
   file sorgente non viene mai sostituito.
 - Il risultato è verificato nel contenuto (firma del formato, testo, tracce audio/video),
   non solo con il codice di uscita del motore.
-- LibreOffice usa un profilo dedicato, quindi funziona anche se è già aperto.
+- LibreOffice usa un profilo dedicato, quindi funziona anche se è già aperto. In quel
+  profilo le macro dei documenti non vengono mai eseguite e i collegamenti ad altri file
+  non vengono mai aggiornati.
+- Ogni motore riceve il formato riconosciuto dal contenuto, quindi un file preparato ad
+  arte non può spacciarsi per un altro. ImageMagick riceve il coder d'ingresso (`PNG:`,
+  `JPEG:`…) e una politica privata che rifiuta programmi esterni, liste `@file` e i coder
+  che leggono altri file o URL (MVG, MSL, SVG, TEXT, PostScript…), con limiti di memoria e
+  di dimensione. FFmpeg riceve il demuxer, così un video non può fare da playlist che
+  richiama altri file, e apre solo file locali.
+- Pandoc tiene solo le immagini nella cartella del documento: immagini remote e percorsi
+  che escono dalla cartella vengono scartati, così un documento non può incorporare un
+  altro tuo file né collegarsi alla rete. LaTeX (Markdown → PDF) non può leggere file fuori
+  dalla cartella né eseguire programmi.
 - Ghostscript è eseguito con `-dSAFER`.
+- `tests/test_security.py` verifica queste difese con file preparati ad arte.
 
 ANYFILE **non è una sandbox**. I motori girano con i permessi dell'utente: un file
 costruito apposta per sfruttare una vulnerabilità di FFmpeg, ImageMagick, LibreOffice o
 Ghostscript potrebbe agire come un qualsiasi programma avviato dall'utente. Con file di
-provenienza non attendibile conviene tenere aggiornati i motori. Un isolamento vero
-(bubblewrap, Flatpak) è un possibile sviluppo futuro.
+provenienza non attendibile conviene tenere aggiornati i motori. Il Flatpak esegue tutto
+nella sua sandbox, che però raggiunge la cartella home e i dischi esterni; isolare ogni
+motore per conto suo (bubblewrap) è un possibile passo successivo.
 
 ## Sviluppo e prove
 
