@@ -304,6 +304,23 @@ Debian 13 e Ubuntu 26.04, nei container puliti.
 Prossimi passi: su Windows il menu contestuale di Explorer e un installer con i motori
 inclusi; su Linux il Flatpak e l'isolamento dei motori per i file non attendibili.
 
+## Come è fatto ANYFILE
+
+Gran parte del codice, dei test, dei pacchetti e della documentazione di ANYFILE è stata
+scritta da assistenti AI per la programmazione (soprattutto Claude Code), seguendo il mio
+progetto e le mie decisioni; i commit scritti con Claude lo indicano in una riga
+`Co-Authored-By`. Io decido cosa entra, rivedo le modifiche e le provo sul mio desktop:
+KDE Plasma 6 su Wayland, con Dolphin.
+
+Niente viene pubblicato senza controlli automatici: 157 test automatici, che fanno anche
+conversioni vere con i motori veri, girano su Debian 13 e Windows a ogni push. Il `.deb`
+viene installato, testato, aggiornato e rimosso in un container pulito prima di ogni
+release. Quello che si vede solo su uno schermo vero, come la posizione della ruota o il
+menu di Dolphin, si controlla a mano con `manual-tests/00-CHECKLIST.md`.
+
+Segnalazioni di bug e revisioni del codice sono benvenute, soprattutto da chi conosce
+bene Qt, Flatpak o i motori di conversione.
+
 ## Licenza
 
 ANYFILE è software libero, distribuito secondo i termini della

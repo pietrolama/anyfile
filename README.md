@@ -321,6 +321,22 @@ Ubuntu 26.04, in clean containers.
 Next steps: on Windows, the Explorer context menu and an installer with the engines
 included; on Linux, Flatpak and isolation of the engines for untrusted files.
 
+## How ANYFILE is made
+
+Most of ANYFILE's code, tests, packaging and documentation were written by AI coding
+assistants (mainly Claude Code), following my design and decisions; the commits written
+with Claude say so in a `Co-Authored-By` line. I decide what goes in, review the changes
+and try them on my own desktop: KDE Plasma 6 on Wayland, with Dolphin.
+
+Nothing ships without automatic checks: 157 automated tests, which also run real
+conversions with the real engines, run on Debian 13 and Windows on every push. The
+`.deb` is installed, tested, upgraded and removed in a clean container before every
+release. What only a real screen can show, such as where the wheel opens or the Dolphin
+menu, is checked by hand with `manual-tests/00-CHECKLIST.md`.
+
+Bug reports and reviews of the code are welcome, especially from people who know
+Qt, Flatpak or the conversion engines well.
+
 ## License
 
 ANYFILE is free software, released under the [GNU General Public License](LICENSE),
