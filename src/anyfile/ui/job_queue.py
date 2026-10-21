@@ -28,9 +28,9 @@ class QtJobQueue(QObject):
 
     def submit(self, source: Path, target: str, output_dir: Path | None, overwrite: bool,
                quality: Quality = Quality.BALANCED, tool: str | None = None,
-               option: str | None = None) -> Job:
+               option: str | None = None, others: tuple[Path, ...] = ()) -> Job:
         return self._queue.submit(source, target, output_dir=output_dir, overwrite=overwrite,
-                                  quality=quality, tool=tool, option=option)
+                                  quality=quality, tool=tool, option=option, others=others)
 
     def cancel_all(self) -> None:
         self._queue.cancel_all()

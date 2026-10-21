@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import sqlite3
 import subprocess
 from datetime import datetime, timezone
@@ -161,3 +162,80 @@ def test_every_subcommand_runs_in_the_terminal():
 def test_registry_offers_the_tools_by_format(registry):
     assert {"resize", "rotate", "grayscale"} <= {t.id for t in registry.tools("png")}
     assert registry.tool("split", "png") is None
+
+
+# --- PDF tools ------------------------------------------------------------------
+
+def _pages(pdf):
+    out = subprocess.run(["pdfinfo", str(pdf)], capture_output=True, text=True).stdout
+    return int(next(line.split()[1] for line in out.splitlines() if line.startswith("Pages:")))
+
+
+def _text(pdf):
+    return subprocess.run(["pdftotext", str(pdf), "-"], capture_output=True, text=True).stdout
+
+
+@pytest.fixture
+def pdf3(tmp_path):
+    """A three-page PDF written by ANYFILE's own overlay writer (no engine needed)."""
+    from anyfile.engines.stamp import Page, page_number, write_overlay
+    path = tmp_path / "doc.pdf"
+    pages = [Page(0, 0, 595, 842)] * 3
+    write_overlay(path, pages, [page_number(p, f"Page {n}", "center") for n, p in enumerate(pages, 1)])
+    return path
+
+
+@needs("pdfunite", "pdfinfo")
+def test_merge_keeps_the_order_and_turns_images_into_pages(registry, pdf3, photo):
+    out = Executor(registry).run(Job(pdf3, "", tool="merge", others=(photo, pdf3)))
+    assert out.name == "doc-merged.pdf" and _pages(out) == 7
+    assert not [p for p in out.parent.iterdir() if p.name.startswith(".anyfile-")]
+
+
+@needs("pdfunite")
+def test_merge_refuses_files_that_cannot_become_pdf(registry, pdf3, tmp_path):
+    other = tmp_path / "notes.txt"
+    other.write_text("hello")
+    with pytest.raises(AnyfileError, match="cannot be used for Merge"):
+        Executor(registry).run(Job(pdf3, "", tool="merge", others=(other,)))
+
+
+@needs("qpdf", "pdfinfo")
+def test_rotate_pdf_keeps_the_text(registry, pdf3):
+    out = edit(registry, pdf3, "rotate", "right")
+    info = subprocess.run(["pdfinfo", "-f", "1", "-l", "1", str(out)], capture_output=True, text=True).stdout
+    assert re.search(r"rot:\s+90", info) and "Page 2" in _text(out)
+
+
+@needs("qpdf", "pdftotext")
+def test_page_numbers_and_watermark(registry, pdf3):
+    numbered = edit(registry, pdf3, "numbers")
+    # Each page says “Page n” already: the number added at the bottom makes it twice.
+    words = _text(numbered).split()
+    assert [words.count(n) for n in ("1", "2", "3")] == [2, 2, 2]
+    marked = edit(registry, pdf3, "watermark", "confidential")
+    assert _pages(marked) == 3 and "Page 3" in _text(marked)
+
+
+@needs("qpdf")
+def test_repair_rebuilds_a_pdf_with_a_broken_index(registry, pdf3, tmp_path):
+    broken = tmp_path / "broken.pdf"
+    data = pdf3.read_bytes()
+    broken.write_bytes(data[:data.rindex(b"xref")] + b"xref\ngarbage\n%%EOF\n")
+    assert _pages(edit(registry, broken, "repair")) == 3
+
+
+@needs("gs")
+def test_pdf_black_and_white(registry, pdf3):
+    out = edit(registry, pdf3, "grayscale")
+    assert out.name == "doc-bw.pdf" and "Page 1" in _text(out)
+
+
+def test_overlay_pages_follow_the_original_size_and_rotation(tmp_path):
+    from anyfile.engines.stamp import Page, watermark, write_overlay
+    pages = [Page(0, 0, 595, 842), Page(0, 0, 842, 595, 90)]
+    path = tmp_path / "ov.pdf"
+    write_overlay(path, pages, [watermark(p, "DRAFT") for p in pages])
+    data = path.read_bytes()
+    assert data.startswith(b"%PDF-1.4") and data.count(b"/Type /Page ") == 2
+    assert b"/MediaBox [0.00 0.00 842.00 595.00] /Rotate 90" in data and b"/ca 0.3" in data

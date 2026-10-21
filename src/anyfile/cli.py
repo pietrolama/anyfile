@@ -213,9 +213,13 @@ def cmd_edit(registry: Registry, args: argparse.Namespace) -> int:
             quality=args.quality), file=sys.stderr)
         return 2
     # The format of the result depends on each file: the executor fills it in.
-    jobs_args = [(f, "", {"output_dir": args.output_dir, "overwrite": args.overwrite,
-                          "quality": quality, "tool": args.tool, "option": args.option})
-                 for f in args.files]
+    common = {"output_dir": args.output_dir, "overwrite": args.overwrite, "quality": quality,
+              "tool": args.tool, "option": args.option}
+    if any(t.multi_input for e in registry.engines for t in e.declared_tools() if t.id == args.tool):
+        # One result from all the files, in the order given.
+        jobs_args = [(args.files[0], "", {**common, "others": tuple(args.files[1:])})]
+    else:
+        jobs_args = [(f, "", common) for f in args.files]
     return _run_jobs(registry, _open_history(), jobs_args, sys.stdout.isatty())
 
 

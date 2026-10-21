@@ -105,6 +105,22 @@ modules:
         url: https://github.com/ImageMagick/ImageMagick/releases/download/7.1.2-34/ImageMagick-7.1.2-34.tar.xz
         sha256: 55fe0ec246245b46c429f9e6bc65294ad4a78a66b88abd9817971ca157856323
 
+  - name: qpdf
+    buildsystem: cmake-ninja
+    builddir: true
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      # Only qpdf's own crypto: no extra libraries to bundle.
+      - -DREQUIRE_CRYPTO_NATIVE=ON
+      - -DUSE_IMPLICIT_CRYPTO=OFF
+      - -DBUILD_DOC=OFF
+      - -DBUILD_STATIC_LIBS=OFF
+      - -DINSTALL_EXAMPLES=OFF
+    sources:
+      - type: archive
+        url: https://github.com/qpdf/qpdf/releases/download/v12.4.2/qpdf-12.4.2.tar.gz
+        sha256: 8a58af5b6141319287c1883bec8bd1bd545b7567b7fc5e6ce5d25a1c85f36397
+
   - name: pandoc
     buildsystem: simple
     build-commands:

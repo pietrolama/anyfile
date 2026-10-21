@@ -58,7 +58,7 @@ split like this:
 | Kind | Packages | What they unlock |
 |---|---|---|
 | required | python3, python3-pyside6.*, file | the application |
-| recommended (installed by apt) | ffmpeg, imagemagick, poppler-utils, ghostscript, libnotify-bin | images, audio, video, PDF, compression, notifications |
+| recommended (installed by apt) | ffmpeg, imagemagick, poppler-utils, ghostscript, qpdf, libnotify-bin | images, audio, video, PDF, compression, PDF tools, notifications |
 | suggested | libreoffice-writer/calc/impress, pandoc, texlive-xetex, qt6-translations-l10n | Office documents, Markdown/EPUB, PDF from Markdown, translated Qt dialogs |
 
 Removal: `sudo apt remove anyfile`. The package is built with `packaging/deb/build.sh`;
@@ -136,7 +136,10 @@ uses the usual one (•). The centre, Esc or Tab go back to the formats.
 | Images | Resize (75, 50, 25%), Rotate (right, 180°, left), Mirror (horizontal, vertical), Black & white, Remove metadata |
 | Video | Remove audio (copied, no re-encoding), Resize, Rotate, First frame (PNG) |
 | Audio | Normalize volume (EBU R128, −16 LUFS, same sample rate), Mono |
-| PDF | Split pages (one PDF per page) |
+| PDF | Merge (PDFs and images, in the order of the files), Split pages, Rotate, Page numbers (centre, right), Watermark (DRAFT, CONFIDENTIAL, COPY), Black & white, Repair |
+
+PDF edits work on the pages, so text, links and bookmarks stay as they are; Rotate, Page
+numbers, Watermark and Repair use qpdf, Black & white uses Ghostscript.
 
 The result is a new file next to the original: `photo-resized.jpg`, `clip-silent.mp4`.
 Animated GIFs keep every frame. With several files the wheel offers every tool that

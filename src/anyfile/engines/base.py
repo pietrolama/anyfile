@@ -205,6 +205,11 @@ class Engine(ABC):
         """Applies the edit to src, writing dst. For multi_output tools dst is a folder."""
         raise NotImplementedError(tool.id)
 
+    def combine(self, tool: Tool, option: ToolOption | None, sources: list[Path], dst: Path,
+                ctx: ConversionContext) -> None:
+        """Combines the sources, in order, into dst (multi_input tools)."""
+        raise NotImplementedError(tool.id)
+
     @abstractmethod
     def declared(self) -> list[Conversion]:
         """All the conversions the engine offers when it is installed."""

@@ -28,6 +28,8 @@ class Executor:
         self.registry = registry
 
     def run(self, job: Job, progress: ProgressFn = lambda _value: None) -> Path:
+        if job.tool and job.others:
+            return self._combine(job, progress)
         src = job.source
         if not src.is_file():
             raise AnyfileError(_("File not found: {path}").format(path=src))
@@ -45,15 +47,7 @@ class Executor:
             job.via = route.via
         assert info.format is not None
 
-        out_dir = job.output_dir or src.parent
-        try:
-            out_dir.mkdir(parents=True, exist_ok=True)
-        except OSError as e:
-            raise AnyfileError(_("Cannot create the folder {folder}: {error}").format(
-                folder=out_dir, error=e.strerror)) from e
-        if not os.access(out_dir, os.W_OK):
-            raise AnyfileError(_("Cannot write to {folder}: choose another destination folder")
-                               .format(folder=out_dir))
+        out_dir = _writable_dir(job.output_dir or src.parent)
 
         # The output is prepared inside the destination folder, so the final move is an
         # atomic rename on the same filesystem.
@@ -134,6 +128,53 @@ class Executor:
         finally:
             shutil.rmtree(work_dir, ignore_errors=True)
 
+    def _combine(self, job: Job, progress: ProgressFn) -> Path:
+        """A tool that combines several files (e.g. merge): all of them, in order, into one
+        result. Inputs in another format (e.g. images to merge into a PDF) are converted
+        first, with the usual conversions."""
+        paths = [job.source, *job.others]
+        for path in paths:
+            if not path.is_file():
+                raise AnyfileError(_("File not found: {path}").format(path=path))
+        infos = [detect(p) for p in paths]
+        job.source_size = sum(i.size for i in infos)
+        job.source_format = infos[0].format.id if infos[0].format else None
+        tool, option = self._tool(job, infos[0])
+        for info in infos[1:]:
+            if not info.format or not self.registry.tool(tool.id, info.format.id):
+                raise AnyfileError(_("“{name}” cannot be used for {tool}").format(
+                    name=info.name, tool=tool.label))
+        target = formats.get(tool.target(infos[0].format.id))
+        job.target = target.id
+
+        out_dir = _writable_dir(job.output_dir or job.source.parent)
+        work_dir = Path(tempfile.mkdtemp(prefix=".anyfile-", dir=out_dir))
+        try:
+            inputs = []
+            for n, info in enumerate(infos, 1):
+                if job.cancel_event.is_set():
+                    raise ConversionCancelled()
+                if info.format.id == target.id:
+                    link = work_dir / f"input-{n}.{target.ext}"
+                    system.link_or_copy(info.path, link)
+                else:
+                    part = Job(info.path, target.id, output_dir=work_dir / "parts", quality=job.quality,
+                               cancel_event=job.cancel_event)
+                    link = Executor(self.registry).run(part)
+                inputs.append(link)
+                progress(n / (len(infos) + 1))
+            produced = work_dir / f"output.{target.ext}"
+            ctx = ConversionContext(Runner(job.cancel_event), lambda _v: None, job.source, job.quality,
+                                    target.id)
+            self.registry.engine(tool.engine).combine(tool, option, inputs, produced, ctx)
+            if job.cancel_event.is_set():
+                raise ConversionCancelled()
+            validate_output(produced, target)
+            name = tool.result_name(job.source.stem)
+            return self._place(job, produced, False, out_dir, target, name, name)
+        finally:
+            shutil.rmtree(work_dir, ignore_errors=True)
+
     def _tool(self, job: Job, info: FileInfo) -> tuple[Tool, ToolOption | None]:
         tool = self.registry.tool(job.tool, info.format.id) if info.format else None
         if tool is None:
@@ -159,6 +200,18 @@ class Executor:
         output = place(produced, final, overwrite=job.overwrite, protect=job.source)
         job.output_size = _size(output)
         return output
+
+
+def _writable_dir(out_dir: Path) -> Path:
+    try:
+        out_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as e:
+        raise AnyfileError(_("Cannot create the folder {folder}: {error}").format(
+            folder=out_dir, error=e.strerror)) from e
+    if not os.access(out_dir, os.W_OK):
+        raise AnyfileError(_("Cannot write to {folder}: choose another destination folder")
+                           .format(folder=out_dir))
+    return out_dir
 
 
 def _step_progress(progress: ProgressFn, n: int, total: int) -> ProgressFn:

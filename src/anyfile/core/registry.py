@@ -28,10 +28,11 @@ def default_engines() -> list[Engine]:
     from anyfile.engines.ghostscript import GhostscriptEngine
     from anyfile.engines.imagemagick import ImageMagickEngine
     from anyfile.engines.pdf import PopplerEngine
+    from anyfile.engines.qpdf import QpdfEngine
 
     # The order is the priority: when two engines offer the same pair, the first one wins.
     return [FFmpegEngine(), ImageMagickEngine(), PopplerEngine(), LibreOfficeEngine(), PandocEngine(),
-            GhostscriptEngine()]
+            GhostscriptEngine(), QpdfEngine()]
 
 
 @dataclass(frozen=True)

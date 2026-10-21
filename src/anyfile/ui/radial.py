@@ -158,7 +158,9 @@ def tool_entries(infos: list[FileInfo], registry: Registry) -> list[Entry]:
             continue
         for tool in registry.tools(info.format.id):
             found.setdefault(tool.id, (tool, info.format.category, []))[2].append(info.path)
-    ordered = sorted(found.values(), key=lambda t: t[1].order)
+    # Combining needs at least two files.
+    ordered = sorted((t for t in found.values() if not t[0].multi_input or len(t[2]) > 1),
+                     key=lambda t: t[1].order)
     return [Entry(None, tool.label, tool.label.upper(), category.label, CATEGORY_COLORS[category],
                   tuple(paths), tool=tool)
             for tool, category, paths in ordered]
@@ -501,14 +503,17 @@ class RadialMenu(QWidget):
     def _start_tool(self, entry: Entry, option: str | None) -> None:
         assert entry.tool is not None
         # The format of each result is decided by the executor (usually the file's own).
+        # A tool that combines files gets them all in one job, in the selection's order.
+        others = entry.paths[1:] if entry.tool.multi_input else ()
         self._submit(entry, lambda _path: dict(target="", quality=self.default_quality,
-                                               tool=entry.tool.id, option=option))
+                                               tool=entry.tool.id, option=option, others=others),
+                     entry.paths[:1] if others else entry.paths)
 
-    def _submit(self, entry: Entry, job_args) -> None:
+    def _submit(self, entry: Entry, job_args, paths: tuple[Path, ...] | None = None) -> None:
         self.phase, self.chosen, self.hover, self.hover_option = Phase.RUNNING, entry, None, None
         self.setCursor(Qt.CursorShape.ArrowCursor)
         output_dir = self.settings.custom_dir if self.settings.use_custom_dir else None
-        for path in entry.paths:
+        for path in entry.paths if paths is None else paths:
             args = job_args(path)
             job = self.queue.submit(path, args.pop("target"), output_dir, self.settings.overwrite, **args)
             self.jobs[job.id] = job

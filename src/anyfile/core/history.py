@@ -65,6 +65,8 @@ class Entry:
     # An edit (e.g. "resize") and its option (e.g. "50"), or None for a conversion.
     tool: str | None = None
     option: str | None = None
+    # The other inputs of a tool that combines files.
+    others: tuple[Path, ...] = ()
 
     @property
     def is_compression(self) -> bool:
@@ -83,6 +85,8 @@ class Entry:
                 "quality": self.quality or Quality.BALANCED}
         if self.tool:
             args.update(tool=self.tool, option=self.option)
+        if self.others:
+            args["others"] = self.others
         return args
 
 
@@ -217,13 +221,14 @@ class History:
             job.applied_quality.value if job.applied_quality else None, job.status.name,
             job.message, job.details, str(job.output) if job.output else None, job.output_size,
             str(job.output_dir) if job.output_dir else None, int(job.overwrite),
-            job.tool, job.option,
+            job.tool, job.option, "\n".join(map(str, job.others)) or None,
         )
         with self._connect() as db:
             cursor = db.execute(
                 "INSERT INTO conversions (time, source, source_format, source_size, target, via,"
                 " quality, status, message, details, output, output_size, output_dir, overwrite,"
-                " tool, tool_option) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", values)
+                " tool, tool_option, others)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", values)
             db.execute("DELETE FROM conversions WHERE id <= ?", (cursor.lastrowid - MAX_ENTRIES,))
             return cursor.lastrowid
 
@@ -275,19 +280,20 @@ def _migrate_schema(db: sqlite3.Connection) -> None:
         db.execute("INSERT OR REPLACE INTO settings SELECT 'enabled', valore FROM impostazioni"
                    " WHERE chiave = 'attiva'")
         db.execute("DROP TABLE impostazioni")
-    # 0.5: edits (tool and option) next to conversions.
+    # 0.5: edits (tool and option, other inputs of a merge) next to conversions.
     columns = {row[1] for row in db.execute("PRAGMA table_info(conversions)")}
-    for column in ("tool", "tool_option"):
+    for column in ("tool", "tool_option", "others"):
         if column not in columns:
             db.execute(f"ALTER TABLE conversions ADD COLUMN {column} TEXT")
 
 
 def _entry(row: tuple) -> Entry:
     (id_, when, source, src_fmt, src_size, target, via, quality, status, message, details,
-     output, out_size, out_dir, overwrite, tool, option) = row
+     output, out_size, out_dir, overwrite, tool, option, others) = row
     return Entry(
         id_, datetime.fromisoformat(when), Path(source), src_fmt, src_size, target,
         tuple(via.split(",")) if via else (), Quality(quality) if quality else None,
         JobStatus[status], message, details, Path(output) if output else None, out_size,
         Path(out_dir) if out_dir else None, bool(overwrite), tool, option,
+        tuple(Path(p) for p in others.split("\n")) if others else (),
     )

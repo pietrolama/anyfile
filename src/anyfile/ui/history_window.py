@@ -164,10 +164,18 @@ class HistoryWindow(QWidget):
 
     def _submit(self, sources: list[Path], entry: hist.Entry) -> None:
         missing = [s for s in sources if not s.is_file()]
-        for source in sources:
-            if source.is_file():
-                job = self.jobs.submit(source, entry.target, **entry.submit_args())
-                self.running[job.id] = job
+        existing = [s for s in sources if s.is_file()]
+        if entry.others and existing:
+            # A merge: one job with every file. Repeated as it was, or on the files chosen now.
+            args = entry.submit_args()
+            if existing != [entry.source]:
+                args["others"] = tuple(existing[1:])
+            job = self.jobs.submit(existing[0], entry.target, **args)
+            self.running[job.id] = job
+            existing = []
+        for source in existing:
+            job = self.jobs.submit(source, entry.target, **entry.submit_args())
+            self.running[job.id] = job
         if missing:
             names = "\n".join(f"• {m}" for m in missing)
             QMessageBox.warning(self, _("Files not found"),

@@ -58,7 +58,7 @@ divise così:
 | Tipo | Pacchetti | Cosa sbloccano |
 |---|---|---|
 | obbligatorie | python3, python3-pyside6.*, file | l'applicazione |
-| consigliate (installate da apt) | ffmpeg, imagemagick, poppler-utils, ghostscript, libnotify-bin | immagini, audio, video, PDF, compressione, notifiche |
+| consigliate (installate da apt) | ffmpeg, imagemagick, poppler-utils, ghostscript, qpdf, libnotify-bin | immagini, audio, video, PDF, compressione, strumenti PDF, notifiche |
 | suggerite | libreoffice-writer/calc/impress, pandoc, texlive-xetex, qt6-translations-l10n | documenti Office, Markdown/EPUB, PDF da Markdown, finestre di dialogo Qt tradotte |
 
 Rimozione: `sudo apt remove anyfile`. Il pacchetto si costruisce con
@@ -140,7 +140,10 @@ ai formati.
 | Immagini | Ridimensiona (75, 50, 25%), Ruota (destra, 180°, sinistra), Specchia (orizzontale, verticale), Bianco e nero, Togli metadati |
 | Video | Togli audio (copiato, senza ricodifica), Ridimensiona, Ruota, Primo fotogramma (PNG) |
 | Audio | Normalizza volume (EBU R128, −16 LUFS, stessa frequenza di campionamento), Mono |
-| PDF | Dividi pagine (un PDF per pagina) |
+| PDF | Unisci (PDF e immagini, nell'ordine dei file), Dividi pagine, Ruota, Numeri di pagina (centro, destra), Filigrana (BOZZA, RISERVATO, COPIA), Bianco e nero, Ripara |
+
+Le modifiche ai PDF lavorano sulle pagine, quindi testo, link e segnalibri restano come
+sono; Ruota, Numeri di pagina, Filigrana e Ripara usano qpdf, Bianco e nero usa Ghostscript.
 
 Il risultato è un file nuovo accanto all'originale: `foto-ridimensionato.jpg`,
 `clip-senza-audio.mp4`. Le GIF animate mantengono tutti i fotogrammi. Con più file la

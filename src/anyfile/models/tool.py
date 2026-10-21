@@ -40,6 +40,9 @@ class Tool:
     output: str | None = None
     # The tool produces several files (e.g. one PDF per page).
     multi_output: bool = False
+    # The tool combines several files into one result (e.g. merge PDFs): it gets them
+    # all at once, in order, instead of one at a time.
+    multi_input: bool = False
     notes: str = ""
 
     @property

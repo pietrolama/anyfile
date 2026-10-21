@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: anyfile\n"
 "Report-Msgid-Bugs-To: https://github.com/pietrolama/anyfile/issues\n"
-"POT-Creation-Date: 2026-10-21 16:16+0200\n"
+"POT-Creation-Date: 2026-10-21 16:40+0200\n"
 "PO-Revision-Date: 2026-10-20 12:00+0200\n"
 "Last-Translator: pietrolama\n"
 "Language-Team: Italian\n"
@@ -82,11 +82,13 @@ msgstr "modifica uno o più file: ridimensiona, ruota, togli l'audio..."
 
 #: src/anyfile/cli.py:48
 msgid "the edit to apply (see “anyfile info FILE” for those available)"
-msgstr "la modifica da applicare (vedi «anyfile info FILE» per quelle disponibili)"
+msgstr ""
+"la modifica da applicare (vedi «anyfile info FILE» per quelle disponibili)"
 
 #: src/anyfile/cli.py:49
 msgid "the edit's option, e.g. 50 for resize (default: the usual one)"
-msgstr "l'opzione della modifica, es. 50 per resize (predefinita: quella abituale)"
+msgstr ""
+"l'opzione della modifica, es. 50 per resize (predefinita: quella abituale)"
 
 #: src/anyfile/cli.py:54
 msgid "max, balanced (default) or small, when the file has to be re-encoded"
@@ -184,9 +186,9 @@ msgstr "Formato: {format} ({category}), rilevato da: {method}"
 msgid "Warning: the extension does not match the content"
 msgstr "Attenzione: l'estensione non corrisponde al contenuto"
 
-#: src/anyfile/cli.py:173 src/anyfile/core/history.py:133
-#: src/anyfile/ui/conversion_view.py:66 src/anyfile/ui/radial.py:655
-#: src/anyfile/ui/radial.py:857
+#: src/anyfile/cli.py:173 src/anyfile/core/history.py:137
+#: src/anyfile/ui/conversion_view.py:66 src/anyfile/ui/radial.py:660
+#: src/anyfile/ui/radial.py:862
 #, python-brace-format
 msgid "via {formats}"
 msgstr "via {formats}"
@@ -229,7 +231,7 @@ msgstr "anyfile: qualità sconosciuta: {quality} (max, balanced, small)"
 msgid "anyfile: unknown edit: {tool} ({tools})"
 msgstr "anyfile: modifica sconosciuta: {tool} ({tools})"
 
-#: src/anyfile/cli.py:242
+#: src/anyfile/cli.py:246
 msgid "cancelled"
 msgstr "annullato"
 
@@ -251,29 +253,17 @@ msgstr "Impossibile leggere il file: {error}"
 msgid "Unrecognized format"
 msgstr "Formato non riconosciuto"
 
-#: src/anyfile/core/executor.py:33
+#: src/anyfile/core/executor.py:35 src/anyfile/core/executor.py:138
 #, python-brace-format
 msgid "File not found: {path}"
 msgstr "File non trovato: {path}"
 
-#: src/anyfile/core/executor.py:52
-#, python-brace-format
-msgid "Cannot create the folder {folder}: {error}"
-msgstr "Impossibile creare la cartella {folder}: {error}"
-
-#: src/anyfile/core/executor.py:55
-#, python-brace-format
-msgid "Cannot write to {folder}: choose another destination folder"
-msgstr ""
-"Non è possibile scrivere in {folder}: scegli un'altra cartella di "
-"destinazione"
-
-#: src/anyfile/core/executor.py:118
+#: src/anyfile/core/executor.py:112
 #, python-brace-format
 msgid "Step {n} of {total} ({source} → {target}): {message}"
 msgstr "Passaggio {n} di {total} ({source} → {target}): {message}"
 
-#: src/anyfile/core/executor.py:127
+#: src/anyfile/core/executor.py:121
 #, python-brace-format
 msgid ""
 "“{name}” is already compact: the compressed version would not be smaller "
@@ -282,25 +272,42 @@ msgstr ""
 "«{name}» è già compatto: la versione compressa non sarebbe più leggera "
 "({after} contro {before})"
 
-#: src/anyfile/core/executor.py:131
+#: src/anyfile/core/executor.py:125
 #, python-brace-format
 msgid "{name}-compressed"
 msgstr "{name}-compresso"
 
-#: src/anyfile/core/executor.py:133 src/anyfile/engines/pdf.py:12
+#: src/anyfile/core/executor.py:127 src/anyfile/engines/pdf.py:12
 #, python-brace-format
 msgid "{name}-pages"
 msgstr "{name}-pagine"
 
-#: src/anyfile/core/executor.py:140
+#: src/anyfile/core/executor.py:145
+#, python-brace-format
+msgid "“{name}” cannot be used for {tool}"
+msgstr "«{name}» non si può usare per {tool}"
+
+#: src/anyfile/core/executor.py:181
 #, python-brace-format
 msgid "“{name}”: this edit is not available for {format}"
 msgstr "«{name}»: questa modifica non è disponibile per {format}"
 
-#: src/anyfile/core/executor.py:144
+#: src/anyfile/core/executor.py:185
 #, python-brace-format
 msgid "Unknown option “{option}” for {tool}: use {choices}"
 msgstr "Opzione «{option}» sconosciuta per {tool}: usa {choices}"
+
+#: src/anyfile/core/executor.py:209
+#, python-brace-format
+msgid "Cannot create the folder {folder}: {error}"
+msgstr "Impossibile creare la cartella {folder}: {error}"
+
+#: src/anyfile/core/executor.py:212
+#, python-brace-format
+msgid "Cannot write to {folder}: choose another destination folder"
+msgstr ""
+"Non è possibile scrivere in {folder}: scegli un'altra cartella di "
+"destinazione"
 
 #: src/anyfile/core/formats.py:18
 msgid "ICO icon"
@@ -310,40 +317,40 @@ msgstr "Icona ICO"
 msgid "Plain text"
 msgstr "Testo semplice"
 
-#: src/anyfile/core/history.py:107
+#: src/anyfile/core/history.py:111
 #, python-brace-format
 msgid "today {time}"
 msgstr "oggi {time}"
 
-#: src/anyfile/core/history.py:109
+#: src/anyfile/core/history.py:113
 #, python-brace-format
 msgid "yesterday {time}"
 msgstr "ieri {time}"
 
-#: src/anyfile/core/history.py:110
+#: src/anyfile/core/history.py:114
 msgid "%Y-%m-%d %H:%M"
 msgstr "%d/%m/%Y %H:%M"
 
-#: src/anyfile/core/history.py:127 src/anyfile/ui/radial.py:917
+#: src/anyfile/core/history.py:131 src/anyfile/ui/radial.py:922
 #, python-brace-format
 msgid "Compress {format}"
 msgstr "Comprimi {format}"
 
-#: src/anyfile/core/history.py:153
+#: src/anyfile/core/history.py:157
 msgid "Already compact: no file created"
 msgstr "Già compatto: nessun file creato"
 
-#: src/anyfile/core/history.py:234
+#: src/anyfile/core/history.py:239
 #, python-brace-format
 msgid "anyfile: history not updated: {error}"
 msgstr "anyfile: cronologia non aggiornata: {error}"
 
-#: src/anyfile/core/jobs.py:45 src/anyfile/core/jobs.py:85
+#: src/anyfile/core/jobs.py:46 src/anyfile/core/jobs.py:86
 #: src/anyfile/models/job.py:22
 msgid "Cancelled"
 msgstr "Annullato"
 
-#: src/anyfile/core/jobs.py:91
+#: src/anyfile/core/jobs.py:92
 #, python-brace-format
 msgid "Unexpected error: {error}"
 msgstr "Errore imprevisto: {error}"
@@ -536,23 +543,28 @@ msgid "{name}-resized"
 msgstr "{name}-ridimensionato"
 
 #: src/anyfile/engines/ffmpeg.py:127 src/anyfile/engines/imagemagick.py:44
+#: src/anyfile/engines/qpdf.py:17
 msgid "Rotate"
 msgstr "Ruota"
 
 #: src/anyfile/engines/ffmpeg.py:127 src/anyfile/engines/imagemagick.py:44
+#: src/anyfile/engines/qpdf.py:17
 #, python-brace-format
 msgid "{name}-rotated"
 msgstr "{name}-ruotato"
 
 #: src/anyfile/engines/ffmpeg.py:128 src/anyfile/engines/imagemagick.py:45
+#: src/anyfile/engines/qpdf.py:18 src/anyfile/engines/qpdf.py:21
 msgid "Right"
 msgstr "Destra"
 
 #: src/anyfile/engines/ffmpeg.py:128 src/anyfile/engines/imagemagick.py:45
+#: src/anyfile/engines/qpdf.py:18
 msgid "180°"
 msgstr "180°"
 
 #: src/anyfile/engines/ffmpeg.py:128 src/anyfile/engines/imagemagick.py:45
+#: src/anyfile/engines/qpdf.py:18
 msgid "Left"
 msgstr "Sinistra"
 
@@ -604,19 +616,32 @@ msgstr "Compressione con perdita"
 msgid "“{name}” has no audio track to extract"
 msgstr "«{name}» non contiene una traccia audio da estrarre"
 
-#: src/anyfile/engines/ghostscript.py:11
+#: src/anyfile/engines/ghostscript.py:12
 msgid "Images at 300 dpi, for printing"
 msgstr "Immagini a 300 dpi, per la stampa"
 
-#: src/anyfile/engines/ghostscript.py:12
+#: src/anyfile/engines/ghostscript.py:13
 msgid "Images at 150 dpi, text unchanged"
 msgstr "Immagini a 150 dpi, testo invariato"
 
-#: src/anyfile/engines/ghostscript.py:13
+#: src/anyfile/engines/ghostscript.py:14
 msgid "Images at 72 dpi, for screens"
 msgstr "Immagini a 72 dpi, per lo schermo"
 
-#: src/anyfile/engines/ghostscript.py:25
+#: src/anyfile/engines/ghostscript.py:18 src/anyfile/engines/imagemagick.py:50
+msgid "Black & white"
+msgstr "Bianco e nero"
+
+#: src/anyfile/engines/ghostscript.py:18 src/anyfile/engines/imagemagick.py:50
+#, python-brace-format
+msgid "{name}-bw"
+msgstr "{name}-bn"
+
+#: src/anyfile/engines/ghostscript.py:19
+msgid "For printing in black and white; text stays selectable"
+msgstr "Per stampare in bianco e nero; il testo resta selezionabile"
+
+#: src/anyfile/engines/ghostscript.py:30
 msgid "Mostly shrinks PDFs with many images; the original stays untouched"
 msgstr "Riduce soprattutto i PDF con molte immagini; l'originale resta intatto"
 
@@ -636,15 +661,6 @@ msgstr "Orizzontale"
 #: src/anyfile/engines/imagemagick.py:48
 msgid "Vertical"
 msgstr "Verticale"
-
-#: src/anyfile/engines/imagemagick.py:50
-msgid "Black & white"
-msgstr "Bianco e nero"
-
-#: src/anyfile/engines/imagemagick.py:50
-#, python-brace-format
-msgid "{name}-bw"
-msgstr "{name}-bn"
 
 #: src/anyfile/engines/imagemagick.py:51
 msgid "Remove metadata"
@@ -694,24 +710,92 @@ msgstr "Dividi pagine"
 msgid "One PDF per page"
 msgstr "Un PDF per pagina"
 
-#: src/anyfile/engines/pdf.py:23
+#: src/anyfile/engines/pdf.py:16
+msgid "Merge"
+msgstr "Unisci"
+
+#: src/anyfile/engines/pdf.py:16
+#, python-brace-format
+msgid "{name}-merged"
+msgstr "{name}-unito"
+
+#: src/anyfile/engines/pdf.py:18
+msgid "One PDF, in the order of the files"
+msgstr "Un solo PDF, nell'ordine dei file"
+
+#: src/anyfile/engines/pdf.py:28
 msgid "One image per page (150 dpi)"
 msgstr "Un'immagine per pagina (150 dpi)"
 
-#: src/anyfile/engines/pdf.py:25
+#: src/anyfile/engines/pdf.py:30
 msgid "Text only, approximate layout"
 msgstr "Solo il testo, impaginazione approssimata"
 
-#: src/anyfile/engines/pdf.py:40 src/anyfile/engines/pdf.py:51
+#: src/anyfile/engines/pdf.py:50 src/anyfile/engines/pdf.py:61
 msgid "page"
 msgstr "pagina"
 
-#: src/anyfile/engines/pdf.py:47
+#: src/anyfile/engines/pdf.py:57
 msgid ""
 "The PDF contains no extractable text: it may be a scan (that would need OCR)"
 msgstr ""
 "Il PDF non contiene testo estraibile: potrebbe essere una scansione (serve "
 "l'OCR)"
+
+#: src/anyfile/engines/qpdf.py:19
+msgid "Every page; text stays selectable"
+msgstr "Tutte le pagine; il testo resta selezionabile"
+
+#: src/anyfile/engines/qpdf.py:20
+msgid "Page numbers"
+msgstr "Numeri di pagina"
+
+#: src/anyfile/engines/qpdf.py:20
+#, python-brace-format
+msgid "{name}-numbered"
+msgstr "{name}-numerato"
+
+#: src/anyfile/engines/qpdf.py:21
+msgid "Centre"
+msgstr "Centro"
+
+#: src/anyfile/engines/qpdf.py:22
+msgid "Watermark"
+msgstr "Filigrana"
+
+#: src/anyfile/engines/qpdf.py:22
+#, python-brace-format
+msgid "{name}-watermarked"
+msgstr "{name}-filigrana"
+
+#: src/anyfile/engines/qpdf.py:23
+msgid "DRAFT"
+msgstr "BOZZA"
+
+#: src/anyfile/engines/qpdf.py:23
+msgid "CONFIDENTIAL"
+msgstr "RISERVATO"
+
+#: src/anyfile/engines/qpdf.py:24
+msgid "COPY"
+msgstr "COPIA"
+
+#: src/anyfile/engines/qpdf.py:25
+msgid "Repair"
+msgstr "Ripara"
+
+#: src/anyfile/engines/qpdf.py:25
+#, python-brace-format
+msgid "{name}-repaired"
+msgstr "{name}-riparato"
+
+#: src/anyfile/engines/qpdf.py:26
+msgid "Rebuilds the structure of a damaged PDF"
+msgstr "Ricostruisce la struttura di un PDF danneggiato"
+
+#: src/anyfile/engines/qpdf.py:77
+msgid "Cannot read the pages of the PDF"
+msgstr "Impossibile leggere le pagine del PDF"
 
 #: src/anyfile/models/conversion.py:10
 msgid "Image"
@@ -773,17 +857,17 @@ msgstr "In coda"
 msgid "Running"
 msgstr "In corso"
 
-#: src/anyfile/models/job.py:18 src/anyfile/ui/radial.py:774
+#: src/anyfile/models/job.py:18 src/anyfile/ui/radial.py:779
 msgid "Done"
 msgstr "Fatto"
 
 #: src/anyfile/models/job.py:19 src/anyfile/ui/main_window.py:292
 #: src/anyfile/ui/main_window.py:298 src/anyfile/ui/main_window.py:310
-#: src/anyfile/ui/radial.py:778
+#: src/anyfile/ui/radial.py:783
 msgid "Error"
 msgstr "Errore"
 
-#: src/anyfile/models/job.py:21 src/anyfile/ui/radial.py:776
+#: src/anyfile/models/job.py:21 src/anyfile/ui/radial.py:781
 msgid "Already compact"
 msgstr "Già compatto"
 
@@ -934,24 +1018,24 @@ msgstr "Riprova"
 msgid "Runs again with the same settings (format, quality, folder)"
 msgstr "Riesegue con le stesse impostazioni (formato, qualità, cartella)"
 
-#: src/anyfile/ui/history_window.py:173
+#: src/anyfile/ui/history_window.py:181
 msgid "Files not found"
 msgstr "File non trovati"
 
-#: src/anyfile/ui/history_window.py:174
+#: src/anyfile/ui/history_window.py:182
 msgid "These files no longer exist and were not converted again:"
 msgstr "Questi file non esistono più e non sono stati riconvertiti:"
 
-#: src/anyfile/ui/history_window.py:188
+#: src/anyfile/ui/history_window.py:196
 #, python-brace-format
 msgid "Repeat “{operation}” on other files"
 msgstr "Ripeti «{operation}» su altri file"
 
-#: src/anyfile/ui/history_window.py:211
+#: src/anyfile/ui/history_window.py:219
 msgid "Clear history"
 msgstr "Svuota cronologia"
 
-#: src/anyfile/ui/history_window.py:212
+#: src/anyfile/ui/history_window.py:220
 msgid ""
 "Delete the whole conversion history?\n"
 "Converted files are not touched."
@@ -959,19 +1043,19 @@ msgstr ""
 "Cancellare tutta la cronologia delle conversioni?\n"
 "I file convertiti non vengono toccati."
 
-#: src/anyfile/ui/history_window.py:230
+#: src/anyfile/ui/history_window.py:238
 #, python-brace-format
 msgid "Converting: {n} of {total}…"
 msgstr "Conversione in corso: {n} di {total}…"
 
-#: src/anyfile/ui/history_window.py:236
+#: src/anyfile/ui/history_window.py:244
 #, python-brace-format
 msgid "{n} conversion repeated"
 msgid_plural "{n} conversions repeated"
 msgstr[0] "{n} conversione ripetuta"
 msgstr[1] "{n} conversioni ripetute"
 
-#: src/anyfile/ui/history_window.py:238 src/anyfile/ui/main_window.py:241
+#: src/anyfile/ui/history_window.py:246 src/anyfile/ui/main_window.py:241
 #, python-brace-format
 msgid "{n} with errors"
 msgid_plural "{n} with errors"
@@ -1046,7 +1130,7 @@ msgstr "Qualità:"
 msgid "Show results"
 msgstr "Mostra risultati"
 
-#: src/anyfile/ui/main_window.py:150 src/anyfile/ui/radial.py:767
+#: src/anyfile/ui/main_window.py:150 src/anyfile/ui/radial.py:772
 msgid "Cancel"
 msgstr "Annulla"
 
@@ -1062,7 +1146,7 @@ msgstr "Scegli i file da convertire"
 msgid "Destination folder"
 msgstr "Cartella di destinazione"
 
-#: src/anyfile/ui/main_window.py:236 src/anyfile/ui/radial.py:563
+#: src/anyfile/ui/main_window.py:236 src/anyfile/ui/radial.py:568
 #, python-brace-format
 msgid "{n} file converted"
 msgid_plural "{n} files converted"
@@ -1076,7 +1160,7 @@ msgid_plural "{n} already compact"
 msgstr[0] "{n} già compatto"
 msgstr[1] "{n} già compatti"
 
-#: src/anyfile/ui/main_window.py:244 src/anyfile/ui/radial.py:547
+#: src/anyfile/ui/main_window.py:244 src/anyfile/ui/radial.py:552
 msgid "Conversion complete"
 msgstr "Conversione completata"
 
@@ -1158,156 +1242,156 @@ msgstr "Strumenti"
 msgid "TOOLS"
 msgstr "STRUMENTI"
 
-#: src/anyfile/ui/radial.py:538
+#: src/anyfile/ui/radial.py:543
 #, python-brace-format
 msgid "{failed} of {total} not converted."
 msgstr "{failed} di {total} non convertiti."
 
-#: src/anyfile/ui/radial.py:542
+#: src/anyfile/ui/radial.py:547
 msgid "Conversion failed"
 msgstr "Conversione non riuscita"
 
-#: src/anyfile/ui/radial.py:559
+#: src/anyfile/ui/radial.py:564
 #, python-brace-format
 msgid "{n} file edited"
 msgid_plural "{n} files edited"
 msgstr[0] "{n} file modificato"
 msgstr[1] "{n} file modificati"
 
-#: src/anyfile/ui/radial.py:561
+#: src/anyfile/ui/radial.py:566
 #, python-brace-format
 msgid "{n} file compressed"
 msgid_plural "{n} files compressed"
 msgstr[0] "{n} file compresso"
 msgstr[1] "{n} file compressi"
 
-#: src/anyfile/ui/radial.py:565
+#: src/anyfile/ui/radial.py:570
 #, python-brace-format
 msgid "{n} already compact (original unchanged)"
 msgid_plural "{n} already compact (originals unchanged)"
 msgstr[0] "{n} già compatto (originale invariato)"
 msgstr[1] "{n} già compatti (originali invariati)"
 
-#: src/anyfile/ui/radial.py:748 src/anyfile/ui/radial.py:761
+#: src/anyfile/ui/radial.py:753 src/anyfile/ui/radial.py:766
 msgid "Formats"
 msgstr "Formati"
 
-#: src/anyfile/ui/radial.py:750
+#: src/anyfile/ui/radial.py:755
 msgid "Full"
 msgstr "Finestra"
 
-#: src/anyfile/ui/radial.py:750
+#: src/anyfile/ui/radial.py:755
 msgid "window"
 msgstr "completa"
 
-#: src/anyfile/ui/radial.py:804
+#: src/anyfile/ui/radial.py:809
 msgid "Unknown format"
 msgstr "Formato sconosciuto"
 
-#: src/anyfile/ui/radial.py:807 src/anyfile/ui/radial.py:864
+#: src/anyfile/ui/radial.py:812 src/anyfile/ui/radial.py:869
 #, python-brace-format
 msgid "{n} file"
 msgid_plural "{n} files"
 msgstr[0] "{n} file"
 msgstr[1] "{n} file"
 
-#: src/anyfile/ui/radial.py:809
+#: src/anyfile/ui/radial.py:814
 msgid "different formats"
 msgstr "formati diversi"
 
-#: src/anyfile/ui/radial.py:843
+#: src/anyfile/ui/radial.py:848
 #, python-brace-format
 msgid "Tools: {names}"
 msgstr "Strumenti: {names}"
 
-#: src/anyfile/ui/radial.py:843
+#: src/anyfile/ui/radial.py:848
 msgid "Tab switches wheel"
 msgstr "Tab cambia ruota"
 
-#: src/anyfile/ui/radial.py:847
+#: src/anyfile/ui/radial.py:852
 msgid "Show all the conversions in the full window"
 msgstr "Mostra tutte le conversioni nella finestra completa"
 
-#: src/anyfile/ui/radial.py:859
+#: src/anyfile/ui/radial.py:864
 #, python-brace-format
 msgid "{format} for {n} of {total} files"
 msgstr "{format} per {n} file su {total}"
 
-#: src/anyfile/ui/radial.py:861
+#: src/anyfile/ui/radial.py:866
 msgid "the others cannot be converted to this format"
 msgstr "gli altri non si convertono in questo formato"
 
-#: src/anyfile/ui/radial.py:873
+#: src/anyfile/ui/radial.py:878
 #, python-brace-format
 msgid "Move outwards (or press {keys}) to change quality"
 msgstr "Scorri verso l'esterno (o premi {keys}) per cambiare qualità"
 
-#: src/anyfile/ui/radial.py:877
+#: src/anyfile/ui/radial.py:882
 msgid "No file recognized. Click the centre for details."
 msgstr "Nessun file riconosciuto. Clic al centro per i dettagli."
 
-#: src/anyfile/ui/radial.py:878
+#: src/anyfile/ui/radial.py:883
 msgid "No conversion available for these files."
 msgstr "Nessuna conversione disponibile per questi file."
 
-#: src/anyfile/ui/radial.py:880
+#: src/anyfile/ui/radial.py:885
 msgid "Click a tool · Esc or the centre: back to the formats"
 msgstr "Clic su uno strumento · Esc o il centro: torna ai formati"
 
-#: src/anyfile/ui/radial.py:881
+#: src/anyfile/ui/radial.py:886
 msgid "Click a format to convert · Esc to close"
 msgstr "Clic su un formato per convertire · Esc per chiudere"
 
-#: src/anyfile/ui/radial.py:883
+#: src/anyfile/ui/radial.py:888
 #, python-brace-format
 msgid "{n} unrecognized file will be ignored"
 msgid_plural "{n} unrecognized files will be ignored"
 msgstr[0] "{n} file non riconosciuto sarà ignorato"
 msgstr[1] "{n} file non riconosciuti saranno ignorati"
 
-#: src/anyfile/ui/radial.py:887
+#: src/anyfile/ui/radial.py:892
 msgid "Esc: continue in the background · Centre: cancel"
 msgstr "Esc: continua in background · Centro: annulla"
 
-#: src/anyfile/ui/radial.py:890
+#: src/anyfile/ui/radial.py:895
 msgid "Click the centre for details"
 msgstr "Clic al centro per i dettagli"
 
-#: src/anyfile/ui/radial.py:903
+#: src/anyfile/ui/radial.py:908
 #, python-brace-format
 msgid "{n} file does not support it"
 msgid_plural "{n} files do not support it"
 msgstr[0] "{n} file non la supporta"
 msgstr[1] "{n} file non la supportano"
 
-#: src/anyfile/ui/radial.py:905 src/anyfile/ui/radial.py:928
+#: src/anyfile/ui/radial.py:910 src/anyfile/ui/radial.py:933
 msgid "The originals stay untouched"
 msgstr "Gli originali restano intatti"
 
-#: src/anyfile/ui/radial.py:906 src/anyfile/ui/radial.py:929
+#: src/anyfile/ui/radial.py:911 src/anyfile/ui/radial.py:934
 msgid "The original stays untouched"
 msgstr "L'originale resta intatto"
 
-#: src/anyfile/ui/radial.py:908
+#: src/anyfile/ui/radial.py:913
 #, python-brace-format
 msgid "move outwards to choose: {options}"
 msgstr "sposta verso l'esterno per scegliere: {options}"
 
-#: src/anyfile/ui/radial.py:920
+#: src/anyfile/ui/radial.py:925
 #, python-brace-format
 msgid "Compress {n} file ({formats})"
 msgid_plural "Compress {n} files ({formats})"
 msgstr[0] "Comprimi {n} file ({formats})"
 msgstr[1] "Comprimi {n} file ({formats})"
 
-#: src/anyfile/ui/radial.py:925
+#: src/anyfile/ui/radial.py:930
 #, python-brace-format
 msgid "{n} cannot be compressed without changing format"
 msgid_plural "{n} cannot be compressed without changing format"
 msgstr[0] "{n} non comprimibile senza cambiare formato"
 msgstr[1] "{n} non comprimibili senza cambiare formato"
 
-#: src/anyfile/ui/radial.py:931
+#: src/anyfile/ui/radial.py:936
 msgid "move outwards for “Small”"
 msgstr "scorri verso l'esterno per «Leggera»"
 

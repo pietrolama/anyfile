@@ -11,6 +11,11 @@ RENDER_DPI = "150"  # also written in the “One image per page” note
 
 SPLIT = Tool("split", N_("Split pages"), N_("{name}-pages"), ("pdf",), "poppler",
              multi_output=True, notes=N_("One PDF per page"))
+# Images are turned into PDF pages first (by the usual conversion), so scans and photos
+# can be merged with PDFs or among themselves.
+MERGE = Tool("merge", N_("Merge"), N_("{name}-merged"),
+             ("pdf", "jpg", "png", "webp", "tiff", "bmp", "gif", "heic", "avif"), "poppler",
+             output="pdf", multi_input=True, notes=N_("One PDF, in the order of the files"))
 
 
 class PopplerEngine(Engine):
@@ -28,11 +33,16 @@ class PopplerEngine(Engine):
         ]
 
     def declared_tools(self) -> list[Tool]:
-        return [SPLIT]
+        return [SPLIT, MERGE]
 
     def probe_tools(self) -> list[Tool]:
-        # pdfseparate comes with pdftotext, but some builds leave it out.
-        return [SPLIT] if self.which("pdfseparate") else []
+        # pdfseparate and pdfunite come with pdftotext, but some builds leave them out.
+        return [t for t, cmd in ((SPLIT, "pdfseparate"), (MERGE, "pdfunite")) if self.which(cmd)]
+
+    def combine(self, tool: Tool, option: ToolOption | None, sources: list[Path], dst: Path,
+                ctx: ConversionContext) -> None:
+        ctx.progress(None)
+        ctx.runner.run([self.which("pdfunite"), *sources, dst], tool="pdfunite")
 
     def apply(self, tool: Tool, option: ToolOption | None, src: Path, dst: Path,
               ctx: ConversionContext) -> None:

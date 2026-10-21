@@ -31,9 +31,10 @@ class JobQueue:
 
     def submit(self, source: Path | str, target: str, *, output_dir: Path | None = None,
                overwrite: bool = False, quality: Quality = Quality.BALANCED,
-               tool: str | None = None, option: str | None = None) -> Job:
+               tool: str | None = None, option: str | None = None,
+               others: tuple[Path, ...] = ()) -> Job:
         job = Job(Path(source), target, output_dir=output_dir, overwrite=overwrite, quality=quality,
-                  tool=tool, option=option)
+                  tool=tool, option=option, others=tuple(Path(p) for p in others))
         self.jobs.append(job)
         self._notify(job)
         self._queue.put(job)

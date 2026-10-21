@@ -37,6 +37,8 @@ class Job:
     # target is then the format of the result.
     tool: str | None = None
     option: str | None = None
+    # The other inputs of a tool that combines files (source is the first one).
+    others: tuple[Path, ...] = ()
     id: int = field(default_factory=lambda: next(_ids))
     status: JobStatus = JobStatus.QUEUED
     # 0..1, or None when the engine does not report progress.
