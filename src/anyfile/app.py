@@ -47,6 +47,7 @@ def run(argv: list[str]) -> int:
     parser.add_argument("--radial", action="store_true",
                         help=_("show the radial menu under the pointer instead of the window"))
     parser.add_argument("--history", action="store_true", help=_("open the conversion history"))
+    parser.add_argument("--pages", action="store_true", help=_("organize the pages of the PDF files"))
     parser.add_argument("files", nargs="*")
     args, qt_args = parser.parse_known_args(argv)
 
@@ -72,7 +73,7 @@ def run(argv: list[str]) -> int:
     registry = Registry()
     history = _open_history()
     paths = [_to_path(f) for f in args.files]
-    windows: list[MainWindow] = []
+    windows: list = []
 
     def open_window(files: list[Path]) -> None:
         app.setQuitOnLastWindowClosed(True)
@@ -80,6 +81,14 @@ def run(argv: list[str]) -> int:
         window.add_files(files)
         window.show()
         windows.append(window)
+
+    def open_pages(files: list[Path]) -> None:
+        from anyfile.ui.pages_window import open_pages_window
+
+        app.setQuitOnLastWindowClosed(True)
+        for path in files:
+            if window := open_pages_window(registry, path, history):
+                windows.append(window)
 
     if args.radial and paths:
         from anyfile.ui.radial import RadialMenu
@@ -89,8 +98,13 @@ def run(argv: list[str]) -> int:
         app.setQuitOnLastWindowClosed(False)
         menu = RadialMenu(registry, paths, history)
         menu.open_window.connect(open_window)
+        menu.open_pages.connect(open_pages)
         menu.finished.connect(lambda: None if windows else app.quit())
         menu.popup()
+    elif args.pages and paths:
+        open_pages(paths)
+        if not windows:
+            return 0  # password not given
     elif args.history and history is not None:
         from anyfile.ui.history_window import HistoryWindow
 

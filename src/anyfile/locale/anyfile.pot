@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: anyfile\n"
 "Report-Msgid-Bugs-To: https://github.com/pietrolama/anyfile/issues\n"
-"POT-Creation-Date: 2026-10-22 14:22+0200\n"
+"POT-Creation-Date: 2026-10-22 14:35+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -35,7 +35,11 @@ msgstr ""
 msgid "open the conversion history"
 msgstr ""
 
-#: src/anyfile/app.py:57
+#: src/anyfile/app.py:50
+msgid "organize the pages of the PDF files"
+msgstr ""
+
+#: src/anyfile/app.py:58
 msgid ""
 "anyfile: PySide6 is not installed, so the graphical interface is not "
 "available.\n"
@@ -142,7 +146,7 @@ msgstr ""
 msgid "The history is empty."
 msgstr ""
 
-#: src/anyfile/cli.py:119 src/anyfile/ui/history_window.py:110
+#: src/anyfile/cli.py:119 src/anyfile/ui/history_window.py:114
 msgid "The history is turned off."
 msgstr ""
 
@@ -195,8 +199,8 @@ msgid "Warning: the extension does not match the content"
 msgstr ""
 
 #: src/anyfile/cli.py:180 src/anyfile/core/history.py:137
-#: src/anyfile/ui/conversion_view.py:66 src/anyfile/ui/radial.py:705
-#: src/anyfile/ui/radial.py:916
+#: src/anyfile/ui/conversion_view.py:82 src/anyfile/ui/radial.py:712
+#: src/anyfile/ui/radial.py:923
 #, python-brace-format
 msgid "via {formats}"
 msgstr ""
@@ -301,7 +305,7 @@ msgid "Cannot read the file: {error}"
 msgstr ""
 
 #: src/anyfile/core/detector.py:192 src/anyfile/core/planner.py:38
-#: src/anyfile/ui/conversion_view.py:164
+#: src/anyfile/ui/conversion_view.py:214
 msgid "Unrecognized format"
 msgstr ""
 
@@ -374,15 +378,20 @@ msgstr ""
 
 #: src/anyfile/core/executor.py:235
 #, python-brace-format
+msgid "{tool}: choose the pages first"
+msgstr ""
+
+#: src/anyfile/core/executor.py:237
+#, python-brace-format
 msgid "Unknown option “{option}” for {tool}: use {choices}"
 msgstr ""
 
-#: src/anyfile/core/executor.py:259
+#: src/anyfile/core/executor.py:261
 #, python-brace-format
 msgid "Cannot create the folder {folder}: {error}"
 msgstr ""
 
-#: src/anyfile/core/executor.py:262
+#: src/anyfile/core/executor.py:264
 #, python-brace-format
 msgid "Cannot write to {folder}: choose another destination folder"
 msgstr ""
@@ -409,7 +418,7 @@ msgstr ""
 msgid "%Y-%m-%d %H:%M"
 msgstr ""
 
-#: src/anyfile/core/history.py:131 src/anyfile/ui/radial.py:978
+#: src/anyfile/core/history.py:131 src/anyfile/ui/radial.py:985
 #, python-brace-format
 msgid "Compress {format}"
 msgstr ""
@@ -506,7 +515,7 @@ msgstr ""
 msgid "The produced file has no readable audio track"
 msgstr ""
 
-#: src/anyfile/engines/base.py:55 src/anyfile/engines/qpdf.py:123
+#: src/anyfile/engines/base.py:55 src/anyfile/engines/qpdf.py:159
 #, python-brace-format
 msgid "Cannot start {tool}: {error}"
 msgstr ""
@@ -1010,19 +1019,44 @@ msgstr ""
 msgid "Removes the password and the restrictions"
 msgstr ""
 
-#: src/anyfile/engines/qpdf.py:85
+#: src/anyfile/engines/qpdf.py:36
+msgid "Organize pages"
+msgstr ""
+
+#: src/anyfile/engines/qpdf.py:36
+#, python-brace-format
+msgid "{name}-organized"
+msgstr ""
+
+#: src/anyfile/engines/qpdf.py:37
+msgid "Reorder, rotate, duplicate or remove pages"
+msgstr ""
+
+#: src/anyfile/engines/qpdf.py:52
+#, python-brace-format
+msgid "“{item}” is not a page: use numbers like 3,1,2+90"
+msgstr ""
+
+#: src/anyfile/engines/qpdf.py:108
 msgid "Choose a password to protect the PDF"
 msgstr ""
 
-#: src/anyfile/engines/qpdf.py:87
+#: src/anyfile/engines/qpdf.py:110
 msgid "The password cannot contain line breaks"
 msgstr ""
 
-#: src/anyfile/engines/qpdf.py:114
+#: src/anyfile/engines/qpdf.py:128
+#, python-brace-format
+msgid "The PDF has no page {pages}"
+msgid_plural "The PDF has no pages {pages}"
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/anyfile/engines/qpdf.py:150
 msgid "Wrong password"
 msgstr ""
 
-#: src/anyfile/engines/qpdf.py:135
+#: src/anyfile/engines/qpdf.py:171
 msgid "Cannot read the pages of the PDF"
 msgstr ""
 
@@ -1086,356 +1120,458 @@ msgstr ""
 msgid "Running"
 msgstr ""
 
-#: src/anyfile/models/job.py:18 src/anyfile/ui/radial.py:833
+#: src/anyfile/models/job.py:18 src/anyfile/ui/radial.py:840
 msgid "Done"
 msgstr ""
 
-#: src/anyfile/models/job.py:19 src/anyfile/ui/main_window.py:298
-#: src/anyfile/ui/main_window.py:304 src/anyfile/ui/main_window.py:316
-#: src/anyfile/ui/radial.py:837
+#: src/anyfile/models/job.py:19 src/anyfile/ui/main_window.py:347
+#: src/anyfile/ui/main_window.py:353 src/anyfile/ui/main_window.py:365
+#: src/anyfile/ui/radial.py:844
 msgid "Error"
 msgstr ""
 
-#: src/anyfile/models/job.py:21 src/anyfile/ui/radial.py:835
+#: src/anyfile/models/job.py:21 src/anyfile/ui/radial.py:842
 msgid "Already compact"
 msgstr ""
 
-#: src/anyfile/ui/conversion_view.py:24
-msgid "Choose format…"
+#: src/anyfile/ui/conversion_view.py:25
+msgid "Choose…"
 msgstr ""
 
-#: src/anyfile/ui/conversion_view.py:63
+#: src/anyfile/ui/conversion_view.py:79
 msgid "Compress  (same format)"
 msgstr ""
 
-#: src/anyfile/ui/conversion_view.py:86
-msgid "Convert all to:"
+#: src/anyfile/ui/conversion_view.py:90 src/anyfile/ui/radial.py:149
+msgid "Tools"
 msgstr ""
 
-#: src/anyfile/ui/conversion_view.py:91 src/anyfile/ui/history_window.py:53
+#: src/anyfile/ui/conversion_view.py:121
+msgid "For all files:"
+msgstr ""
+
+#: src/anyfile/ui/conversion_view.py:126 src/anyfile/ui/history_window.py:57
 msgid "File"
 msgstr ""
 
-#: src/anyfile/ui/conversion_view.py:91
+#: src/anyfile/ui/conversion_view.py:126
 msgid "Detected format"
 msgstr ""
 
-#: src/anyfile/ui/conversion_view.py:91
-msgid "Convert to"
+#: src/anyfile/ui/conversion_view.py:126
+msgid "Convert or edit"
 msgstr ""
 
-#: src/anyfile/ui/conversion_view.py:91 src/anyfile/ui/settings.py:71
+#: src/anyfile/ui/conversion_view.py:127 src/anyfile/ui/settings.py:71
 msgid "Status"
 msgstr ""
 
-#: src/anyfile/ui/conversion_view.py:117
+#: src/anyfile/ui/conversion_view.py:153
 #, python-brace-format
 msgid "{name}: folders are not supported"
 msgstr ""
 
-#: src/anyfile/ui/conversion_view.py:144
+#: src/anyfile/ui/conversion_view.py:181
 msgid "Unknown"
 msgstr ""
 
-#: src/anyfile/ui/conversion_view.py:147
+#: src/anyfile/ui/conversion_view.py:184
 msgid ""
 "The file extension does not match the content: ANYFILE uses the format found "
 "in the content."
 msgstr ""
 
-#: src/anyfile/ui/conversion_view.py:168
+#: src/anyfile/ui/conversion_view.py:218
 #, python-brace-format
 msgid "No engine installed for {format}: {engine} is needed"
 msgstr ""
 
-#: src/anyfile/ui/conversion_view.py:170
+#: src/anyfile/ui/conversion_view.py:220
 #, python-brace-format
 msgid "No conversion available for {format}"
 msgstr ""
 
-#: src/anyfile/ui/conversion_view.py:240
+#: src/anyfile/ui/conversion_view.py:299
 msgid "Double-click to show it in its folder"
 msgstr ""
 
-#: src/anyfile/ui/conversion_view.py:242
+#: src/anyfile/ui/conversion_view.py:301
 msgid "Already compact: the original stays"
 msgstr ""
 
-#: src/anyfile/ui/history_window.py:35
+#: src/anyfile/ui/history_window.py:39
 msgid "History — ANYFILE"
 msgstr ""
 
-#: src/anyfile/ui/history_window.py:39
+#: src/anyfile/ui/history_window.py:43
 msgid "Search by file name…"
 msgstr ""
 
-#: src/anyfile/ui/history_window.py:41
+#: src/anyfile/ui/history_window.py:45
 msgid "Errors only"
 msgstr ""
 
-#: src/anyfile/ui/history_window.py:43
+#: src/anyfile/ui/history_window.py:47
 msgid "Record new conversions"
 msgstr ""
 
-#: src/anyfile/ui/history_window.py:53
+#: src/anyfile/ui/history_window.py:57
 msgid "When"
 msgstr ""
 
-#: src/anyfile/ui/history_window.py:53
+#: src/anyfile/ui/history_window.py:57
 msgid "Operation"
 msgstr ""
 
-#: src/anyfile/ui/history_window.py:53
+#: src/anyfile/ui/history_window.py:57
 msgid "Result"
 msgstr ""
 
-#: src/anyfile/ui/history_window.py:71
+#: src/anyfile/ui/history_window.py:75 src/anyfile/ui/pages_window.py:144
 msgid "Show result"
 msgstr ""
 
-#: src/anyfile/ui/history_window.py:73
+#: src/anyfile/ui/history_window.py:77
 msgid "Repeat on other files…"
 msgstr ""
 
-#: src/anyfile/ui/history_window.py:75 src/anyfile/ui/main_window.py:79
-#: src/anyfile/ui/main_window.py:290
+#: src/anyfile/ui/history_window.py:79 src/anyfile/ui/main_window.py:83
+#: src/anyfile/ui/main_window.py:339 src/anyfile/ui/pages_window.py:179
 msgid "Remove"
 msgstr ""
 
-#: src/anyfile/ui/history_window.py:77
+#: src/anyfile/ui/history_window.py:81
 msgid "Clear history…"
 msgstr ""
 
-#: src/anyfile/ui/history_window.py:79 src/anyfile/ui/history_window.py:151
+#: src/anyfile/ui/history_window.py:83 src/anyfile/ui/history_window.py:155
 msgid "Repeat"
 msgstr ""
 
-#: src/anyfile/ui/history_window.py:112
+#: src/anyfile/ui/history_window.py:116
 msgid "No conversion matches the filters."
 msgstr ""
 
-#: src/anyfile/ui/history_window.py:114
+#: src/anyfile/ui/history_window.py:118
 msgid ""
 "No conversions yet.\n"
 "Conversions made with the radial menu, the window or the command line will "
 "appear here."
 msgstr ""
 
-#: src/anyfile/ui/history_window.py:122
+#: src/anyfile/ui/history_window.py:126
 msgid "%Y-%m-%d %H:%M:%S"
 msgstr ""
 
-#: src/anyfile/ui/history_window.py:127
+#: src/anyfile/ui/history_window.py:131
 msgid "The original file no longer exists"
 msgstr ""
 
-#: src/anyfile/ui/history_window.py:132
+#: src/anyfile/ui/history_window.py:136
 #, python-brace-format
 msgid "Result: {path}"
 msgstr ""
 
-#: src/anyfile/ui/history_window.py:151
+#: src/anyfile/ui/history_window.py:155
 msgid "Retry"
 msgstr ""
 
-#: src/anyfile/ui/history_window.py:152
+#: src/anyfile/ui/history_window.py:156
 msgid "Runs again with the same settings (format, quality, folder)"
 msgstr ""
 
-#: src/anyfile/ui/history_window.py:181
+#: src/anyfile/ui/history_window.py:198
 msgid "Files not found"
 msgstr ""
 
-#: src/anyfile/ui/history_window.py:182
+#: src/anyfile/ui/history_window.py:199
 msgid "These files no longer exist and were not converted again:"
 msgstr ""
 
-#: src/anyfile/ui/history_window.py:196
+#: src/anyfile/ui/history_window.py:213
 #, python-brace-format
 msgid "Repeat “{operation}” on other files"
 msgstr ""
 
-#: src/anyfile/ui/history_window.py:219
+#: src/anyfile/ui/history_window.py:236
 msgid "Clear history"
 msgstr ""
 
-#: src/anyfile/ui/history_window.py:220
+#: src/anyfile/ui/history_window.py:237
 msgid ""
 "Delete the whole conversion history?\n"
 "Converted files are not touched."
 msgstr ""
 
-#: src/anyfile/ui/history_window.py:238
+#: src/anyfile/ui/history_window.py:255
 #, python-brace-format
 msgid "Converting: {n} of {total}…"
 msgstr ""
 
-#: src/anyfile/ui/history_window.py:244
+#: src/anyfile/ui/history_window.py:261
 #, python-brace-format
 msgid "{n} conversion repeated"
 msgid_plural "{n} conversions repeated"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/anyfile/ui/history_window.py:246 src/anyfile/ui/main_window.py:247
+#: src/anyfile/ui/history_window.py:263 src/anyfile/ui/main_window.py:296
 #, python-brace-format
 msgid "{n} with errors"
 msgid_plural "{n} with errors"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/anyfile/ui/main_window.py:51
+#: src/anyfile/ui/main_window.py:55
 msgid ""
 "Drop the files to convert here\n"
 "or use “Add files…”"
 msgstr ""
 
-#: src/anyfile/ui/main_window.py:71
+#: src/anyfile/ui/main_window.py:75
 msgid "Main"
 msgstr ""
 
-#: src/anyfile/ui/main_window.py:76
+#: src/anyfile/ui/main_window.py:80
 msgid "Add files…"
 msgstr ""
 
-#: src/anyfile/ui/main_window.py:82
+#: src/anyfile/ui/main_window.py:86
 msgid "Clear list"
 msgstr ""
 
-#: src/anyfile/ui/main_window.py:84
+#: src/anyfile/ui/main_window.py:88
 msgid "Engines…"
 msgstr ""
 
-#: src/anyfile/ui/main_window.py:86
+#: src/anyfile/ui/main_window.py:90
 msgid "History"
 msgstr ""
 
-#: src/anyfile/ui/main_window.py:99
+#: src/anyfile/ui/main_window.py:103
 msgid "Integrate with Dolphin"
 msgstr ""
 
-#: src/anyfile/ui/main_window.py:100
+#: src/anyfile/ui/main_window.py:104
 msgid "Add “Convert with ANYFILE” to Dolphin's context menu"
 msgstr ""
 
-#: src/anyfile/ui/main_window.py:105
+#: src/anyfile/ui/main_window.py:109
 msgid "Save next to the original file"
 msgstr ""
 
-#: src/anyfile/ui/main_window.py:106
+#: src/anyfile/ui/main_window.py:110
 msgid "Save in:"
 msgstr ""
 
-#: src/anyfile/ui/main_window.py:111
+#: src/anyfile/ui/main_window.py:115
 msgid "Browse…"
 msgstr ""
 
-#: src/anyfile/ui/main_window.py:113
+#: src/anyfile/ui/main_window.py:117
 msgid "Overwrite existing files (otherwise: “name (1).ext”)"
 msgstr ""
 
-#: src/anyfile/ui/main_window.py:118
+#: src/anyfile/ui/main_window.py:122
 msgid ""
 "Applies to lossy formats (JPEG, WebP, MP3, Opus, video, GIF).\n"
 "For PNG, WAV, FLAC and documents it changes nothing."
 msgstr ""
 
-#: src/anyfile/ui/main_window.py:140
+#: src/anyfile/ui/main_window.py:144
 msgid "Quality:"
 msgstr ""
 
-#: src/anyfile/ui/main_window.py:150
+#: src/anyfile/ui/main_window.py:154
 msgid "Show results"
 msgstr ""
 
-#: src/anyfile/ui/main_window.py:152 src/anyfile/ui/radial.py:826
+#: src/anyfile/ui/main_window.py:156 src/anyfile/ui/radial.py:833
 msgid "Cancel"
 msgstr ""
 
-#: src/anyfile/ui/main_window.py:154
+#: src/anyfile/ui/main_window.py:158
 msgid "Convert"
 msgstr ""
 
-#: src/anyfile/ui/main_window.py:175
+#: src/anyfile/ui/main_window.py:179
 msgid "Choose the files to convert"
 msgstr ""
 
-#: src/anyfile/ui/main_window.py:191
+#: src/anyfile/ui/main_window.py:195
 msgid "Destination folder"
 msgstr ""
 
-#: src/anyfile/ui/main_window.py:242 src/anyfile/ui/radial.py:613
+#: src/anyfile/ui/main_window.py:265 src/anyfile/ui/radial.py:559
+#, python-brace-format
+msgid "Files to add after “{name}”"
+msgstr ""
+
+#: src/anyfile/ui/main_window.py:266 src/anyfile/ui/radial.py:560
+#, python-brace-format
+msgid "Supported files ({patterns})"
+msgstr ""
+
+#: src/anyfile/ui/main_window.py:291 src/anyfile/ui/radial.py:620
 #, python-brace-format
 msgid "{n} file converted"
 msgid_plural "{n} files converted"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/anyfile/ui/main_window.py:244
+#: src/anyfile/ui/main_window.py:293
 #, python-brace-format
 msgid "{n} already compact"
 msgid_plural "{n} already compact"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/anyfile/ui/main_window.py:250 src/anyfile/ui/radial.py:597
+#: src/anyfile/ui/main_window.py:299 src/anyfile/ui/radial.py:604
 msgid "Conversion complete"
 msgstr ""
 
-#: src/anyfile/ui/main_window.py:250
+#: src/anyfile/ui/main_window.py:299
 msgid "Conversion finished with errors"
 msgstr ""
 
-#: src/anyfile/ui/main_window.py:287 src/anyfile/ui/main_window.py:310
+#: src/anyfile/ui/main_window.py:336 src/anyfile/ui/main_window.py:359
 msgid "Dolphin integration"
 msgstr ""
 
-#: src/anyfile/ui/main_window.py:288
+#: src/anyfile/ui/main_window.py:337
 msgid "“Convert with ANYFILE” is currently installed in Dolphin."
 msgstr ""
 
-#: src/anyfile/ui/main_window.py:289
+#: src/anyfile/ui/main_window.py:338
 msgid "Reinstall"
 msgstr ""
 
-#: src/anyfile/ui/main_window.py:296
+#: src/anyfile/ui/main_window.py:345
 msgid "Dolphin integration updated."
 msgstr ""
 
-#: src/anyfile/ui/main_window.py:302
+#: src/anyfile/ui/main_window.py:351
 msgid "Dolphin integration removed."
 msgstr ""
 
-#: src/anyfile/ui/main_window.py:311
+#: src/anyfile/ui/main_window.py:360
 msgid ""
 "Added “Convert with ANYFILE” to Dolphin's context menu.\n"
 "Right-click any file in Dolphin to open the radial menu."
 msgstr ""
 
-#: src/anyfile/ui/main_window.py:314
+#: src/anyfile/ui/main_window.py:363
 msgid "Dolphin integration installed."
 msgstr ""
 
-#: src/anyfile/ui/main_window.py:328
+#: src/anyfile/ui/main_window.py:377
 #, python-brace-format
 msgid "Missing engines: {engines}"
 msgstr ""
 
-#: src/anyfile/ui/main_window.py:330
+#: src/anyfile/ui/main_window.py:379
 #, python-brace-format
 msgid "{n} engines available"
 msgstr ""
 
-#: src/anyfile/ui/main_window.py:331
+#: src/anyfile/ui/main_window.py:380
 msgid "details"
 msgstr ""
 
-#: src/anyfile/ui/main_window.py:336
+#: src/anyfile/ui/main_window.py:385
 msgid "Conversions in progress"
 msgstr ""
 
-#: src/anyfile/ui/main_window.py:337
+#: src/anyfile/ui/main_window.py:386
 msgid "Some conversions are still running. Cancel them and quit?"
+msgstr ""
+
+#: src/anyfile/ui/pages_window.py:119
+#, python-brace-format
+msgid "Organize pages — {name}"
+msgstr ""
+
+#: src/anyfile/ui/pages_window.py:138
+msgid "Save selected pages"
+msgstr ""
+
+#: src/anyfile/ui/pages_window.py:139
+msgid "A new PDF with only the selected pages, in this order"
+msgstr ""
+
+#: src/anyfile/ui/pages_window.py:141
+msgid "Save"
+msgstr ""
+
+#: src/anyfile/ui/pages_window.py:170
+msgid "Pages"
+msgstr ""
+
+#: src/anyfile/ui/pages_window.py:174
+msgid "Rotate left"
+msgstr ""
+
+#: src/anyfile/ui/pages_window.py:175
+msgid "Rotate right"
+msgstr ""
+
+#: src/anyfile/ui/pages_window.py:176
+msgid "Move earlier"
+msgstr ""
+
+#: src/anyfile/ui/pages_window.py:177
+msgid "Move later"
+msgstr ""
+
+#: src/anyfile/ui/pages_window.py:178
+msgid "Duplicate"
+msgstr ""
+
+#: src/anyfile/ui/pages_window.py:180
+msgid "Start over"
+msgstr ""
+
+#: src/anyfile/ui/pages_window.py:181
+msgid "Back to the pages as they are in the file"
+msgstr ""
+
+#: src/anyfile/ui/pages_window.py:236
+#, python-brace-format
+msgid "Page {n}"
+msgstr ""
+
+#: src/anyfile/ui/pages_window.py:297
+#, python-brace-format
+msgid "{n} page"
+msgid_plural "{n} pages"
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/anyfile/ui/pages_window.py:299
+#, python-brace-format
+msgid "{n} removed"
+msgid_plural "{n} removed"
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/anyfile/ui/pages_window.py:301
+#, python-brace-format
+msgid "{n} rotated"
+msgid_plural "{n} rotated"
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/anyfile/ui/pages_window.py:303
+msgid "new order"
+msgstr ""
+
+#: src/anyfile/ui/pages_window.py:328
+msgid "Saving…"
+msgstr ""
+
+#: src/anyfile/ui/pages_window.py:337
+#, python-brace-format
+msgid "Saved as “{name}”"
 msgstr ""
 
 #: src/anyfile/ui/password_dialog.py:42
@@ -1502,177 +1638,163 @@ msgid "More formats"
 msgstr ""
 
 #: src/anyfile/ui/radial.py:149
-msgid "Tools"
-msgstr ""
-
-#: src/anyfile/ui/radial.py:149
 msgid "TOOLS"
 msgstr ""
 
-#: src/anyfile/ui/radial.py:552
-#, python-brace-format
-msgid "Files to add after “{name}”"
-msgstr ""
-
-#: src/anyfile/ui/radial.py:553
-#, python-brace-format
-msgid "Supported files ({patterns})"
-msgstr ""
-
-#: src/anyfile/ui/radial.py:588
+#: src/anyfile/ui/radial.py:595
 #, python-brace-format
 msgid "{failed} of {total} not converted."
 msgstr ""
 
-#: src/anyfile/ui/radial.py:592
+#: src/anyfile/ui/radial.py:599
 msgid "Conversion failed"
 msgstr ""
 
-#: src/anyfile/ui/radial.py:609
+#: src/anyfile/ui/radial.py:616
 #, python-brace-format
 msgid "{n} file edited"
 msgid_plural "{n} files edited"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/anyfile/ui/radial.py:611
+#: src/anyfile/ui/radial.py:618
 #, python-brace-format
 msgid "{n} file compressed"
 msgid_plural "{n} files compressed"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/anyfile/ui/radial.py:615
+#: src/anyfile/ui/radial.py:622
 #, python-brace-format
 msgid "{n} already compact (original unchanged)"
 msgid_plural "{n} already compact (originals unchanged)"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/anyfile/ui/radial.py:807 src/anyfile/ui/radial.py:820
+#: src/anyfile/ui/radial.py:814 src/anyfile/ui/radial.py:827
 msgid "Formats"
 msgstr ""
 
-#: src/anyfile/ui/radial.py:809
+#: src/anyfile/ui/radial.py:816
 msgid "Full"
 msgstr ""
 
-#: src/anyfile/ui/radial.py:809
+#: src/anyfile/ui/radial.py:816
 msgid "window"
 msgstr ""
 
-#: src/anyfile/ui/radial.py:863
+#: src/anyfile/ui/radial.py:870
 msgid "Unknown format"
 msgstr ""
 
-#: src/anyfile/ui/radial.py:866 src/anyfile/ui/radial.py:923
+#: src/anyfile/ui/radial.py:873 src/anyfile/ui/radial.py:930
 #, python-brace-format
 msgid "{n} file"
 msgid_plural "{n} files"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/anyfile/ui/radial.py:868
+#: src/anyfile/ui/radial.py:875
 msgid "different formats"
 msgstr ""
 
-#: src/anyfile/ui/radial.py:902
+#: src/anyfile/ui/radial.py:909
 #, python-brace-format
 msgid "Tools: {names}"
 msgstr ""
 
-#: src/anyfile/ui/radial.py:902
+#: src/anyfile/ui/radial.py:909
 msgid "Tab switches wheel"
 msgstr ""
 
-#: src/anyfile/ui/radial.py:906
+#: src/anyfile/ui/radial.py:913
 msgid "Show all the conversions in the full window"
 msgstr ""
 
-#: src/anyfile/ui/radial.py:918
+#: src/anyfile/ui/radial.py:925
 #, python-brace-format
 msgid "{format} for {n} of {total} files"
 msgstr ""
 
-#: src/anyfile/ui/radial.py:920
+#: src/anyfile/ui/radial.py:927
 msgid "the others cannot be converted to this format"
 msgstr ""
 
-#: src/anyfile/ui/radial.py:932
+#: src/anyfile/ui/radial.py:939
 #, python-brace-format
 msgid "Move outwards (or press {keys}) to change quality"
 msgstr ""
 
-#: src/anyfile/ui/radial.py:936
+#: src/anyfile/ui/radial.py:943
 msgid "No file recognized. Click the centre for details."
 msgstr ""
 
-#: src/anyfile/ui/radial.py:937
+#: src/anyfile/ui/radial.py:944
 msgid "No conversion available for these files."
 msgstr ""
 
-#: src/anyfile/ui/radial.py:939
+#: src/anyfile/ui/radial.py:946
 msgid "Click a tool · Esc or the centre: back to the formats"
 msgstr ""
 
-#: src/anyfile/ui/radial.py:940
+#: src/anyfile/ui/radial.py:947
 msgid "Click a format to convert · Esc to close"
 msgstr ""
 
-#: src/anyfile/ui/radial.py:942
+#: src/anyfile/ui/radial.py:949
 #, python-brace-format
 msgid "{n} unrecognized file will be ignored"
 msgid_plural "{n} unrecognized files will be ignored"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/anyfile/ui/radial.py:946
+#: src/anyfile/ui/radial.py:953
 msgid "Esc: continue in the background · Centre: cancel"
 msgstr ""
 
-#: src/anyfile/ui/radial.py:949
+#: src/anyfile/ui/radial.py:956
 msgid "Click the centre for details"
 msgstr ""
 
-#: src/anyfile/ui/radial.py:962
+#: src/anyfile/ui/radial.py:969
 #, python-brace-format
 msgid "{n} file does not support it"
 msgid_plural "{n} files do not support it"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/anyfile/ui/radial.py:964 src/anyfile/ui/radial.py:989
+#: src/anyfile/ui/radial.py:971 src/anyfile/ui/radial.py:996
 msgid "The originals stay untouched"
 msgstr ""
 
-#: src/anyfile/ui/radial.py:965 src/anyfile/ui/radial.py:990
+#: src/anyfile/ui/radial.py:972 src/anyfile/ui/radial.py:997
 msgid "The original stays untouched"
 msgstr ""
 
-#: src/anyfile/ui/radial.py:967
+#: src/anyfile/ui/radial.py:974
 msgid "click to choose the files to add after this one"
 msgstr ""
 
-#: src/anyfile/ui/radial.py:969
+#: src/anyfile/ui/radial.py:976
 #, python-brace-format
 msgid "move outwards to choose: {options}"
 msgstr ""
 
-#: src/anyfile/ui/radial.py:981
+#: src/anyfile/ui/radial.py:988
 #, python-brace-format
 msgid "Compress {n} file ({formats})"
 msgid_plural "Compress {n} files ({formats})"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/anyfile/ui/radial.py:986
+#: src/anyfile/ui/radial.py:993
 #, python-brace-format
 msgid "{n} cannot be compressed without changing format"
 msgid_plural "{n} cannot be compressed without changing format"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/anyfile/ui/radial.py:992
+#: src/anyfile/ui/radial.py:999
 msgid "move outwards for “Small”"
 msgstr ""
 

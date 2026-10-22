@@ -30,25 +30,25 @@ class Executor:
 
     # --- protected PDFs ---------------------------------------------------------
 
-    def _qpdf(self) -> QpdfEngine | None:
+    def qpdf(self) -> QpdfEngine | None:
         engine = next((e for e in self.registry.engines if isinstance(e, QpdfEngine)), None)
         return engine if engine and engine.available else None
 
     def needs_password(self, info: FileInfo) -> bool:
         """Whether the file is a PDF that cannot be opened without a password. The
         interface asks for it before submitting the job."""
-        qpdf = self._qpdf() if info.encrypted else None
+        qpdf = self.qpdf() if info.encrypted else None
         return bool(qpdf and qpdf.needs_password(info.path))
 
     def password_ok(self, path: Path, password: str) -> bool:
-        qpdf = self._qpdf()
+        qpdf = self.qpdf()
         return bool(qpdf and not qpdf.needs_password(path, password))
 
     def _unlocked(self, info: FileInfo, link: Path, password: str, job: Job) -> Path:
         """A PDF that needs a password is decrypted first, inside the work folder: every
         operation then works on it. Restrictions alone (printing, copying...) do not stop
         the engines, so those files are used as they are."""
-        qpdf = self._qpdf() if info.encrypted else None
+        qpdf = self.qpdf() if info.encrypted else None
         if qpdf is None or not qpdf.needs_password(link):
             return link
         if not password:
@@ -231,6 +231,8 @@ class Executor:
         if tool.multi_input and not job.others:
             raise AnyfileError(_("{tool} needs at least two files").format(tool=tool.label))
         option = tool.option(job.option)
+        if tool.free_option and option is None:
+            raise AnyfileError(_("{tool}: choose the pages first").format(tool=tool.label))
         if tool.options and option is None:
             raise AnyfileError(_("Unknown option “{option}” for {tool}: use {choices}").format(
                 option=job.option, tool=tool.label, choices=", ".join(o.id for o in tool.options)))

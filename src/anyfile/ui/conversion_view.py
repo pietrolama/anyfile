@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from PySide6.QtCore import Qt, Signal
@@ -19,11 +19,26 @@ from anyfile.i18n import N_, _
 from anyfile.models.conversion import Route
 from anyfile.models.file_info import FileInfo
 from anyfile.models.job import Job, JobStatus
+from anyfile.models.tool import Tool, ToolOption
 
 COL_FILE, COL_FORMAT, COL_TARGET, COL_STATUS = range(4)
-PLACEHOLDER = N_("Choose format…")
+PLACEHOLDER = N_("Choose…")
 # Value of the “Compress” entry: the target is each file's own format.
 COMPRESS = "="
+# Value of a tool entry: "tool:<id>:<option>" (the option may be empty).
+TOOL_PREFIX = "tool:"
+
+
+def tool_value(tool: Tool, option: ToolOption | None = None) -> str:
+    return f"{TOOL_PREFIX}{tool.id}:{option.id if option else ''}"
+
+
+def parse_tool_value(value: str | None) -> tuple[str, str | None] | None:
+    """(tool id, option id) for a tool entry, None for a format."""
+    if not value or not value.startswith(TOOL_PREFIX):
+        return None
+    tool_id, _sep, option = value[len(TOOL_PREFIX):].partition(":")
+    return tool_id, option or None
 
 
 @dataclass
@@ -31,6 +46,7 @@ class Row:
     info: FileInfo
     targets: list[Route]
     combo: QComboBox
+    tools: list[Tool] = field(default_factory=list)
     job_id: int | None = None
     status: JobStatus | None = None
     converted_to: str | None = None
@@ -48,8 +64,8 @@ class Row:
         return self.status in (JobStatus.QUEUED, JobStatus.RUNNING)
 
 
-def fill_target_combo(combo: QComboBox, targets: list[Route]) -> None:
-    """Fills the target menu, grouping formats by category."""
+def fill_target_combo(combo: QComboBox, targets: list[Route], tools: list[Tool] = ()) -> None:
+    """Fills the target menu, grouping formats by category; the tools come last."""
     combo.clear()
     combo.addItem(_(PLACEHOLDER), None)
     last_group = None
@@ -68,11 +84,30 @@ def fill_target_combo(combo: QComboBox, targets: list[Route]) -> None:
             combo.addItem(f"{fmt.label}  (.{fmt.ext})", fmt.id)
         if conv.notes:
             combo.setItemData(combo.count() - 1, conv.notes, Qt.ItemDataRole.ToolTipRole)
+    if tools:
+        if combo.count() > 1:
+            combo.insertSeparator(combo.count())
+        combo.addItem(_("Tools"))
+        # A heading, not a choice.
+        combo.model().item(combo.count() - 1).setEnabled(False)
+    for tool in tools:
+        if tool.free_option:
+            entries = [(tool.label + "…", tool_value(tool))]
+        elif tool.options:
+            entries = [(f"{tool.label} · {o.label}", tool_value(tool, o)) for o in tool.options]
+        else:
+            entries = [(tool.label, tool_value(tool))]
+        for text, value in entries:
+            combo.addItem(text, value)
+            if tool.notes:
+                combo.setItemData(combo.count() - 1, _(tool.notes), Qt.ItemDataRole.ToolTipRole)
 
 
 class ConversionView(QWidget):
     selection_changed = Signal()
     row_activated = Signal(object)  # Row
+    # A tool chosen in a window of its own (Organize pages): (tool id, path).
+    tool_window_requested = Signal(str, object)
 
     def __init__(self, registry: Registry, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -83,12 +118,13 @@ class ConversionView(QWidget):
         self.bulk_combo.setMinimumWidth(220)
         self.bulk_combo.activated.connect(self._apply_bulk)
         bulk_bar = QHBoxLayout()
-        bulk_bar.addWidget(QLabel(_("Convert all to:")))
+        bulk_bar.addWidget(QLabel(_("For all files:")))
         bulk_bar.addWidget(self.bulk_combo)
         bulk_bar.addStretch()
 
         self.table = QTableWidget(0, 4)
-        self.table.setHorizontalHeaderLabels([_("File"), _("Detected format"), _("Convert to"), _("Status")])
+        self.table.setHorizontalHeaderLabels([_("File"), _("Detected format"), _("Convert or edit"),
+                                              _("Status")])
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.table.verticalHeader().hide()
@@ -127,8 +163,9 @@ class ConversionView(QWidget):
     def _append(self, info: FileInfo) -> None:
         targets = available_targets(info, self.registry)
         combo = QComboBox()
+        row = Row(info, targets, combo, self._tools(info))
         combo.currentIndexChanged.connect(lambda _i: self.selection_changed.emit())
-        row = Row(info, targets, combo)
+        combo.activated.connect(lambda _i, row=row: self._open_tool_window(row))
         self.rows.append(row)
 
         r = self.table.rowCount()
@@ -149,15 +186,28 @@ class ConversionView(QWidget):
         self.table.setItem(r, COL_FORMAT, fmt_item)
 
         previous = row.combo.currentData()
-        fill_target_combo(row.combo, row.targets)
+        fill_target_combo(row.combo, row.targets, row.tools)
         if previous and (i := row.combo.findData(previous)) >= 0:
             row.combo.setCurrentIndex(i)
-        row.combo.setEnabled(bool(row.targets))
-        if not row.targets:
+        row.combo.setEnabled(bool(row.targets or row.tools))
+        if not row.targets and not row.tools:
             row.combo.setItemText(0, "—")
             self._set_status_text(r, self._why_unavailable(info), muted=True)
         elif row.status is None:
             self._set_status_text(r, "")
+
+    def _tools(self, info: FileInfo) -> list[Tool]:
+        if info.format is None:
+            return []
+        return [t for t in self.registry.tools(info.format.id) if t.applies(info)]
+
+    def _open_tool_window(self, row: Row) -> None:
+        """Organize pages is chosen in its own window: the row goes back to its previous choice."""
+        chosen = parse_tool_value(row.combo.currentData())
+        tool = chosen and next((t for t in row.tools if t.id == chosen[0]), None)
+        if tool and tool.free_option:
+            row.combo.setCurrentIndex(0)
+            self.tool_window_requested.emit(tool.id, row.info.path)
 
     def _why_unavailable(self, info: FileInfo) -> str:
         if info.format is None:
@@ -173,6 +223,7 @@ class ConversionView(QWidget):
         """Recomputes the targets after the engines were checked again."""
         for r, row in enumerate(self.rows):
             row.targets = available_targets(row.info, self.registry)
+            row.tools = self._tools(row.info)
             self._fill_row(r, row)
         self._refresh_bulk()
 
@@ -196,13 +247,18 @@ class ConversionView(QWidget):
 
     def _refresh_bulk(self) -> None:
         union: dict[str, Route] = {}
+        tools: dict[str, Tool] = {}
         for row in self.rows:
             for conv in row.targets:
                 union.setdefault(COMPRESS if conv.is_compression else conv.target, conv)
+            for tool in row.tools:
+                # Pages are organized one file at a time.
+                if not tool.free_option:
+                    tools.setdefault(tool.id, tool)
         ordered = sorted(union.values(), key=lambda c: (
             not c.is_compression, formats.get(c.target).category.order, formats.get(c.target).label))
-        fill_target_combo(self.bulk_combo, ordered)
-        self.bulk_combo.setEnabled(bool(ordered))
+        fill_target_combo(self.bulk_combo, ordered, list(tools.values()))
+        self.bulk_combo.setEnabled(bool(ordered or tools))
 
     def _apply_bulk(self, _index: int) -> None:
         target = self.bulk_combo.currentData()
@@ -221,15 +277,18 @@ class ConversionView(QWidget):
                 and not (row.status is JobStatus.DONE and row.converted_to == row.target)]
 
     def attach_job(self, row: Row, job: Job) -> None:
-        row.job_id, row.converted_to = job.id, job.target
+        # The choice that was carried out: a format, or a tool with its option.
+        row.job_id, row.converted_to = job.id, row.target
         self.update_job(job)
 
     def update_job(self, job: Job) -> None:
+        # Several rows share the job of a tool that combines them (Merge).
         for r, row in enumerate(self.rows):
             if row.job_id == job.id:
-                break
-        else:
-            return
+                self._update_row(r, row, job)
+        self.selection_changed.emit()
+
+    def _update_row(self, r: int, row: Row, job: Job) -> None:
         row.status = job.status
         row.combo.setEnabled(not row.busy and bool(row.targets))
         if job.status is JobStatus.RUNNING:
@@ -246,7 +305,6 @@ class ConversionView(QWidget):
                                   tooltip=f"{job.message}\n\n{job.details}".strip())
         else:
             self._set_status_text(r, job.status.label)
-        self.selection_changed.emit()
 
     def _set_progress(self, r: int, value: float | None) -> None:
         bar = self.table.cellWidget(r, COL_STATUS)

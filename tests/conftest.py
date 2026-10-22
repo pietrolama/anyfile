@@ -47,6 +47,18 @@ def _isolated_data_home(tmp_path_factory, monkeypatch):
     monkeypatch.setenv("APPDATA", data_home)  # Windows
 
 
+@pytest.fixture(autouse=True, scope="session")
+def _isolated_settings(tmp_path_factory):
+    # Nor the user's preferences (output folder, overwrite, quality): windows save them.
+    try:
+        from PySide6.QtCore import QSettings
+    except ImportError:
+        return
+    folder = str(tmp_path_factory.mktemp("settings"))
+    for fmt in (QSettings.Format.NativeFormat, QSettings.Format.IniFormat):
+        QSettings.setPath(fmt, QSettings.Scope.UserScope, folder)
+
+
 def _run(*args: str) -> None:
     subprocess.run(args, check=True, capture_output=True, timeout=120)
 

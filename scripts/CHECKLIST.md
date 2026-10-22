@@ -126,7 +126,7 @@ desktop: `LANGUAGE=en anyfile --radial FILE`.
 | 14 | `14-data.csv` | → XLSX | Table with 3 rows |
 | 15 | `15-three-pages.pdf` | → PNG | Folder `15-three-pages-pages/` with 3 images |
 | 15b | `15-three-pages.pdf` | → Text | Text of the three pages |
-| 16 | `16-scan.pdf` | → Text | Readable error: “contains no extractable text… would need OCR” |
+| 16 | `16-scan.pdf` | → Text | Readable error: “contains no extractable text… use “Recognize text” among the tools first” |
 
 ## Edge cases
 
@@ -135,8 +135,23 @@ desktop: `LANGUAGE=en anyfile --radial FILE`.
 | 17 | `17-archive.zip` | Open in ANYFILE | Grey row “Unrecognized format”, menu disabled |
 | 18 | `18-damaged.png` | → JPEG | Status “✗ ImageMagick could not…”; tooltip with the details; the other conversions in the queue carry on |
 | 19 | `19-empty.txt` | Open in ANYFILE | “The file is empty” |
-| 20 | All files together | Select all → ANYFILE → “Convert all to: PDF” | PDF is set only where possible; the others stay on “Choose format…” |
+| 20 | All files together | Select all → ANYFILE → “For all files: PDF” | PDF is set only where possible; the others stay on “Choose…” |
 | 21 | A folder | Drop it on the window | Message at the bottom: folders are not supported |
 | 22 | Any | “Save in:” a different folder | The results end up there; “Show results” opens Dolphin on the file |
 | 23 | `09-long-video.mp4` | Start, then minimize the window | System notification at the end |
 | 24 | `09-long-video.mp4` | Start and close the window | Asks whether to cancel the running conversions |
+
+## Protected PDFs, text recognition, pages
+
+Make a protected copy first: wheel on `15-three-pages.pdf` → Tools → Protect → “To open”.
+
+| # | File | Action | Expected result |
+|---|------|--------|-----------------|
+| 25 | `15-three-pages.pdf` | Wheel → Tools → Protect | Password dialog **above the wheel**, with “Repeat”; OK only when both match; `…-protected.pdf` asks for the password in Okular |
+| 26 | `…-protected.pdf` | Wheel → PNG | Password dialog above the wheel; a wrong one says “Wrong password, try again” and stays open; the right one converts |
+| 27 | `…-protected.pdf` | Wheel → Tools | Unlock is there, Protect is not; Unlock gives a PDF that opens without a password |
+| 28 | A real scan or photo of a page | Wheel → Tools → Recognize text | `…-searchable.pdf` looks the same; text can be selected and found with Ctrl+F in Okular |
+| 29 | `15-three-pages.pdf` | Wheel → Tools → Organize pages | The wheel closes, the pages window opens in front with the thumbnails |
+| 30 | Pages window | **Drag** a page to a new place with the mouse | The page moves there (not on top of another page); the summary says “new order” |
+| 31 | Pages window | Rotate, Duplicate, Remove, Save | `…-organized.pdf` matches what the window showed; “Show result” opens Dolphin on it |
+| 32 | Full window, two PDFs | Both rows on “Merge” → Convert | One `…-merged.pdf` with the files in list order; both rows show it |

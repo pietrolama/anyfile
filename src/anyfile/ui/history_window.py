@@ -12,12 +12,14 @@ from PySide6.QtWidgets import (
 )
 
 from anyfile.core import history as hist
+from anyfile.core.detector import detect
 from anyfile.core.executor import Executor
 from anyfile.core.registry import Registry
 from anyfile.i18n import _, ngettext
 from anyfile.models.job import Job, JobStatus
 from anyfile.ui.desktop import APP_ICON, reveal
 from anyfile.ui.job_queue import QtJobQueue
+from anyfile.ui.password_dialog import ask_new_password, ask_passwords
 
 COL_WHEN, COL_FILE, COL_OPERATION, COL_RESULT = range(4)
 MARKS = {JobStatus.DONE: "✓", JobStatus.FAILED: "✗", JobStatus.UNCHANGED: "＝"}
@@ -27,9 +29,11 @@ class HistoryWindow(QWidget):
     def __init__(self, registry: Registry, history: hist.History, parent: QWidget | None = None) -> None:
         super().__init__(parent, Qt.WindowType.Window)
         self.history = history
+        self.registry = registry
         self.entries: list[hist.Entry] = []
         self.running: dict[int, Job] = {}
-        self.jobs = QtJobQueue(Executor(registry), self, history=history)
+        self.executor = Executor(registry)
+        self.jobs = QtJobQueue(self.executor, self, history=history)
         self.jobs.job_updated.connect(self._on_job)
 
         self.setWindowTitle(_("History — ANYFILE"))
@@ -165,16 +169,29 @@ class HistoryWindow(QWidget):
     def _submit(self, sources: list[Path], entry: hist.Entry) -> None:
         missing = [s for s in sources if not s.is_file()]
         existing = [s for s in sources if s.is_file()]
+        # Passwords are never stored: a protected PDF, or Protect, asks for one again.
+        tool = self.registry.tool(entry.tool, entry.source_format or "") if entry.tool else None
+        if tool and tool.asks_password:
+            password = ask_new_password(self, [s.name for s in existing])
+            if password is None:
+                return
+            passwords = dict.fromkeys(existing, password)
+        else:
+            passwords = ask_passwords(self, self.executor, [detect(s) for s in existing])
+            if passwords is None:
+                return
         if entry.others and existing:
             # A merge: one job with every file. Repeated as it was, or on the files chosen now.
             args = entry.submit_args()
             if existing != [entry.source]:
                 args["others"] = tuple(existing[1:])
-            job = self.jobs.submit(existing[0], entry.target, **args)
+            password = next((passwords[s] for s in existing if s in passwords), "")
+            job = self.jobs.submit(existing[0], entry.target, password=password, **args)
             self.running[job.id] = job
             existing = []
         for source in existing:
-            job = self.jobs.submit(source, entry.target, **entry.submit_args())
+            job = self.jobs.submit(source, entry.target, password=passwords.get(source, ""),
+                                   **entry.submit_args())
             self.running[job.id] = job
         if missing:
             names = "\n".join(f"• {m}" for m in missing)

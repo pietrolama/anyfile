@@ -10,7 +10,7 @@ from anyfile.core import system
 from anyfile.core.errors import PasswordRequired
 from anyfile.engines.base import ConversionContext, Engine, EngineError
 from anyfile.engines.stamp import Page, page_number, watermark, write_overlay
-from anyfile.i18n import N_, _
+from anyfile.i18n import N_, _, ngettext
 from anyfile.models.conversion import Conversion
 from anyfile.models.tool import Tool, ToolOption
 
@@ -33,10 +33,30 @@ TOOLS = [
          notes=N_("AES-256 encryption")),
     Tool("unlock", N_("Unlock"), N_("{name}-unlocked"), _PDF, "qpdf", encrypted=True,
          notes=N_("Removes the password and the restrictions")),
+    Tool("organize", N_("Organize pages"), N_("{name}-organized"), _PDF, "qpdf", free_option=True,
+         notes=N_("Reorder, rotate, duplicate or remove pages")),
 ]
 _ROTATION = {"right": "+90", "180": "+180", "left": "-90"}
 _BOX = re.compile(r"^Page\s+(\d+)\s+CropBox:\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)")
 _ROT = re.compile(r"^Page\s+(\d+)\s+rot:\s+(-?\d+)")
+_PAGE = re.compile(r"^(\d+)(?:([+-])(90|180|270))?$")
+
+
+def parse_pages(spec: str) -> list[tuple[int, int]]:
+    """The order of the pages for Organize: “3,1+90,2-90” → [(3, 0), (1, 90), (2, 270)].
+    Each page may appear more than once; the rotation is added to the page's own."""
+    pages = []
+    for item in spec.replace(" ", "").split(","):
+        m = _PAGE.match(item)
+        if not m or int(m.group(1)) < 1:
+            raise EngineError(_("“{item}” is not a page: use numbers like 3,1,2+90").format(item=item))
+        angle = int(m.group(3) or 0)
+        pages.append((int(m.group(1)), (-angle if m.group(2) == "-" else angle) % 360))
+    return pages
+
+
+def format_pages(pages: list[tuple[int, int]]) -> str:
+    return ",".join(f"{n}+{angle}" if angle else str(n) for n, angle in pages)
 
 
 class QpdfEngine(Engine):
@@ -65,12 +85,15 @@ class QpdfEngine(Engine):
         elif tool.id == "protect":
             self._protect(option.id, src, dst, ctx)
             return
+        elif tool.id == "organize":
+            self._organize(option.id, src, dst, ctx)
+            return
         elif tool.id == "unlock":
             # A file that needed a password arrives here already decrypted by the executor.
             args += ["--decrypt"]
         elif tool.id in ("numbers", "watermark"):
             overlay = dst.with_name("overlay.pdf")
-            pages = self._pages(src, ctx)
+            pages = self.pages(src, ctx)
             if tool.id == "numbers":
                 drawings = [page_number(p, str(n), option.id) for n, p in enumerate(pages, 1)]
             else:
@@ -98,6 +121,19 @@ class QpdfEngine(Engine):
         ctx.runner.run([self.binary(), "--warning-exit-0", src, "@-", dst], tool="qpdf",
                        stdin="\n".join(lines) + "\n")
 
+    def _organize(self, spec: str, src: Path, dst: Path, ctx: ConversionContext) -> None:
+        pages = parse_pages(spec)
+        count = len(self.pages(src, ctx))
+        if missing := sorted({n for n, _angle in pages if n > count}):
+            raise EngineError(ngettext("The PDF has no page {pages}", "The PDF has no pages {pages}",
+                                       len(missing)).format(pages=", ".join(map(str, missing))))
+        # “.” keeps the original as the base, so its metadata and bookmarks carry over;
+        # --rotate counts the pages of the result.
+        lines = ["--pages", ".", ",".join(str(n) for n, _angle in pages), "--"]
+        lines += [f"--rotate=+{angle}:{i}" for i, (_n, angle) in enumerate(pages, 1) if angle]
+        ctx.runner.run([self.binary(), "--warning-exit-0", src, "@-", dst], tool="qpdf",
+                       stdin="\n".join(lines) + "\n")
+
     # --- protected files: used by the executor before any operation --------------------
 
     def needs_password(self, path: Path, password: str = "") -> bool:
@@ -122,7 +158,7 @@ class QpdfEngine(Engine):
         except (OSError, subprocess.TimeoutExpired) as e:
             raise EngineError(_("Cannot start {tool}: {error}").format(tool="qpdf", error=e)) from e
 
-    def _pages(self, src: Path, ctx: ConversionContext) -> list[Page]:
+    def pages(self, src: Path, ctx: ConversionContext) -> list[Page]:
         out = ctx.runner.run([self.binary(1), "-box", "-f", "1", "-l", "100000", src], tool="pdfinfo")
         boxes: dict[int, tuple[float, ...]] = {}
         rotations: dict[int, int] = {}

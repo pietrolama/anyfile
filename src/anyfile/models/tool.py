@@ -48,6 +48,9 @@ class Tool:
     asks_password: bool = False
     # Only for encrypted files (True), only for unencrypted ones (False), or for all (None).
     encrypted: bool | None = None
+    # The option is free text checked by the engine (e.g. the order of the pages), chosen in
+    # a window of its own instead of on the outer ring.
+    free_option: bool = False
     notes: str = ""
 
     @property
@@ -62,6 +65,8 @@ class Tool:
 
     def option(self, option_id: str | None) -> ToolOption | None:
         """The requested option, the default one when none is given; None if unknown."""
+        if self.free_option:
+            return ToolOption(option_id, option_id) if option_id else None
         if not self.options:
             return None
         wanted = option_id or self.default

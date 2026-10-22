@@ -9,19 +9,21 @@ from PySide6.QtWidgets import (
     QMessageBox, QPushButton, QRadioButton, QSizePolicy, QStackedWidget, QToolBar, QVBoxLayout, QWidget,
 )
 
-from anyfile.core import system
+from anyfile.core import formats, system
+from anyfile.core.detector import detect
 from anyfile.core.executor import Executor
 from anyfile.core.history import History
 from anyfile.core.registry import Registry
 from anyfile.i18n import _, ngettext
 from anyfile.models.conversion import Quality
 from anyfile.models.job import Job, JobStatus
-from anyfile.ui.conversion_view import ConversionView, Row
+from anyfile.models.tool import Tool
+from anyfile.ui.conversion_view import ConversionView, Row, parse_tool_value
 from anyfile.ui.desktop import APP_ICON, notify, reveal
 
 FINISHED = (JobStatus.DONE, JobStatus.FAILED, JobStatus.CANCELLED, JobStatus.UNCHANGED)
 from anyfile.ui.job_queue import QtJobQueue
-from anyfile.ui.password_dialog import ask_passwords
+from anyfile.ui.password_dialog import ask_new_password, ask_passwords
 from anyfile.ui.settings import EnginesDialog, Settings
 
 
@@ -31,6 +33,7 @@ class MainWindow(QMainWindow):
         self.registry = registry
         self.history = history
         self.history_window = None
+        self.tool_windows: list[QWidget] = []
         self.settings = Settings()
         self.executor = Executor(registry)
         self.jobs = QtJobQueue(self.executor, self, history=history)
@@ -47,6 +50,7 @@ class MainWindow(QMainWindow):
         self.view = ConversionView(registry)
         self.view.selection_changed.connect(self._update_buttons)
         self.view.row_activated.connect(self._show_row_output)
+        self.view.tool_window_requested.connect(self._open_tool_window)
 
         drop_hint = QLabel(_("Drop the files to convert here\nor use “Add files…”"))
         drop_hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -211,17 +215,62 @@ class MainWindow(QMainWindow):
         rows = self.view.pending()
         if not rows:
             return
-        passwords = ask_passwords(self, self.executor, (row.info for row in rows))
+        tools = {id(row): self._tool(row) for row in rows}
+        protect = [r for r in rows if tools[id(r)] and tools[id(r)].asks_password]
+        merge = [r for r in rows if tools[id(r)] and tools[id(r)].multi_input]
+        new_password = ""
+        if protect:
+            new_password = ask_new_password(self, [r.info.name for r in protect])
+            if new_password is None:
+                return
+        # The rows that chose Merge become one PDF, in the order of the list; a single one
+        # gets the files to add from a dialog.
+        merged = tuple(r.info.path for r in merge[1:])
+        if len(merge) == 1 and not (merged := self._files_to_add(merge[0], tools[id(merge[0])])):
+            return
+        opened = [r.info for r in rows if r not in protect] + [detect(p) for p in merged if len(merge) == 1]
+        passwords = ask_passwords(self, self.executor, opened)
         if passwords is None:
             return
-        output_dir, overwrite = self._output_dir(), self.overwrite.isChecked()
-        quality = self.quality.currentData()
+
+        common = dict(output_dir=self._output_dir(), overwrite=self.overwrite.isChecked(),
+                      quality=self.quality.currentData())
         for row in rows:
-            job = self.jobs.submit(row.info.path, row.target, output_dir, overwrite, quality,
-                                   password=passwords.get(row.info.path, ""))
+            if row in merge[1:]:
+                continue
+            tool = tools[id(row)]
+            if tool is None:
+                job = self.jobs.submit(row.info.path, row.target, password=passwords.get(row.info.path, ""),
+                                       **common)
+            else:
+                _tool_id, option = parse_tool_value(row.target)
+                others = merged if row is (merge[0] if merge else None) else ()
+                password = new_password if tool.asks_password else next(
+                    (passwords[p] for p in (row.info.path, *others) if p in passwords), "")
+                job = self.jobs.submit(row.info.path, "", tool=tool.id, option=option, others=others,
+                                       password=password, **common)
             self._batch[job.id] = job.status
-            self.view.attach_job(row, job)
+            for attached in (merge if merge and row is merge[0] else [row]):
+                self.view.attach_job(attached, job)
         self._update_buttons()
+
+    def _tool(self, row: Row) -> Tool | None:
+        chosen = parse_tool_value(row.target)
+        return next((t for t in row.tools if t.id == chosen[0]), None) if chosen else None
+
+    def _files_to_add(self, row: Row, tool: Tool) -> tuple[Path, ...]:
+        patterns = " ".join(f"*.{ext}" for fid in tool.formats if (fmt := formats.BY_ID.get(fid))
+                            for ext in fmt.extensions)
+        names, _filter = QFileDialog.getOpenFileNames(
+            self, _("Files to add after “{name}”").format(name=row.info.name), str(row.info.path.parent),
+            _("Supported files ({patterns})").format(patterns=patterns))
+        return tuple(Path(n) for n in names)
+
+    def _open_tool_window(self, tool_id: str, path: Path) -> None:
+        from anyfile.ui.pages_window import open_pages_window
+
+        if window := open_pages_window(self.registry, path, self.history, self):
+            self.tool_windows.append(window)
 
     def _on_job_updated(self, job: Job) -> None:
         self.view.update_job(job)

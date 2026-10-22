@@ -194,6 +194,7 @@ def sector(a0: float, a1: float, r_in: float, r_out: float, gap: float = GAP) ->
 
 class RadialMenu(QWidget):
     open_window = Signal(list)  # list[Path]: hand over to the full window
+    open_pages = Signal(list)  # list[Path]: PDFs whose pages are organized in their own window
     finished = Signal()
 
     def __init__(self, registry: Registry, paths: list[Path], history: History | None = None) -> None:
@@ -451,6 +452,12 @@ class RadialMenu(QWidget):
                 self._show_wheel(tools=True)
             elif self.entries[hit].is_more:
                 self._to_window()
+            elif self.entries[hit].tool and self.entries[hit].tool.free_option:
+                # Chosen in a window of its own: the wheel goes away first, so the window
+                # (and a password dialog) is not hidden behind it.
+                self.hide()
+                self.open_pages.emit(list(self.entries[hit].paths))
+                self._close()
             elif self.entries[hit].tool:
                 self._start_tool(self.entries[hit], option or self.default_option(hit))
             else:

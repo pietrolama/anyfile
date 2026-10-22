@@ -140,7 +140,7 @@ ai formati.
 | Immagini | Ridimensiona (75, 50, 25%), Ruota (destra, 180°, sinistra), Specchia (orizzontale, verticale), Bianco e nero, Togli metadati, Riconosci testo (PDF ricercabile) |
 | Video | Togli audio (copiato, senza ricodifica), Ridimensiona, Ruota, Primo fotogramma (PNG) |
 | Audio | Normalizza volume (EBU R128, −16 LUFS, stessa frequenza di campionamento), Mono |
-| PDF | Unisci (PDF e immagini, nell'ordine dei file), Dividi pagine, Ruota, Numeri di pagina (centro, destra), Filigrana (BOZZA, RISERVATO, COPIA), Bianco e nero, Ripara, Proteggi (password per aprire, password per modificare), Sblocca, Riconosci testo (lingue installate) |
+| PDF | Unisci (PDF e immagini, nell'ordine dei file), Dividi pagine, Ruota, Numeri di pagina (centro, destra), Filigrana (BOZZA, RISERVATO, COPIA), Bianco e nero, Ripara, Proteggi (password per aprire, password per modificare), Sblocca, Riconosci testo (lingue installate), Organizza pagine |
 
 Le modifiche ai PDF lavorano sulle pagine, quindi testo, link e segnalibri restano come
 sono; Ruota, Numeri di pagina, Filigrana, Ripara, Proteggi e Sblocca usano qpdf, Bianco e
@@ -153,6 +153,12 @@ ANYFILE la chiede prima di iniziare, decifra una copia temporanea e non salva ma
 password (nemmeno nella cronologia). Da riga di comando si digita nel terminale, oppure
 si indica con `--password-file FILE`; non è mai un argomento, che finirebbe nella
 cronologia della shell.
+
+**Organizza pagine** apre una finestra con le pagine in miniatura: trascinale in un nuovo
+ordine, ruotale, duplicale o toglile (Ctrl+L, Ctrl+R, Ctrl+←/→, Ctrl+D, Canc), poi
+**Salva** scrive `nome-organizzato.pdf`; **Salva le pagine selezionate** estrae solo
+quelle. Anche con `anyfile --pages FILE.pdf`, o da terminale `anyfile edit -t organize
+--option "3,1,2+90" FILE.pdf` (pagina 3, pagina 1, pagina 2 ruotata a destra).
 
 **Riconosci testo** (OCR, con Tesseract) legge scansioni e foto e aggiunge il testo sotto
 la pagina, invisibile: le pagine restano identiche, ma il testo si può cercare e copiare.
@@ -233,7 +239,9 @@ conversioni funzionano comunque.
 `anyfile [FILE...]`, il menu delle applicazioni, o il centro della ruota. Offre:
 
 - trascinamento dei file nella finestra;
-- formato scelto file per file, oppure per tutti con «Converti tutti in»;
+- formato o strumento scelto file per file, oppure per tutti con «Per tutti i file»: gli
+  strumenti della ruota sono in fondo a ogni menu (i file impostati su Unisci diventano un
+  solo PDF, nell'ordine della lista);
 - cartella di destinazione e qualità predefinita, entrambe ricordate;
 - sovrascrittura solo se richiesta: altrimenti il nuovo file diventa `nome (1).ext`;
 - coda con avanzamento e annullamento;

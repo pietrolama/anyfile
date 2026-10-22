@@ -136,7 +136,7 @@ uses the usual one (•). The centre, Esc or Tab go back to the formats.
 | Images | Resize (75, 50, 25%), Rotate (right, 180°, left), Mirror (horizontal, vertical), Black & white, Remove metadata, Recognize text (searchable PDF) |
 | Video | Remove audio (copied, no re-encoding), Resize, Rotate, First frame (PNG) |
 | Audio | Normalize volume (EBU R128, −16 LUFS, same sample rate), Mono |
-| PDF | Merge (PDFs and images, in the order of the files), Split pages, Rotate, Page numbers (centre, right), Watermark (DRAFT, CONFIDENTIAL, COPY), Black & white, Repair, Protect (password to open, password to edit), Unlock, Recognize text (installed languages) |
+| PDF | Merge (PDFs and images, in the order of the files), Split pages, Rotate, Page numbers (centre, right), Watermark (DRAFT, CONFIDENTIAL, COPY), Black & white, Repair, Protect (password to open, password to edit), Unlock, Recognize text (installed languages), Organize pages |
 
 PDF edits work on the pages, so text, links and bookmarks stay as they are; Rotate, Page
 numbers, Watermark, Repair, Protect and Unlock use qpdf, Black & white uses Ghostscript.
@@ -147,6 +147,12 @@ text. Every operation works on a PDF that needs a password too: ANYFILE asks for
 before starting, decrypts a temporary copy and never stores the password (not even in
 the history). On the command line it is typed in the terminal, or given with
 `--password-file FILE`; it is never an argument, which would end up in the shell history.
+
+**Organize pages** opens a window with the pages as thumbnails: drag them into a new
+order, rotate, duplicate or remove them (Ctrl+L, Ctrl+R, Ctrl+←/→, Ctrl+D, Del), then
+**Save** writes `name-organized.pdf`; **Save selected pages** extracts just those. Also
+`anyfile --pages FILE.pdf`, or with the command line `anyfile edit -t organize --option
+"3,1,2+90" FILE.pdf` (page 3, page 1, page 2 turned right).
 
 **Recognize text** (OCR, with Tesseract) reads scans and photos and adds the text
 underneath, invisible: the pages look exactly the same, but the text can be searched and
@@ -226,7 +232,8 @@ conversions still work.
 `anyfile [FILE...]`, the application menu, or the centre of the wheel. It offers:
 
 - dropping files on the window;
-- a format per file, or one for all with “Convert all to”;
+- a format or a tool per file, or one for all with “For all files”: the tools of the
+  wheel are at the end of each menu (files set to Merge become one PDF, in list order);
 - destination folder and default quality, both remembered;
 - overwriting only on request: otherwise the new file becomes `name (1).ext`;
 - a queue with progress and cancellation;
