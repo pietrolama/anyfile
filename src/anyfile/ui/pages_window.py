@@ -7,8 +7,11 @@ import tempfile
 import threading
 from pathlib import Path
 
-from PySide6.QtCore import QObject, QSize, Qt, Signal
-from PySide6.QtGui import QAction, QColor, QIcon, QKeySequence, QPainter, QPixmap, QTransform
+from PySide6.QtCore import QObject, QPoint, QSize, Qt, Signal
+from PySide6.QtGui import (
+    QAction, QColor, QDragEnterEvent, QDragMoveEvent, QDropEvent, QIcon, QKeySequence, QPainter,
+    QPalette, QPen, QPixmap, QTransform,
+)
 from PySide6.QtWidgets import (
     QAbstractItemView, QHBoxLayout, QLabel, QListWidget, QListWidgetItem, QMainWindow, QPushButton,
     QToolBar, QVBoxLayout, QWidget,
@@ -71,6 +74,83 @@ class _Thumbnails(QObject):
             self.failed.emit(e.message)
 
 
+class PageList(QListWidget):
+    """The pages in a grid. Dragged pages are inserted where the line shows: Qt's own
+    move in icon mode only shifts the thumbnails around, without changing the order."""
+
+    pages_dropped = Signal()
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._drop_row: int | None = None
+
+    def drop_row(self, pos: QPoint) -> int:
+        """Where pages dropped at pos go: before the page under the pointer, or after it
+        when the pointer is on its right half."""
+        for row in range(self.count()):
+            rect = self.visualItemRect(self.item(row))
+            if pos.y() < rect.top() or (pos.y() <= rect.bottom() and pos.x() < rect.center().x()):
+                return row
+        return self.count()
+
+    def move_rows(self, rows: list[int], target: int) -> None:
+        """Moves the rows, keeping their order, so they start at target (counted before the move)."""
+        rows = sorted(rows)
+        items = [self.takeItem(r - n) for n, r in enumerate(rows)]
+        target -= sum(1 for r in rows if r < target)
+        for n, item in enumerate(items):
+            self.insertItem(target + n, item)
+            item.setSelected(True)
+        if items:
+            self.scrollToItem(items[0])
+
+    def dragEnterEvent(self, event: QDragEnterEvent) -> None:  # noqa: N802
+        if event.source() is self:
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def dragMoveEvent(self, event: QDragMoveEvent) -> None:  # noqa: N802
+        if event.source() is not self:
+            event.ignore()
+            return
+        self._drop_row = self.drop_row(event.position().toPoint())
+        event.acceptProposedAction()
+        self.viewport().update()
+
+    def dragLeaveEvent(self, event) -> None:  # noqa: N802
+        self._drop_row = None
+        self.viewport().update()
+
+    def dropEvent(self, event: QDropEvent) -> None:  # noqa: N802
+        self._drop_row = None
+        self.viewport().update()
+        if event.source() is not self:
+            event.ignore()
+            return
+        rows = [self.row(i) for i in self.selectedItems()]
+        target = self.drop_row(event.position().toPoint())
+        # Copy, not move: Qt must not remove the dragged rows itself after the drop.
+        event.setDropAction(Qt.DropAction.CopyAction)
+        event.accept()
+        self.clearSelection()
+        self.move_rows(rows, target)
+        self.pages_dropped.emit()
+
+    def paintEvent(self, event) -> None:  # noqa: N802
+        super().paintEvent(event)
+        if self._drop_row is None or not self.count():
+            return
+        # A vertical line before the target page, or after the last one.
+        after = self._drop_row >= self.count()
+        rect = self.visualItemRect(self.item(self.count() - 1 if after else self._drop_row))
+        x = rect.right() + 3 if after else rect.left() - 3
+        painter = QPainter(self.viewport())
+        painter.setPen(QPen(self.palette().color(QPalette.ColorRole.Highlight), 3))
+        painter.drawLine(x, rect.top() + 4, x, rect.bottom() - 4)
+        painter.end()
+
+
 def _framed(page: QPixmap) -> QPixmap:
     """The page with a thin border and a shadow: white pages stand out from the background."""
     framed = QPixmap(page.width() + 4, page.height() + 4)
@@ -120,18 +200,21 @@ class PagesWindow(QMainWindow):
         self.setWindowIcon(QIcon.fromTheme(APP_ICON))
         self.resize(940, 640)
 
-        self.list = QListWidget()
+        self.list = PageList()
+        self.list.pages_dropped.connect(self._changed)
         self.list.setViewMode(QListWidget.ViewMode.IconMode)
         self.list.setIconSize(QSize(THUMB + 4, THUMB + 4))  # with the frame
         self.list.setGridSize(QSize(THUMB + 28, THUMB + 44))
         self.list.setResizeMode(QListWidget.ResizeMode.Adjust)
+        # Not Static: in icon mode that makes the list refuse every drop. The pages stay in
+        # reading order anyway, because PageList handles the drop itself.
         self.list.setMovement(QListWidget.Movement.Snap)
         self.list.setUniformItemSizes(True)
         self.list.setWrapping(True)
         self.list.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
-        self.list.setDragDropMode(QAbstractItemView.DragDropMode.InternalMove)
-        self.list.setDefaultDropAction(Qt.DropAction.MoveAction)
-        self.list.model().rowsMoved.connect(self._changed)
+        self.list.setDragEnabled(True)
+        self.list.setAcceptDrops(True)
+        self.list.setDropIndicatorShown(False)  # PageList draws its own
         self.list.itemSelectionChanged.connect(self._update_actions)
 
         self.summary = QLabel()
@@ -173,8 +256,8 @@ class PagesWindow(QMainWindow):
         self.addToolBar(bar)
         self.rotate_left = self._action("object-rotate-left", _("Rotate left"), "Ctrl+L", lambda: self.rotate(-90))
         self.rotate_right = self._action("object-rotate-right", _("Rotate right"), "Ctrl+R", lambda: self.rotate(90))
-        self.move_earlier = self._action("go-previous", _("Move earlier"), "Ctrl+Left", lambda: self.move(-1))
-        self.move_later = self._action("go-next", _("Move later"), "Ctrl+Right", lambda: self.move(1))
+        self.move_earlier = self._action("go-previous", _("Move earlier"), "Ctrl+Left", lambda: self.move_selection(-1))
+        self.move_later = self._action("go-next", _("Move later"), "Ctrl+Right", lambda: self.move_selection(1))
         self.duplicate_action = self._action("edit-copy", _("Duplicate"), "Ctrl+D", self.duplicate)
         self.remove_action = self._action("edit-delete", _("Remove"), QKeySequence.StandardKey.Delete, self.remove)
         self.restore_action = self._action("edit-undo", _("Start over"), QKeySequence.StandardKey.Undo, self.restore)
@@ -254,15 +337,13 @@ class PagesWindow(QMainWindow):
             self._paint(item)
         self._changed()
 
-    def move(self, step: int) -> None:
+    def move_selection(self, step: int) -> None:
         rows = self._selected_rows()
         if not rows or (step < 0 and rows[0] == 0) or (step > 0 and rows[-1] == self.list.count() - 1):
             return
-        for row in (rows if step < 0 else reversed(rows)):
-            item = self.list.takeItem(row)
-            self.list.insertItem(row + step, item)
-            item.setSelected(True)
-        self.list.scrollToItem(self.list.item(rows[0] + step))
+        self.list.clearSelection()
+        # One place earlier, or one place after the page that follows the last selected.
+        self.list.move_rows(rows, rows[0] - 1 if step < 0 else rows[-1] + 2)
         self._changed()
 
     def duplicate(self) -> None:

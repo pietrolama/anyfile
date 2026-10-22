@@ -11,7 +11,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
 from conftest import needs
-from PySide6.QtCore import QPointF
+from PySide6.QtCore import QPoint, QPointF
 from PySide6.QtWidgets import QApplication, QComboBox
 
 from anyfile.core.errors import AnyfileError
@@ -122,7 +122,7 @@ def test_window_shows_every_page_and_saves_the_changes(app, pages_window, pdf4):
 
     window.list.item(1).setSelected(True)
     window.rotate(90)
-    window.move(1)  # page 2 after page 3
+    window.move_selection(1)  # page 2 after page 3
     window.list.clearSelection()
     window.list.item(0).setSelected(True)
     window.duplicate()
@@ -193,6 +193,8 @@ def test_window_merges_the_rows_in_list_order_and_protects(app, registry, pdf4, 
     other = tmp_path / "other.pdf"
     subprocess.run(["qpdf", "--empty", "--pages", str(pdf4), "4", "--", str(other)], check=True)
     monkeypatch.setattr(main_window_module, "ask_new_password", lambda _parent, _names: "pw")
+    # The window is not active offscreen: it would send real desktop notifications.
+    monkeypatch.setattr(main_window_module, "notify", lambda *_args: None)
     window = main_window_module.MainWindow(registry)
     window.add_files([other, pdf4])
     rows = window.view.rows
@@ -217,3 +219,30 @@ def test_window_merges_the_rows_in_list_order_and_protects(app, registry, pdf4, 
     check = subprocess.run(["qpdf", "--requires-password", str(protected)])
     assert check.returncode == 0
     window.jobs.close()
+
+
+@needs("qpdf", "pdfinfo")
+def test_dragged_pages_go_where_the_line_shows(app, pages_window, pdf4):
+    window = pages_window(pdf4)
+    pages = window.list
+    # Where the drop events arrive: a list that refuses them cannot be reordered by mouse.
+    assert pages.viewport().acceptDrops()
+    window.resize(1200, 500)  # all four pages on one row
+    app.processEvents()
+    second = pages.visualItemRect(pages.item(1))
+    y = second.center().y()
+    assert pages.drop_row(QPoint(second.left() + 5, y)) == 1  # left half: before it
+    assert pages.drop_row(QPoint(second.right() - 5, y)) == 2  # right half: after it
+    last = pages.visualItemRect(pages.item(3))
+    assert pages.drop_row(QPoint(last.right() + 40, y)) == 4  # past the end
+
+    pages.move_rows([0, 2], 4)  # pages 1 and 3 dragged to the end, in their order
+    assert [p for p, _a in window.pages()] == [2, 4, 1, 3]
+    pages.move_rows([3], 0)
+    assert [p for p, _a in window.pages()] == [3, 2, 4, 1]
+    window.list.clearSelection()
+    window.list.item(1).setSelected(True)
+    window.move_selection(1)
+    window.move_selection(-1)
+    window.move_selection(-1)
+    assert [p for p, _a in window.pages()] == [2, 3, 4, 1]
