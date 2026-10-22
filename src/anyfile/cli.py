@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import getpass
 import sqlite3
 import sys
 import threading
@@ -41,6 +42,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("-q", "--quality", default="balanced",
                    help=_("max, balanced (default) or small; only applies to lossy formats "
                           "(JPEG, WebP, MP3, video...)"))
+    p.add_argument("--password-file", type=Path, metavar="FILE",
+                   help=_("file holding the password of protected PDFs (“-”: standard input); "
+                          "without it, the password is asked when needed"))
 
     p = sub.add_parser("edit", help=_("edit one or more files: resize, rotate, remove audio..."))
     p.add_argument("files", nargs="+", type=Path)
@@ -52,6 +56,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--overwrite", action="store_true", help=_("overwrite existing files"))
     p.add_argument("-q", "--quality", default="balanced",
                    help=_("max, balanced (default) or small, when the file has to be re-encoded"))
+    p.add_argument("--password-file", type=Path, metavar="FILE",
+                   help=_("file holding the password of protected PDFs, or the new one for "
+                          "“protect” (“-”: standard input); without it, the password is asked"))
 
     p = sub.add_parser("info", help=_("show the detected format and the possible conversions"))
     p.add_argument("files", nargs="+", type=Path)
@@ -175,7 +182,11 @@ def cmd_info(registry: Registry, files: list[Path]) -> int:
         print("  " + _("Conversions: {targets}").format(targets=names or _("none")))
         if any(registry.presets(c) for c in targets):
             print("  " + _("(* with quality presets: --quality max|balanced|small)"))
-        tools = registry.tools(info.format.id)
+        if info.encrypted:
+            print("  " + _("Protected PDF: a password is needed to open it")
+                  if Executor(registry).needs_password(info)
+                  else "  " + _("Protected PDF: opens without a password, with restrictions"))
+        tools = [t for t in registry.tools(info.format.id) if t.applies(info)]
         if tools:
             print("  " + _("Edits: {tools}").format(tools=", ".join(
                 t.id + (f" ({'|'.join(o.id for o in t.options)})" if t.options else "") for t in tools)))
@@ -198,7 +209,7 @@ def cmd_convert(registry: Registry, args: argparse.Namespace) -> int:
 
     jobs_args = [(f, target.id, {"output_dir": args.output_dir, "overwrite": args.overwrite,
                                   "quality": quality}) for f in args.files]
-    return _run_jobs(registry, _open_history(), jobs_args, sys.stdout.isatty())
+    return _run_jobs(registry, _open_history(), jobs_args, sys.stdout.isatty(), args.password_file)
 
 
 def cmd_edit(registry: Registry, args: argparse.Namespace) -> int:
@@ -220,10 +231,74 @@ def cmd_edit(registry: Registry, args: argparse.Namespace) -> int:
         jobs_args = [(args.files[0], "", {**common, "others": tuple(args.files[1:])})]
     else:
         jobs_args = [(f, "", common) for f in args.files]
-    return _run_jobs(registry, _open_history(), jobs_args, sys.stdout.isatty())
+    return _run_jobs(registry, _open_history(), jobs_args, sys.stdout.isatty(), args.password_file)
 
 
-def _run_jobs(registry: Registry, history: hist.History | None, jobs_args: list, tty: bool) -> int:
+def _read_password_file(path: Path) -> str | None:
+    try:
+        text = sys.stdin.read() if str(path) == "-" else path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as e:
+        print(_("anyfile: cannot read the password: {error}").format(error=e), file=sys.stderr)
+        return None
+    return text.splitlines()[0] if text else ""
+
+
+def _add_passwords(executor: Executor, jobs_args: list, given: str | None) -> bool:
+    """Gives each job the password it needs: the one from --password-file, otherwise
+    asked on the terminal. False when the user gave up."""
+    interactive = sys.stdin.isatty()
+    for source, _target, kwargs in jobs_args:
+        tool = next((t for e in executor.registry.engines for t in e.declared_tools()
+                     if t.id == kwargs.get("tool")), None)
+        if tool and tool.asks_password:
+            if given is None and interactive:
+                given = _ask_new_password()
+                if given is None:
+                    return False
+            kwargs["password"] = given or ""
+            continue
+        for path in (source, *kwargs.get("others", ())):
+            info = detect(path)
+            if kwargs.get("password") or not executor.needs_password(info):
+                continue
+            if given is not None or not interactive:
+                kwargs["password"] = given or ""
+                continue
+            for _attempt in range(3):
+                password = getpass.getpass(_("Password for “{name}”: ").format(name=info.name))
+                if executor.password_ok(path, password):
+                    kwargs["password"] = password
+                    break
+                print(_("Wrong password."), file=sys.stderr)
+            else:
+                return False
+    return True
+
+
+def _ask_new_password() -> str | None:
+    password = getpass.getpass(_("New password: "))
+    if not password:
+        print(_("anyfile: the password cannot be empty"), file=sys.stderr)
+        return None
+    if getpass.getpass(_("Repeat the password: ")) != password:
+        print(_("anyfile: the passwords do not match"), file=sys.stderr)
+        return None
+    return password
+
+
+def _run_jobs(registry: Registry, history: hist.History | None, jobs_args: list, tty: bool,
+              password_file: Path | None = None) -> int:
+    executor = Executor(registry)
+    given = None
+    if password_file is not None and (given := _read_password_file(password_file)) is None:
+        return 2
+    try:
+        if not _add_passwords(executor, jobs_args, given):
+            return 1
+    except (KeyboardInterrupt, EOFError):
+        print()
+        return 130
+
     lock = threading.Lock()
 
     def on_update(job: Job) -> None:
@@ -240,12 +315,15 @@ def _run_jobs(registry: Registry, history: hist.History | None, jobs_args: list,
                 print(f"✓ {name} → {job.output}")
             elif job.status is JobStatus.FAILED:
                 print(f"✗ {name}: {job.message}", file=sys.stderr)
+                if job.needs_password:
+                    print("  " + _("Give it with --password-file FILE, or run the command "
+                                   "in a terminal to type it"), file=sys.stderr)
             elif job.status is JobStatus.UNCHANGED:
                 print(f"= {job.message}")
             elif job.status is JobStatus.CANCELLED:
                 print(f"- {name}: " + _("cancelled"), file=sys.stderr)
 
-    queue = JobQueue(Executor(registry), on_update, history)
+    queue = JobQueue(executor, on_update, history)
     jobs = [queue.submit(source, target, **kwargs) for source, target, kwargs in jobs_args]
     try:
         queue.wait()

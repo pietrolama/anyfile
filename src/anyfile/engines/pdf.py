@@ -55,7 +55,7 @@ class PopplerEngine(Engine):
             ctx.runner.run([self.binary(0), "-layout", "-enc", "UTF-8", src, dst], tool="pdftotext")
             if dst.is_file() and not dst.read_bytes().strip():
                 raise EngineError(_("The PDF contains no extractable text: it may be a scan "
-                                    "(that would need OCR)"))
+                                    "(use “Recognize text” among the tools first)"))
             return
         fmt_flag = "-png" if conversion.target == "png" else "-jpeg"
         ctx.runner.run([self.binary(1), "-r", RENDER_DPI, fmt_flag, src, dst / _("page")],

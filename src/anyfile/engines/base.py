@@ -6,7 +6,7 @@ import threading
 from abc import ABC, abstractmethod
 from collections import deque
 from collections.abc import Callable, Iterable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import ClassVar
 
@@ -38,6 +38,7 @@ class Runner:
         cwd: Path | None = None,
         tool: str | None = None,
         env: dict[str, str] | None = None,
+        stdin: str | None = None,
     ) -> str:
         if self.cancel_event.is_set():
             raise ConversionCancelled()
@@ -45,7 +46,8 @@ class Runner:
         tool = tool or Path(argv[0]).name
         try:
             proc = subprocess.Popen(
-                argv, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                argv, stdin=subprocess.DEVNULL if stdin is None else subprocess.PIPE,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                 text=True, encoding="utf-8", errors="replace", cwd=cwd,
                 env={**os.environ, **env} if env else None, **system.popen_options(),
             )
@@ -74,6 +76,15 @@ class Runner:
                  threading.Thread(target=pump_stderr, daemon=True)]
         for t in pumps:
             t.start()
+        if stdin is not None:
+            # Secrets (passwords) travel this way: never on the command line, where other
+            # processes could read them.
+            assert proc.stdin
+            try:
+                proc.stdin.write(stdin)
+                proc.stdin.close()
+            except OSError:
+                pass  # the program exited without reading: its exit code tells why
 
         while True:
             try:
@@ -108,6 +119,8 @@ class ConversionContext:
     quality: Quality = Quality.BALANCED
     # Detected format of the file the engine reads (id).
     source_format: str = ""
+    # The new password, for tools that set one (Protect).
+    password: str = field(default="", repr=False)
 
 
 COMPRESS_NOTE = N_("Same format, smaller file; the original stays untouched")

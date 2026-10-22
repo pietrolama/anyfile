@@ -58,7 +58,7 @@ divise così:
 | Tipo | Pacchetti | Cosa sbloccano |
 |---|---|---|
 | obbligatorie | python3, python3-pyside6.*, file | l'applicazione |
-| consigliate (installate da apt) | ffmpeg, imagemagick, poppler-utils, ghostscript, qpdf, libnotify-bin | immagini, audio, video, PDF, compressione, strumenti PDF, notifiche |
+| consigliate (installate da apt) | ffmpeg, imagemagick, poppler-utils, ghostscript, qpdf, tesseract-ocr, libnotify-bin | immagini, audio, video, PDF, compressione, strumenti PDF, riconoscimento del testo, notifiche |
 | suggerite | libreoffice-writer/calc/impress, pandoc, texlive-xetex, qt6-translations-l10n | documenti Office, Markdown/EPUB, PDF da Markdown, finestre di dialogo Qt tradotte |
 
 Rimozione: `sudo apt remove anyfile`. Il pacchetto si costruisce con
@@ -137,13 +137,28 @@ ai formati.
 
 | File | Strumenti (opzioni) |
 |---|---|
-| Immagini | Ridimensiona (75, 50, 25%), Ruota (destra, 180°, sinistra), Specchia (orizzontale, verticale), Bianco e nero, Togli metadati |
+| Immagini | Ridimensiona (75, 50, 25%), Ruota (destra, 180°, sinistra), Specchia (orizzontale, verticale), Bianco e nero, Togli metadati, Riconosci testo (PDF ricercabile) |
 | Video | Togli audio (copiato, senza ricodifica), Ridimensiona, Ruota, Primo fotogramma (PNG) |
 | Audio | Normalizza volume (EBU R128, −16 LUFS, stessa frequenza di campionamento), Mono |
-| PDF | Unisci (PDF e immagini, nell'ordine dei file), Dividi pagine, Ruota, Numeri di pagina (centro, destra), Filigrana (BOZZA, RISERVATO, COPIA), Bianco e nero, Ripara |
+| PDF | Unisci (PDF e immagini, nell'ordine dei file), Dividi pagine, Ruota, Numeri di pagina (centro, destra), Filigrana (BOZZA, RISERVATO, COPIA), Bianco e nero, Ripara, Proteggi (password per aprire, password per modificare), Sblocca, Riconosci testo (lingue installate) |
 
 Le modifiche ai PDF lavorano sulle pagine, quindi testo, link e segnalibri restano come
-sono; Ruota, Numeri di pagina, Filigrana e Ripara usano qpdf, Bianco e nero usa Ghostscript.
+sono; Ruota, Numeri di pagina, Filigrana, Ripara, Proteggi e Sblocca usano qpdf, Bianco e
+nero usa Ghostscript.
+
+**PDF protetti.** Proteggi cifra con AES-256: «per aprire» chiede la password per leggere
+il file, «per modificare» lascia leggere e stampare a chiunque ma non modificare né
+copiare il testo. Ogni operazione funziona anche su un PDF che richiede una password:
+ANYFILE la chiede prima di iniziare, decifra una copia temporanea e non salva mai la
+password (nemmeno nella cronologia). Da riga di comando si digita nel terminale, oppure
+si indica con `--password-file FILE`; non è mai un argomento, che finirebbe nella
+cronologia della shell.
+
+**Riconosci testo** (OCR, con Tesseract) legge scansioni e foto e aggiunge il testo sotto
+la pagina, invisibile: le pagine restano identiche, ma il testo si può cercare e copiare.
+Vengono lette solo le pagine senza testo. L'anello esterno offre le lingue installate
+(`sudo apt install tesseract-ocr-ita`, `-deu`, `-fra`...); il Flatpak include inglese,
+italiano, tedesco, francese, spagnolo e portoghese.
 
 Il risultato è un file nuovo accanto all'originale: `foto-ridimensionato.jpg`,
 `clip-senza-audio.mp4`. Le GIF animate mantengono tutti i fotogrammi. Con più file la
@@ -233,6 +248,8 @@ anyfile convert *.wav -t mp3 -o ~/Musica       # conversione, anche di più file
 anyfile convert video.mov -t mp4 -q small      # qualità: max | balanced | small
 anyfile convert foto.jpg -t jpg                # stesso formato = comprimi
 anyfile edit -t resize --option 25 *.jpg       # strumenti: resize, rotate, mute, split...
+anyfile edit -t ocr --option ita scansione.pdf # riconosci testo (italiano)
+anyfile edit -t protect contratto.pdf         # chiede la nuova password
 anyfile engines                                # motori installati e mancanti
 anyfile history [-n 20] [--failed]             # cronologia (--clear per cancellarla)
 anyfile repeat 42 43                           # ripete le voci 42 e 43 della cronologia

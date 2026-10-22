@@ -11,12 +11,13 @@ from pathlib import Path
 from anyfile.core import formats, system
 from anyfile.core.detector import detect
 from anyfile.core.history import format_size
-from anyfile.core.errors import AnyfileError, ConversionCancelled, NothingGained
+from anyfile.core.errors import AnyfileError, ConversionCancelled, NothingGained, PasswordRequired
 from anyfile.core.planner import plan
 from anyfile.core.registry import Registry
 from anyfile.core.validation import validate_output
 from anyfile.i18n import _
 from anyfile.engines.base import ConversionContext, ProgressFn, Runner
+from anyfile.engines.qpdf import QpdfEngine
 from anyfile.models.conversion import Format, Quality
 from anyfile.models.file_info import FileInfo
 from anyfile.models.job import Job
@@ -26,6 +27,42 @@ from anyfile.models.tool import Tool, ToolOption
 class Executor:
     def __init__(self, registry: Registry) -> None:
         self.registry = registry
+
+    # --- protected PDFs ---------------------------------------------------------
+
+    def _qpdf(self) -> QpdfEngine | None:
+        engine = next((e for e in self.registry.engines if isinstance(e, QpdfEngine)), None)
+        return engine if engine and engine.available else None
+
+    def needs_password(self, info: FileInfo) -> bool:
+        """Whether the file is a PDF that cannot be opened without a password. The
+        interface asks for it before submitting the job."""
+        qpdf = self._qpdf() if info.encrypted else None
+        return bool(qpdf and qpdf.needs_password(info.path))
+
+    def password_ok(self, path: Path, password: str) -> bool:
+        qpdf = self._qpdf()
+        return bool(qpdf and not qpdf.needs_password(path, password))
+
+    def _unlocked(self, info: FileInfo, link: Path, password: str, job: Job) -> Path:
+        """A PDF that needs a password is decrypted first, inside the work folder: every
+        operation then works on it. Restrictions alone (printing, copying...) do not stop
+        the engines, so those files are used as they are."""
+        qpdf = self._qpdf() if info.encrypted else None
+        if qpdf is None or not qpdf.needs_password(link):
+            return link
+        if not password:
+            raise PasswordRequired(_("“{name}” is protected by a password").format(name=info.name))
+        plain = link.with_name(f"unlocked-{link.name}")
+        ctx = ConversionContext(Runner(job.cancel_event), lambda _v: None, info.path)
+        try:
+            qpdf.decrypt(link, plain, password, ctx)
+        except PasswordRequired:
+            raise PasswordRequired(_("Wrong password for “{name}”").format(name=info.name),
+                                   wrong=True) from None
+        return plain
+
+    # --- running -----------------------------------------------------------------
 
     def run(self, job: Job, progress: ProgressFn = lambda _value: None) -> Path:
         if job.tool and job.others:
@@ -59,6 +96,9 @@ class Executor:
             input_dir.mkdir()
             link = input_dir / f"input.{info.format.ext}"
             system.link_or_copy(src, link)
+            # For a tool that sets a password, job.password is the new one.
+            if not (tool and tool.asks_password):
+                link = self._unlocked(info, link, job.password, job)
 
             multi = tool.multi_output if tool else route.multi_output
             produced = work_dir / ("out" if multi else f"output.{target.ext}")
@@ -67,7 +107,7 @@ class Executor:
 
             if tool:
                 ctx = ConversionContext(Runner(job.cancel_event), progress, src, job.quality,
-                                        info.format.id)
+                                        info.format.id, password=job.password if tool.asks_password else "")
                 try:
                     self.registry.engine(tool.engine).apply(tool, option, link, produced, ctx)
                     if job.cancel_event.is_set():
@@ -157,9 +197,11 @@ class Executor:
                 if info.format.id == target.id:
                     link = work_dir / f"input-{n}.{target.ext}"
                     system.link_or_copy(info.path, link)
+                    # Protected files share the password given for the job.
+                    link = self._unlocked(info, link, job.password, job)
                 else:
                     part = Job(info.path, target.id, output_dir=work_dir / "parts", quality=job.quality,
-                               cancel_event=job.cancel_event)
+                               password=job.password, cancel_event=job.cancel_event)
                     link = Executor(self.registry).run(part)
                 inputs.append(link)
                 progress(n / (len(infos) + 1))
@@ -180,6 +222,12 @@ class Executor:
         if tool is None:
             raise AnyfileError(_("“{name}”: this edit is not available for {format}").format(
                 name=info.name, format=info.format.label if info.format else "?"))
+        if not tool.applies(info):
+            message = (_("“{name}” is already protected: unlock it first") if info.encrypted
+                       else _("“{name}” is not protected"))
+            raise AnyfileError(message.format(name=info.name))
+        if tool.asks_password and not job.password:
+            raise AnyfileError(_("{tool} needs a password").format(tool=tool.label))
         if tool.multi_input and not job.others:
             raise AnyfileError(_("{tool} needs at least two files").format(tool=tool.label))
         option = tool.option(job.option)

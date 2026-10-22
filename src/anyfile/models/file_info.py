@@ -17,6 +17,8 @@ class FileInfo:
     # The extension names a different format than the one found in the content.
     extension_mismatch: bool = False
     reason: str = ""
+    # A PDF with encryption: a password to open it, or only restrictions (printing, copying...).
+    encrypted: bool = False
 
     @property
     def name(self) -> str:

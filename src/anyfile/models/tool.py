@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from anyfile.i18n import _
+from anyfile.models.file_info import FileInfo
 
 
 @dataclass(frozen=True)
@@ -43,11 +44,18 @@ class Tool:
     # The tool combines several files into one result (e.g. merge PDFs): it gets them
     # all at once, in order, instead of one at a time.
     multi_input: bool = False
+    # The user chooses a password for the result (e.g. Protect).
+    asks_password: bool = False
+    # Only for encrypted files (True), only for unencrypted ones (False), or for all (None).
+    encrypted: bool | None = None
     notes: str = ""
 
     @property
     def label(self) -> str:
         return _(self.name)
+
+    def applies(self, info: FileInfo) -> bool:
+        return self.encrypted is None or self.encrypted == info.encrypted
 
     def target(self, source: str) -> str:
         return self.output or source

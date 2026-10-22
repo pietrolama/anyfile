@@ -18,5 +18,13 @@ class NothingGained(AnyfileError):
     """Compression did not make the file smaller: not an error, the result is discarded."""
 
 
+class PasswordRequired(AnyfileError):
+    """The PDF needs a password to be opened: none was given, or it was wrong."""
+
+    def __init__(self, message: str, wrong: bool = False) -> None:
+        super().__init__(message)
+        self.wrong = wrong
+
+
 class ConversionCancelled(Exception):
     pass

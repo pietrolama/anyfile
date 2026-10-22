@@ -64,7 +64,7 @@ Architecture: all
 Maintainer: pietrolama <pietrolama1@gmail.com>
 Installed-Size: $INSTALLED_KB
 Depends: python3 (>= 3.10), python3-pyside6.qtcore, python3-pyside6.qtgui, python3-pyside6.qtwidgets, file
-Recommends: ffmpeg, imagemagick, poppler-utils, ghostscript, qpdf, libnotify-bin
+Recommends: ffmpeg, imagemagick, poppler-utils, ghostscript, qpdf, tesseract-ocr, libnotify-bin
 Suggests: dolphin, qt6-translations-l10n, libreoffice-writer, libreoffice-calc, libreoffice-impress, pandoc, texlive-xetex
 Section: utils
 Priority: optional

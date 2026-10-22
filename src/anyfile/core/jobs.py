@@ -8,7 +8,7 @@ import traceback
 from collections.abc import Callable
 from pathlib import Path
 
-from anyfile.core.errors import AnyfileError, ConversionCancelled, NothingGained
+from anyfile.core.errors import AnyfileError, ConversionCancelled, NothingGained, PasswordRequired
 from anyfile.core.executor import Executor
 from anyfile.core.history import History
 from anyfile.i18n import _
@@ -32,9 +32,9 @@ class JobQueue:
     def submit(self, source: Path | str, target: str, *, output_dir: Path | None = None,
                overwrite: bool = False, quality: Quality = Quality.BALANCED,
                tool: str | None = None, option: str | None = None,
-               others: tuple[Path, ...] = ()) -> Job:
+               others: tuple[Path, ...] = (), password: str = "") -> Job:
         job = Job(Path(source), target, output_dir=output_dir, overwrite=overwrite, quality=quality,
-                  tool=tool, option=option, others=tuple(Path(p) for p in others))
+                  tool=tool, option=option, others=tuple(Path(p) for p in others), password=password)
         self.jobs.append(job)
         self._notify(job)
         self._queue.put(job)
@@ -84,6 +84,8 @@ class JobQueue:
             job.status, job.progress, job.message = JobStatus.DONE, 1.0, ""
         except ConversionCancelled:
             job.status, job.message = JobStatus.CANCELLED, _("Cancelled")
+        except PasswordRequired as e:
+            job.status, job.message, job.needs_password = JobStatus.FAILED, e.message, True
         except NothingGained as e:
             job.status, job.message = JobStatus.UNCHANGED, e.message
         except AnyfileError as e:

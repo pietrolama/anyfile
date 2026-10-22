@@ -21,6 +21,7 @@ from anyfile.ui.desktop import APP_ICON, notify, reveal
 
 FINISHED = (JobStatus.DONE, JobStatus.FAILED, JobStatus.CANCELLED, JobStatus.UNCHANGED)
 from anyfile.ui.job_queue import QtJobQueue
+from anyfile.ui.password_dialog import ask_passwords
 from anyfile.ui.settings import EnginesDialog, Settings
 
 
@@ -31,7 +32,8 @@ class MainWindow(QMainWindow):
         self.history = history
         self.history_window = None
         self.settings = Settings()
-        self.jobs = QtJobQueue(Executor(registry), self, history=history)
+        self.executor = Executor(registry)
+        self.jobs = QtJobQueue(self.executor, self, history=history)
         self.jobs.job_updated.connect(self._on_job_updated)
         self._batch: dict[int, JobStatus] = {}
         self._last_output: Path | None = None
@@ -209,10 +211,14 @@ class MainWindow(QMainWindow):
         rows = self.view.pending()
         if not rows:
             return
+        passwords = ask_passwords(self, self.executor, (row.info for row in rows))
+        if passwords is None:
+            return
         output_dir, overwrite = self._output_dir(), self.overwrite.isChecked()
         quality = self.quality.currentData()
         for row in rows:
-            job = self.jobs.submit(row.info.path, row.target, output_dir, overwrite, quality)
+            job = self.jobs.submit(row.info.path, row.target, output_dir, overwrite, quality,
+                                   password=passwords.get(row.info.path, ""))
             self._batch[job.id] = job.status
             self.view.attach_job(row, job)
         self._update_buttons()

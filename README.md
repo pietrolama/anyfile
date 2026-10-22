@@ -58,7 +58,7 @@ split like this:
 | Kind | Packages | What they unlock |
 |---|---|---|
 | required | python3, python3-pyside6.*, file | the application |
-| recommended (installed by apt) | ffmpeg, imagemagick, poppler-utils, ghostscript, qpdf, libnotify-bin | images, audio, video, PDF, compression, PDF tools, notifications |
+| recommended (installed by apt) | ffmpeg, imagemagick, poppler-utils, ghostscript, qpdf, tesseract-ocr, libnotify-bin | images, audio, video, PDF, compression, PDF tools, text recognition, notifications |
 | suggested | libreoffice-writer/calc/impress, pandoc, texlive-xetex, qt6-translations-l10n | Office documents, Markdown/EPUB, PDF from Markdown, translated Qt dialogs |
 
 Removal: `sudo apt remove anyfile`. The package is built with `packaging/deb/build.sh`;
@@ -133,13 +133,26 @@ uses the usual one (•). The centre, Esc or Tab go back to the formats.
 
 | Files | Tools (options) |
 |---|---|
-| Images | Resize (75, 50, 25%), Rotate (right, 180°, left), Mirror (horizontal, vertical), Black & white, Remove metadata |
+| Images | Resize (75, 50, 25%), Rotate (right, 180°, left), Mirror (horizontal, vertical), Black & white, Remove metadata, Recognize text (searchable PDF) |
 | Video | Remove audio (copied, no re-encoding), Resize, Rotate, First frame (PNG) |
 | Audio | Normalize volume (EBU R128, −16 LUFS, same sample rate), Mono |
-| PDF | Merge (PDFs and images, in the order of the files), Split pages, Rotate, Page numbers (centre, right), Watermark (DRAFT, CONFIDENTIAL, COPY), Black & white, Repair |
+| PDF | Merge (PDFs and images, in the order of the files), Split pages, Rotate, Page numbers (centre, right), Watermark (DRAFT, CONFIDENTIAL, COPY), Black & white, Repair, Protect (password to open, password to edit), Unlock, Recognize text (installed languages) |
 
 PDF edits work on the pages, so text, links and bookmarks stay as they are; Rotate, Page
-numbers, Watermark and Repair use qpdf, Black & white uses Ghostscript.
+numbers, Watermark, Repair, Protect and Unlock use qpdf, Black & white uses Ghostscript.
+
+**Protected PDFs.** Protect encrypts with AES-256: “to open” asks for the password to
+read the file, “to edit” lets anyone read and print it but not change it or copy its
+text. Every operation works on a PDF that needs a password too: ANYFILE asks for it
+before starting, decrypts a temporary copy and never stores the password (not even in
+the history). On the command line it is typed in the terminal, or given with
+`--password-file FILE`; it is never an argument, which would end up in the shell history.
+
+**Recognize text** (OCR, with Tesseract) reads scans and photos and adds the text
+underneath, invisible: the pages look exactly the same, but the text can be searched and
+copied. Only pages without text are read. The outer ring offers the installed languages
+(`sudo apt install tesseract-ocr-ita`, `-deu`, `-fra`...); the Flatpak includes English,
+Italian, German, French, Spanish and Portuguese.
 
 The result is a new file next to the original: `photo-resized.jpg`, `clip-silent.mp4`.
 Animated GIFs keep every frame. With several files the wheel offers every tool that
@@ -228,6 +241,8 @@ anyfile convert *.wav -t mp3 -o ~/Music        # conversion, several files too
 anyfile convert video.mov -t mp4 -q small      # quality: max | balanced | small
 anyfile convert photo.jpg -t jpg               # same format = compress
 anyfile edit -t resize --option 25 *.jpg       # tools: resize, rotate, mute, split...
+anyfile edit -t ocr --option ita scan.pdf      # recognize text (Italian)
+anyfile edit -t protect contract.pdf          # asks for the new password
 anyfile engines                                # installed and missing engines
 anyfile history [-n 20] [--failed]             # history (--clear to delete it)
 anyfile repeat 42 43                           # repeat history entries 42 and 43

@@ -34,6 +34,7 @@ from anyfile.models.job import Job, JobStatus
 from anyfile.models.tool import Tool
 from anyfile.ui.desktop import human_size, notify
 from anyfile.ui.job_queue import QtJobQueue
+from anyfile.ui.password_dialog import ask_new_password, ask_passwords
 from anyfile.ui.radial_geometry import (
     CENTER, Ring, clockwise_angle, groups, in_arc, polar, qt_angle, step,
 )
@@ -157,6 +158,8 @@ def tool_entries(infos: list[FileInfo], registry: Registry) -> list[Entry]:
         if info.format is None:
             continue
         for tool in registry.tools(info.format.id):
+            if not tool.applies(info):
+                continue  # e.g. Unlock for a PDF that has no password
             found.setdefault(tool.id, (tool, info.format.category, []))[2].append(info.path)
     # A tool that combines files is offered with a single file too: the other files are
     # then chosen in a file dialog.
@@ -234,7 +237,8 @@ class RadialMenu(QWidget):
         self._spinner = QTimer(self, interval=16)
         self._spinner.timeout.connect(self._on_spin)
 
-        self.queue = QtJobQueue(Executor(registry), self, history=history)
+        self.executor = Executor(registry)
+        self.queue = QtJobQueue(self.executor, self, history=history)
         self.queue.job_updated.connect(self._on_job)
 
     # --- opening and placement ----------------------------------------------
@@ -495,10 +499,13 @@ class RadialMenu(QWidget):
 
     def _start(self, entry: Entry, quality: Quality) -> None:
         assert entry.conversion is not None
+        passwords = self._passwords(entry.paths)
+        if passwords is None:
+            return  # cancelled: back to the wheel
         formats_by_path = {i.path: i.format.id for i in self.recognized}
         self._submit(entry, lambda path: dict(
             target=formats_by_path[path] if entry.conversion.is_compression else entry.conversion.target,
-            quality=quality))
+            quality=quality, password=passwords.get(path, "")))
 
     def _start_tool(self, entry: Entry, option: str | None) -> None:
         assert entry.tool is not None
@@ -510,9 +517,31 @@ class RadialMenu(QWidget):
             others = self._pick_files_to_add(entry)
             if not others:
                 return  # cancelled: back to the wheel
-        self._submit(entry, lambda _path: dict(target="", quality=self.default_quality,
-                                               tool=entry.tool.id, option=option, others=others),
-                     entry.paths[:1] if others else entry.paths)
+        paths = entry.paths[:1] if others else entry.paths
+        if entry.tool.asks_password:
+            password = ask_new_password(self, [p.name for p in paths])
+            self.activateWindow()
+            if password is None:
+                return
+            passwords = dict.fromkeys(paths, password)
+        else:
+            passwords = self._passwords((*paths, *others))
+            if passwords is None:
+                return
+            if others:
+                # A single job for all the files: it carries the password they share.
+                passwords = {paths[0]: next(iter(passwords.values()), "")}
+        self._submit(entry, lambda path: dict(target="", quality=self.default_quality,
+                                              tool=entry.tool.id, option=option, others=others,
+                                              password=passwords.get(path, "")),
+                     paths)
+
+    def _passwords(self, paths: tuple[Path, ...]) -> dict[Path, str] | None:
+        """Asks the password of the protected PDFs among the paths, while the wheel stays open."""
+        infos = {i.path: i for i in self.infos}
+        passwords = ask_passwords(self, self.executor, (infos.get(p) or detect(p) for p in paths))
+        self.activateWindow()
+        return passwords
 
     def _pick_files_to_add(self, entry: Entry) -> tuple[Path, ...]:
         first = entry.paths[0]

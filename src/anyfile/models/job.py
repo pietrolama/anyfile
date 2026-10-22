@@ -39,6 +39,9 @@ class Job:
     option: str | None = None
     # The other inputs of a tool that combines files (source is the first one).
     others: tuple[Path, ...] = ()
+    # The password of a protected PDF, or the new one for a tool that sets it (Protect).
+    # Kept only in memory: never written to the history.
+    password: str = field(default="", repr=False)
     id: int = field(default_factory=lambda: next(_ids))
     status: JobStatus = JobStatus.QUEUED
     # 0..1, or None when the engine does not report progress.
@@ -53,6 +56,8 @@ class Job:
     via: tuple[str, ...] = ()
     # Quality actually applied, or None when it does not matter for the target (e.g. PNG).
     applied_quality: Quality | None = None
+    # Failed because the PDF is protected and the password was missing or wrong.
+    needs_password: bool = False
     cancel_event: threading.Event = field(default_factory=threading.Event, repr=False)
 
     @property

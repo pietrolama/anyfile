@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import shutil
 import subprocess
 import zipfile
@@ -13,6 +14,10 @@ from anyfile.models.conversion import Format
 from anyfile.models.file_info import FileInfo
 
 _HEAD_SIZE = 8192
+# The trailer of an encrypted PDF points to its encryption dictionary. The trailer is at
+# the end of the file, or also at the start in linearized files.
+_PDF_ENCRYPT = re.compile(rb"/Encrypt\s*(?:\d+\s+\d+\s+R|<<)")
+_PDF_TAIL = 65536
 
 # Formats that share a container or encoding and can be mixed up without harm.
 _FAMILIES = (
@@ -185,4 +190,16 @@ def detect(path: Path | str) -> FileInfo:
     return FileInfo(
         path, fmt, size, detected_by, mime=mime, extension_mismatch=mismatch,
         reason="" if fmt else _("Unrecognized format"),
+        encrypted=bool(fmt and fmt.id == "pdf" and _pdf_encrypted(path, head)),
     )
+
+
+def _pdf_encrypted(path: Path, head: bytes) -> bool:
+    if _PDF_ENCRYPT.search(head):
+        return True
+    try:
+        with open(path, "rb") as f:
+            f.seek(max(0, path.stat().st_size - _PDF_TAIL))
+            return bool(_PDF_ENCRYPT.search(f.read()))
+    except OSError:
+        return False
