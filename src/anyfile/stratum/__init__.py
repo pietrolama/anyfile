@@ -19,7 +19,7 @@ from anyfile.engines.ffmpeg import AUDIO_PRESETS, FFmpegEngine
 from anyfile.i18n import _
 from anyfile.models.component import Anatomy, Component, Kind
 from anyfile.models.file_info import FileInfo
-from anyfile.stratum import media, pdf as stratum_pdf, zip as stratum_zip
+from anyfile.stratum import image as stratum_image, media, pdf as stratum_pdf, zip as stratum_zip
 
 # Job.tool of an extraction; Job.option is the id of the component, followed by the
 # format to convert it to, if any: "1", "1:mp3".
@@ -107,9 +107,28 @@ class PdfAnalyzer:
         return stratum_pdf.check(component, produced, runner)
 
 
+class ImageAnalyzer:
+    sources = stratum_image.SOURCES
+
+    def anatomy(self, info: FileInfo, path: Path, registry: Registry, runner: Runner, password: str = "") -> Anatomy:
+        return stratum_image.anatomy(path, runner, format_id=info.format.id if info.format else "")
+
+    def targets(self, component: Component, registry: Registry) -> list[str]:
+        return stratum_image.targets(component)
+
+    def extract(self, info: FileInfo, component: Component, src: Path, produced: Path,
+                target: str, ctx: ConversionContext, registry: Registry, anatomy: Anatomy,
+                password: str = "") -> None:
+        stratum_image.extract(src, component, produced, ctx.runner)
+
+    def check(self, component: Component, produced: Path, runner: Runner, registry: Registry,
+              target: str = "") -> str | None:
+        return stratum_image.check(component, produced, runner)
+
+
 # Registry of analyzers by format id
 _ANALYZERS: dict[str, Any] = {}
-for _cls in (MediaAnalyzer, ZipAnalyzer, PdfAnalyzer):
+for _cls in (MediaAnalyzer, ZipAnalyzer, PdfAnalyzer, ImageAnalyzer):
     _inst = _cls()
     for _fmt in _inst.sources:
         _ANALYZERS[_fmt] = _inst

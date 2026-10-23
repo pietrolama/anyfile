@@ -13,7 +13,7 @@ from anyfile.i18n import _, format_number, ngettext
 from anyfile.models.component import Anatomy, Component, Kind
 from anyfile.models.conversion import Quality
 
-SOURCES = ("mkv", "webm", "mp4", "mov", "avi")
+SOURCES = ("mkv", "webm", "mp4", "mov", "avi", "mp3", "flac", "m4a", "ogg", "opus")
 
 CODECS = {
     "h264": "H.264", "hevc": "H.265", "av1": "AV1", "vp9": "VP9", "vp8": "VP8", "mpeg4": "MPEG-4",
