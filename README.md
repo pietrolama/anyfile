@@ -8,7 +8,8 @@ A local file converter for Linux, made for KDE Plasma on Debian/Ubuntu. Right-cl
 file in Dolphin and a wheel under the pointer shows what you can do with it: convert
 it, compress it, pick the quality. You choose the result, not the program: ANYFILE
 detects the format, offers only the conversions the installed engines can really
-carry out, runs them safely and checks the file it produces.
+carry out, runs them safely and checks the file it produces. For a video, **STRATUM**
+looks inside it: the audio tracks, subtitles and cover, to take out one by one.
 
 Everything happens on your computer: no file is uploaded anywhere.
 
@@ -205,6 +206,33 @@ targets valid for more files. A slice that applies to only part of the selection
 shows how many files it covers (e.g. “PDF 6/9”) and converts only those. “Compress”
 is a single slice: it compresses each file in its own format.
 
+## STRATUM: inside a video
+
+ANYFILE answers “how do I transform this file?”; STRATUM answers “what is inside it?”.
+For a single video (MKV, MP4, WebM, MOV, AVI) the wheel has a **STRATUM** slice, next to
+Tools. It opens an exploded view in the same place: the tracks the file really contains,
+grouped by kind (video, audio, subtitles, cover), with language, codec, channels, title
+and the *default* and *forced* flags.
+
+- **Click a track** to select it, then **click the centre** to extract the selection.
+  The tracks are copied without re-encoding, into a format that holds them as they are
+  (AAC → `.m4a`, AC-3 → `.ac3`, SubRip → `.srt`, PGS → `.sup`…).
+- **The outer ring** of the track under the pointer converts it instead: audio to MP3,
+  M4A, Opus, Ogg, FLAC or WAV at the default quality, text subtitles to SRT, ASS or
+  VTT. The first format, marked •, is the track's own. A 5.1 track becomes stereo in
+  MP3, which holds at most two channels.
+- The results are named as players expect, so they find them next to the video:
+  `film.ita.m4a`, `film.eng.forced.srt`. Timings stay those of the video, so extracted
+  subtitles stay in sync.
+- **Esc**, or the centre with nothing selected, goes back to the wheel, until something
+  has been extracted. A file with many tracks first shows one slice per kind, which
+  opens onto its tracks.
+- From the keyboard: arrows, Space to select, 1-9 for a format, Enter to extract.
+
+Each extracted file is read back and must contain exactly the expected track. The
+original is never touched, an existing file is replaced only if you asked for it in
+the settings, and every extraction ends up in the history, ready to repeat.
+
 ## History
 
 Every conversion made with the wheel, the window or the command line ends up in the
@@ -253,6 +281,8 @@ anyfile edit -t protect contract.pdf          # asks for the new password
 anyfile engines                                # installed and missing engines
 anyfile history [-n 20] [--failed]             # history (--clear to delete it)
 anyfile repeat 42 43                           # repeat history entries 42 and 43
+anyfile explode film.mkv                       # STRATUM: the tracks inside a video
+anyfile explode film.mkv -x 1 3:srt            # extract track 1 as it is, track 3 as SRT
 anyfile --radial FILE...                       # open the wheel
 ```
 
@@ -332,8 +362,10 @@ src/anyfile/
   core/jobs.py          job queue with progress and cancellation
   core/history.py       SQLite history shared by wheel, window and command line
   core/system.py        everything that depends on the operating system (Linux / Windows)
+  stratum/              STRATUM: what a file contains (models/component.py), tracks of a video
   engines/              FFmpeg, ImageMagick, Poppler, LibreOffice + Pandoc, Ghostscript
   ui/radial.py          radial menu (ui/radial_geometry.py: geometry without Qt)
+  ui/stratum_view.py    STRATUM's exploded view
   ui/main_window.py     full window
   ui/history_window.py  history window
   i18n.py, locale/      translations
@@ -353,7 +385,7 @@ python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'
 .venv/bin/pytest
 ```
 
-There are more than 150 automated tests. They generate small sample files with the
+There are more than 250 automated tests. They generate small sample files with the
 engines themselves and check real conversions, cancellation, name conflicts, presets,
 chains, the history, translations and the behaviour of the wheel (with offscreen Qt).
 A test is skipped when the engine it needs is not installed.

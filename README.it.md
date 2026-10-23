@@ -8,7 +8,8 @@ Convertitore di file locale per Linux, pensato per KDE Plasma su Debian/Ubuntu. 
 destro su un file in Dolphin, e una ruota sotto il puntatore mostra cosa puoi farne:
 convertirlo, comprimerlo, scegliere la qualità. Si sceglie il risultato, non il
 programma: ANYFILE rileva il formato, offre solo le conversioni che i motori installati
-sanno davvero eseguire, le esegue in sicurezza e verifica il file prodotto.
+sanno davvero eseguire, le esegue in sicurezza e verifica il file prodotto. In un video,
+**STRATUM** guarda dentro: tracce audio, sottotitoli e copertina, da estrarre una per una.
 
 Tutto avviene sul computer: nessun file viene caricato in rete.
 
@@ -211,6 +212,33 @@ destinazioni valide per più file. Una fetta che vale solo per una parte della
 selezione indica quanti file copre (es. «PDF 6/9») e converte solo quelli. «Comprimi»
 è una sola fetta: comprime ogni file nel proprio formato.
 
+## STRATUM: dentro un video
+
+ANYFILE risponde a «come trasformo questo file?»; STRATUM a «che cosa contiene?». Per un
+singolo video (MKV, MP4, WebM, MOV, AVI) la ruota ha una fetta **STRATUM**, accanto a
+Strumenti. Apre nello stesso punto una vista esplosa: le tracce che il file contiene
+davvero, raggruppate per tipo (video, audio, sottotitoli, copertina), con lingua, codec,
+canali, titolo e le indicazioni *predefinita* e *forzati*.
+
+- **Clic su una traccia** per selezionarla, poi **clic sul centro** per estrarre la
+  selezione. Le tracce vengono copiate senza ricodifica, in un formato che le contiene
+  così come sono (AAC → `.m4a`, AC-3 → `.ac3`, SubRip → `.srt`, PGS → `.sup`…).
+- **L'anello esterno** della traccia sotto il puntatore la converte invece: l'audio in
+  MP3, M4A, Opus, Ogg, FLAC o WAV con la qualità predefinita, i sottotitoli di testo in
+  SRT, ASS o VTT. Il primo formato, segnato con •, è quello della traccia. Una traccia
+  5.1 diventa stereo in MP3, che non va oltre i due canali.
+- I risultati hanno i nomi che i lettori si aspettano, così li trovano accanto al video:
+  `film.ita.m4a`, `film.eng.forced.srt`. I tempi restano quelli del video, quindi i
+  sottotitoli estratti restano sincronizzati.
+- **Esc**, o il centro quando non c'è niente di selezionato, riporta alla ruota,
+  finché non è stato estratto nulla. Un file con molte tracce mostra prima una fetta per
+  tipo, che si apre sulle sue tracce.
+- Da tastiera: frecce, Spazio per selezionare, 1-9 per il formato, Invio per estrarre.
+
+Ogni file estratto viene riletto e deve contenere esattamente la traccia attesa.
+L'originale non viene mai toccato, un file esistente viene sostituito solo se l'hai
+chiesto nelle impostazioni e ogni estrazione finisce nella cronologia, pronta da ripetere.
+
 ## Cronologia
 
 Ogni conversione fatta con la ruota, la finestra o il terminale finisce nella stessa
@@ -261,6 +289,8 @@ anyfile edit -t protect contratto.pdf         # chiede la nuova password
 anyfile engines                                # motori installati e mancanti
 anyfile history [-n 20] [--failed]             # cronologia (--clear per cancellarla)
 anyfile repeat 42 43                           # ripete le voci 42 e 43 della cronologia
+anyfile explode film.mkv                       # STRATUM: le tracce dentro un video
+anyfile explode film.mkv -x 1 3:srt            # estrae la traccia 1 così com'è, la 3 in SRT
 anyfile --radial FILE...                       # apre la ruota
 ```
 
@@ -340,7 +370,7 @@ python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'
 .venv/bin/pytest
 ```
 
-I test automatici sono più di 150. Generano piccoli file di esempio con i motori stessi
+I test automatici sono più di 250. Generano piccoli file di esempio con i motori stessi
 e controllano conversioni reali, annullamento, conflitti di nome, preset, catene,
 cronologia, traduzioni e il comportamento della ruota (con Qt offscreen). Un test viene
 saltato se il motore che serve non è installato.
