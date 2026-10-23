@@ -8,8 +8,9 @@ Convertitore di file locale per Linux, pensato per KDE Plasma su Debian/Ubuntu. 
 destro su un file in Dolphin, e una ruota sotto il puntatore mostra cosa puoi farne:
 convertirlo, comprimerlo, scegliere la qualità. Si sceglie il risultato, non il
 programma: ANYFILE rileva il formato, offre solo le conversioni che i motori installati
-sanno davvero eseguire, le esegue in sicurezza e verifica il file prodotto. In un video,
-**STRATUM** guarda dentro: tracce audio, sottotitoli e copertina, da estrarre una per una.
+sanno davvero eseguire, le esegue in sicurezza e verifica il file prodotto. Con
+**STRATUM**, guarda dentro i file composti: tracce video, copertine audio, immagini e
+allegati PDF, membri di archivi ZIP o fotogrammi di GIF animate e TIFF multipagina, da estrarre uno per uno.
 
 Tutto avviene sul computer: nessun file viene caricato in rete.
 
@@ -212,32 +213,26 @@ destinazioni valide per più file. Una fetta che vale solo per una parte della
 selezione indica quanti file copre (es. «PDF 6/9») e converte solo quelli. «Comprimi»
 è una sola fetta: comprime ogni file nel proprio formato.
 
-## STRATUM: dentro un video
+## STRATUM: dentro un file
 
-ANYFILE risponde a «come trasformo questo file?»; STRATUM a «che cosa contiene?». Per un
-singolo video (MKV, MP4, WebM, MOV, AVI) la ruota ha una fetta **STRATUM**, accanto a
-Strumenti. Apre nello stesso punto una vista esplosa: le tracce che il file contiene
-davvero, raggruppate per tipo (video, audio, sottotitoli, copertina), con lingua, codec,
-canali, titolo e le indicazioni *predefinita* e *forzati*.
+ANYFILE risponde a «come trasformo questo file?»; STRATUM a «che cosa contiene?». Per i
+file supportati, la ruota ha una fetta **STRATUM**, accanto a Strumenti. Apre nello stesso
+punto una vista esplosa che mostra i componenti contenuti:
 
-- **Clic su una traccia** per selezionarla, poi **clic sul centro** per estrarre la
-  selezione. Le tracce vengono copiate senza ricodifica, in un formato che le contiene
-  così come sono (AAC → `.m4a`, AC-3 → `.ac3`, SubRip → `.srt`, PGS → `.sup`…).
-- **L'anello esterno** della traccia sotto il puntatore la converte invece: l'audio in
-  MP3, M4A, Opus, Ogg, FLAC o WAV con la qualità predefinita, i sottotitoli di testo in
-  SRT, ASS o VTT. Il primo formato, segnato con •, è quello della traccia. Una traccia
-  5.1 diventa stereo in MP3, che non va oltre i due canali.
-- I risultati hanno i nomi che i lettori si aspettano, così li trovano accanto al video:
-  `film.ita.m4a`, `film.eng.forced.srt`. I tempi restano quelli del video, quindi i
-  sottotitoli estratti restano sincronizzati.
-- **Esc**, o il centro quando non c'è niente di selezionato, riporta alla ruota,
-  finché non è stato estratto nulla. Un file con molte tracce mostra prima una fetta per
-  tipo, che si apre sulle sue tracce.
+- **Video** (MKV, MP4, WebM, MOV, AVI): tracce video, audio, sottotitoli e copertine. Copiate
+  senza ricodifica o convertite al volo (audio in MP3/M4A/Opus/FLAC/WAV, sottotitoli in SRT/ASS/VTT).
+- **File Audio** (MP3, FLAC, M4A, OGG, OPUS): copertine incorporate (ID3 APIC, blocchi immagine FLAC,
+  covr M4A) e testi sincronizzati.
+- **Documenti PDF**: immagini raster incorporate e file allegati estratti senza aprire editor complessi.
+- **Archivi ZIP**: singoli file interni, con protezioni da path traversal e zip bomb.
+- **Immagini multi-fotogramma / multi-pagina** (GIF animate, TIFF multipagina): singoli fotogrammi o pagine.
+
+- **Clic su un componente** per selezionarlo, poi **clic sul centro** per estrarre la selezione.
+- **L'anello esterno** permette la conversione durante l'estrazione (es. per le tracce audio).
+- **Esc**, o il centro quando non c'è selezione, riporta alla ruota.
 - Da tastiera: frecce, Spazio per selezionare, 1-9 per il formato, Invio per estrarre.
 
-Ogni file estratto viene riletto e deve contenere esattamente la traccia attesa.
-L'originale non viene mai toccato, un file esistente viene sostituito solo se l'hai
-chiesto nelle impostazioni e ogni estrazione finisce nella cronologia, pronta da ripetere.
+Ogni file estratto viene validato. L'originale non viene mai toccato, e ogni estrazione finisce nella cronologia.
 
 ## Cronologia
 

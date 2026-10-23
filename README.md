@@ -8,8 +8,9 @@ A local file converter for Linux, made for KDE Plasma on Debian/Ubuntu. Right-cl
 file in Dolphin and a wheel under the pointer shows what you can do with it: convert
 it, compress it, pick the quality. You choose the result, not the program: ANYFILE
 detects the format, offers only the conversions the installed engines can really
-carry out, runs them safely and checks the file it produces. For a video, **STRATUM**
-looks inside it: the audio tracks, subtitles and cover, to take out one by one.
+carry out, runs them safely and checks the file it produces. With **STRATUM**, it looks
+inside compound files: video tracks, audio covers, PDF images and attachments, ZIP
+archive members, or animated GIF / multi-page TIFF frames, to take out one by one.
 
 Everything happens on your computer: no file is uploaded anywhere.
 
@@ -206,32 +207,27 @@ targets valid for more files. A slice that applies to only part of the selection
 shows how many files it covers (e.g. “PDF 6/9”) and converts only those. “Compress”
 is a single slice: it compresses each file in its own format.
 
-## STRATUM: inside a video
+## STRATUM: look inside a file
 
 ANYFILE answers “how do I transform this file?”; STRATUM answers “what is inside it?”.
-For a single video (MKV, MP4, WebM, MOV, AVI) the wheel has a **STRATUM** slice, next to
-Tools. It opens an exploded view in the same place: the tracks the file really contains,
-grouped by kind (video, audio, subtitles, cover), with language, codec, channels, title
-and the *default* and *forced* flags.
+For supported files, the wheel has a **STRATUM** slice next to Tools. It opens an exploded
+view in the same place, showing the components the file contains:
 
-- **Click a track** to select it, then **click the centre** to extract the selection.
-  The tracks are copied without re-encoding, into a format that holds them as they are
-  (AAC → `.m4a`, AC-3 → `.ac3`, SubRip → `.srt`, PGS → `.sup`…).
-- **The outer ring** of the track under the pointer converts it instead: audio to MP3,
-  M4A, Opus, Ogg, FLAC or WAV at the default quality, text subtitles to SRT, ASS or
-  VTT. The first format, marked •, is the track's own. A 5.1 track becomes stereo in
-  MP3, which holds at most two channels.
-- The results are named as players expect, so they find them next to the video:
-  `film.ita.m4a`, `film.eng.forced.srt`. Timings stay those of the video, so extracted
-  subtitles stay in sync.
-- **Esc**, or the centre with nothing selected, goes back to the wheel, until something
-  has been extracted. A file with many tracks first shows one slice per kind, which
-  opens onto its tracks.
+- **Videos** (MKV, MP4, WebM, MOV, AVI): video, audio, subtitles and cover tracks with language,
+  codec, channels and flags. Extracted as-is or converted on the fly (audio to MP3/M4A/Opus/FLAC/WAV,
+  subtitles to SRT/ASS/VTT).
+- **Audio files** (MP3, FLAC, M4A, OGG, OPUS): embedded cover art (ID3 APIC, FLAC picture blocks,
+  M4A covr) and synchronized lyrics/subtitles.
+- **PDF documents**: embedded raster images and attached files extracted cleanly without opening an editor.
+- **ZIP archives**: individual archive members with path traversal and zip bomb security guards.
+- **Multi-frame / Multi-page images** (GIF animations, multi-page TIFF): individual frames or pages.
+
+- **Click a component** to select it, then **click the centre** to extract the selection.
+- **The outer ring** of an item (e.g. an audio track) allows converting it during extraction.
+- **Esc**, or the centre with nothing selected, goes back to the wheel.
 - From the keyboard: arrows, Space to select, 1-9 for a format, Enter to extract.
 
-Each extracted file is read back and must contain exactly the expected track. The
-original is never touched, an existing file is replaced only if you asked for it in
-the settings, and every extraction ends up in the history, ready to repeat.
+Each extracted file is validated. The original is never touched, and every extraction ends up in the history.
 
 ## History
 
