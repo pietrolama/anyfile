@@ -44,6 +44,7 @@ KIND_COLORS = {
     Kind.AUDIO: "#f67400",
     Kind.SUBTITLE: "#9b59b6",
     Kind.COVER: "#3daee9",
+    Kind.MEMBER: "#27ae60",
 }
 # Beyond this many tracks of one kind, the slices would be too thin to read.
 MAX_TRACKS = 32

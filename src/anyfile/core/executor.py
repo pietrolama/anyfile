@@ -24,7 +24,7 @@ from anyfile.models.file_info import FileInfo
 from anyfile.models.job import Job
 from anyfile.models.tool import Tool, ToolOption
 from anyfile import stratum
-from anyfile.stratum import EXTRACT, media
+from anyfile.stratum import EXTRACT, media, zip as stratum_zip
 
 
 class Executor:
@@ -254,22 +254,32 @@ class Executor:
                         id=component.id, format=target.upper(), choices=", ".join(possible)))
                 ext = target or component.ext
                 job.target = ext
-                # Quality only matters when the track is converted: a copy stays as it is.
-                job.applied_quality = job.quality if ext != component.ext and ext in AUDIO_PRESETS else None
-                engine = stratum.media_engine(self.registry)
-                produced = work_dir / f"output.{ext}"
-                ctx = ConversionContext(Runner(job.cancel_event), progress, src, job.quality, info.format.id)
-                media.extract(engine, component, link, info.format.id, produced, anatomy.duration, ctx, ext)
-                if job.cancel_event.is_set():
-                    raise ConversionCancelled()
-                if problem := media.check(engine, component, produced, ctx.runner, ext):
-                    raise ValidationError(problem)
+                if info.format.id == "zip":
+                    produced = work_dir / f"output.{ext}"
+                    runner = Runner(job.cancel_event)
+                    stratum_zip.extract(link, component, produced, runner)
+                    if job.cancel_event.is_set():
+                        raise ConversionCancelled()
+                    if problem := stratum_zip.check(component, produced, runner):
+                        raise ValidationError(problem)
+                else:
+                    # Quality only matters when the track is converted: a copy stays as it is.
+                    job.applied_quality = job.quality if ext != component.ext and ext in AUDIO_PRESETS else None
+                    engine = stratum.media_engine(self.registry)
+                    produced = work_dir / f"output.{ext}"
+                    ctx = ConversionContext(Runner(job.cancel_event), progress, src, job.quality, info.format.id)
+                    media.extract(engine, component, link, info.format.id, produced, anatomy.duration, ctx, ext)
+                    if job.cancel_event.is_set():
+                        raise ConversionCancelled()
+                    if problem := media.check(engine, component, produced, ctx.runner, ext):
+                        raise ValidationError(problem)
             except AnyfileError as e:
                 e.message = e.message.replace(str(link), src.name)
                 e.details = e.details.replace(str(link), str(src))
                 raise
             name = stratum.result_name(src.stem, component)
-            output = place(produced, out_dir / f"{name}.{ext}", overwrite=job.overwrite,
+            target_path = out_dir / (f"{name}.{ext}" if ext else name)
+            output = place(produced, target_path, overwrite=job.overwrite,
                            protect=src)
             job.output_size = _size(output)
             return output

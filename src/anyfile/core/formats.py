@@ -59,6 +59,8 @@ FORMATS: tuple[Format, ...] = (
     Format("ppt", "PowerPoint 97 PPT", C.PRESENTATION, ("ppt",), ("application/vnd.ms-powerpoint",)),
     Format("odp", "OpenDocument ODP", C.PRESENTATION, ("odp",),
            ("application/vnd.oasis.opendocument.presentation",)),
+    # Archives
+    Format("zip", "ZIP archive", C.ARCHIVE, ("zip",), ("application/zip", "application/x-zip-compressed")),
 )
 
 BY_ID: dict[str, Format] = {f.id: f for f in FORMATS}

@@ -113,6 +113,7 @@ def _sniff_zip(path: Path) -> str | None:
                 for prefix, fid in (("word/", "docx"), ("xl/", "xlsx"), ("ppt/", "pptx")):
                     if any(n.startswith(prefix) for n in names):
                         return fid
+        return "zip"
     except (zipfile.BadZipFile, OSError, KeyError):
         pass
     return None

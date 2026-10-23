@@ -13,6 +13,7 @@ class Kind(Enum):
     AUDIO = N_("Audio")
     SUBTITLE = N_("Subtitles")
     COVER = N_("Cover")
+    MEMBER = N_("Files")
 
     @property
     def label(self) -> str:

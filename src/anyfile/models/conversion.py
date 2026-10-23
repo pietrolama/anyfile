@@ -14,6 +14,7 @@ class Category(Enum):
     TEXT = N_("Text")
     SPREADSHEET = N_("Spreadsheet")
     PRESENTATION = N_("Presentation")
+    ARCHIVE = N_("Archive")
     PDF = N_("PDF")
 
     @property
