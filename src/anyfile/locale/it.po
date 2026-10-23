@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: anyfile\n"
 "Report-Msgid-Bugs-To: https://github.com/pietrolama/anyfile/issues\n"
-"POT-Creation-Date: 2026-10-23 07:54+0200\n"
+"POT-Creation-Date: 2026-10-23 09:42+0200\n"
 "PO-Revision-Date: 2026-10-20 12:00+0200\n"
 "Last-Translator: pietrolama\n"
 "Language-Team: Italian\n"
@@ -299,12 +299,12 @@ msgstr "anyfile: la traccia {id} non si può salvare come {format} ({choices})"
 msgid "No track found"
 msgstr "Nessuna traccia trovata"
 
-#: src/anyfile/cli.py:288 src/anyfile/ui/stratum_view.py:537
+#: src/anyfile/cli.py:288 src/anyfile/ui/stratum_view.py:540
 msgid "default"
 msgstr "predefinita"
 
-#: src/anyfile/cli.py:288 src/anyfile/ui/stratum_view.py:420
-#: src/anyfile/ui/stratum_view.py:537
+#: src/anyfile/cli.py:288 src/anyfile/ui/stratum_view.py:423
+#: src/anyfile/ui/stratum_view.py:540
 msgid "forced"
 msgstr "forzati"
 
@@ -362,20 +362,20 @@ msgstr ""
 msgid "cancelled"
 msgstr "annullato"
 
-#: src/anyfile/core/detector.py:156
+#: src/anyfile/core/detector.py:157
 msgid "Not a regular file"
 msgstr "Non è un file regolare"
 
-#: src/anyfile/core/detector.py:159
+#: src/anyfile/core/detector.py:160
 msgid "The file is empty"
 msgstr "Il file è vuoto"
 
-#: src/anyfile/core/detector.py:165
+#: src/anyfile/core/detector.py:166
 #, python-brace-format
 msgid "Cannot read the file: {error}"
 msgstr "Impossibile leggere il file: {error}"
 
-#: src/anyfile/core/detector.py:192 src/anyfile/core/planner.py:38
+#: src/anyfile/core/detector.py:193 src/anyfile/core/planner.py:38
 #: src/anyfile/ui/conversion_view.py:214
 msgid "Unrecognized format"
 msgstr "Formato non riconosciuto"
@@ -391,7 +391,8 @@ msgid "Wrong password for “{name}”"
 msgstr "Password errata per «{name}»"
 
 #: src/anyfile/core/executor.py:77 src/anyfile/core/executor.py:183
-#: src/anyfile/core/executor.py:230
+#: src/anyfile/core/executor.py:230 src/anyfile/stratum/image.py:28
+#: src/anyfile/stratum/pdf.py:143
 #, python-brace-format
 msgid "File not found: {path}"
 msgstr "File non trovato: {path}"
@@ -440,47 +441,51 @@ msgstr "«{name}»: la traccia {id} non si può estrarre: {reason}"
 msgid "Track {id} cannot be saved as {format}: use {choices}"
 msgstr "La traccia {id} non si può salvare come {format}: usa {choices}"
 
-#: src/anyfile/core/executor.py:282
+#: src/anyfile/core/executor.py:261
+msgid "STRATUM cannot extract from {format} yet"
+msgstr "STRATUM non sa ancora guardare dentro i file {format}"
+
+#: src/anyfile/core/executor.py:287
 #, python-brace-format
 msgid "“{name}”: this edit is not available for {format}"
 msgstr "«{name}»: questa modifica non è disponibile per {format}"
 
-#: src/anyfile/core/executor.py:285
+#: src/anyfile/core/executor.py:290
 #, python-brace-format
 msgid "“{name}” is already protected: unlock it first"
 msgstr "«{name}» è già protetto: prima sbloccalo"
 
-#: src/anyfile/core/executor.py:286
+#: src/anyfile/core/executor.py:291
 #, python-brace-format
 msgid "“{name}” is not protected"
 msgstr "«{name}» non è protetto"
 
-#: src/anyfile/core/executor.py:289
+#: src/anyfile/core/executor.py:294
 #, python-brace-format
 msgid "{tool} needs a password"
 msgstr "{tool} richiede una password"
 
-#: src/anyfile/core/executor.py:291
+#: src/anyfile/core/executor.py:296
 #, python-brace-format
 msgid "{tool} needs at least two files"
 msgstr "{tool} richiede almeno due file"
 
-#: src/anyfile/core/executor.py:294
+#: src/anyfile/core/executor.py:299
 #, python-brace-format
 msgid "{tool}: choose the pages first"
 msgstr "{tool}: prima scegli le pagine"
 
-#: src/anyfile/core/executor.py:296
+#: src/anyfile/core/executor.py:301
 #, python-brace-format
 msgid "Unknown option “{option}” for {tool}: use {choices}"
 msgstr "Opzione «{option}» sconosciuta per {tool}: usa {choices}"
 
-#: src/anyfile/core/executor.py:320
+#: src/anyfile/core/executor.py:325
 #, python-brace-format
 msgid "Cannot create the folder {folder}: {error}"
 msgstr "Impossibile creare la cartella {folder}: {error}"
 
-#: src/anyfile/core/executor.py:323
+#: src/anyfile/core/executor.py:328
 #, python-brace-format
 msgid "Cannot write to {folder}: choose another destination folder"
 msgstr ""
@@ -519,7 +524,7 @@ msgstr "Comprimi {format}"
 msgid "track {id}"
 msgstr "traccia {id}"
 
-#: src/anyfile/core/history.py:149 src/anyfile/ui/stratum_view.py:465
+#: src/anyfile/core/history.py:149 src/anyfile/ui/stratum_view.py:468
 msgid "Extract"
 msgstr "Estrai"
 
@@ -1189,6 +1194,18 @@ msgstr "Sottotitoli"
 msgid "Cover"
 msgstr "Copertina"
 
+#: src/anyfile/models/component.py:16
+msgid "Files"
+msgstr "File"
+
+#: src/anyfile/models/component.py:17
+msgid "Images"
+msgstr "Immagini"
+
+#: src/anyfile/models/component.py:18
+msgid "Attachments"
+msgstr "Allegati"
+
 #: src/anyfile/models/conversion.py:10
 msgid "Image"
 msgstr "Immagine"
@@ -1210,26 +1227,30 @@ msgid "Presentation"
 msgstr "Presentazione"
 
 #: src/anyfile/models/conversion.py:17
+msgid "Archive"
+msgstr "Archivio"
+
+#: src/anyfile/models/conversion.py:18
 msgid "PDF"
 msgstr "PDF"
 
-#: src/anyfile/models/conversion.py:119
+#: src/anyfile/models/conversion.py:120
 msgid "Maximum quality"
 msgstr "Massima qualità"
 
-#: src/anyfile/models/conversion.py:119 src/anyfile/models/conversion.py:124
+#: src/anyfile/models/conversion.py:120 src/anyfile/models/conversion.py:125
 msgid "Balanced"
 msgstr "Bilanciata"
 
-#: src/anyfile/models/conversion.py:120
+#: src/anyfile/models/conversion.py:121
 msgid "Smallest file"
 msgstr "File più leggero"
 
-#: src/anyfile/models/conversion.py:124
+#: src/anyfile/models/conversion.py:125
 msgid "Maximum"
 msgstr "Massima"
 
-#: src/anyfile/models/conversion.py:124
+#: src/anyfile/models/conversion.py:125
 msgid "Small"
 msgstr "Leggera"
 
@@ -1242,13 +1263,13 @@ msgid "Running"
 msgstr "In corso"
 
 #: src/anyfile/models/job.py:18 src/anyfile/ui/radial.py:951
-#: src/anyfile/ui/stratum_view.py:488
+#: src/anyfile/ui/stratum_view.py:491
 msgid "Done"
 msgstr "Fatto"
 
 #: src/anyfile/models/job.py:19 src/anyfile/ui/main_window.py:347
 #: src/anyfile/ui/main_window.py:353 src/anyfile/ui/main_window.py:365
-#: src/anyfile/ui/radial.py:955 src/anyfile/ui/stratum_view.py:492
+#: src/anyfile/ui/radial.py:955 src/anyfile/ui/stratum_view.py:495
 msgid "Error"
 msgstr "Errore"
 
@@ -1256,19 +1277,46 @@ msgstr "Errore"
 msgid "Already compact"
 msgstr "Già compatto"
 
-#: src/anyfile/stratum/__init__.py:64
+#: src/anyfile/stratum/image.py:36
+msgid "Cannot inspect image: {error}"
+msgstr "Impossibile leggere il file: {error}"
+
+#: src/anyfile/stratum/image.py:68 src/anyfile/stratum/pdf.py:72
+msgid "page {n}"
+msgstr "Pagina {n}"
+
+#: src/anyfile/stratum/image.py:91
+#, python-brace-format
+msgid "GIF animation · {n} frames"
+msgstr "Animazione GIF · {n} fotogrammi"
+
+#: src/anyfile/stratum/image.py:93
+#, python-brace-format
+msgid "TIFF image · {n} pages"
+msgstr "Immagine TIFF · {n} pagine"
+
+#: src/anyfile/stratum/image.py:108
+#, python-brace-format
+msgid "Invalid frame index: {idx}"
+msgstr "Indice fotogramma non valido: {idx}"
+
+#: src/anyfile/stratum/image.py:119
+msgid "Extracted image component is empty or missing"
+msgstr "Il componente immagine estratto è vuoto o mancante"
+
+#: src/anyfile/stratum/__init__.py:49
+#, python-brace-format
+msgid "“{name}”: the analysis took too long"
+msgstr "«{name}»: l'analisi ha richiesto troppo tempo"
+
+#: src/anyfile/stratum/__init__.py:181
 #, python-brace-format
 msgid "STRATUM cannot look inside {format} files yet"
 msgstr "STRATUM non sa ancora guardare dentro i file {format}"
 
-#: src/anyfile/stratum/__init__.py:65
+#: src/anyfile/stratum/__init__.py:182
 msgid "unrecognized"
 msgstr "non riconosciuti"
-
-#: src/anyfile/stratum/__init__.py:83
-#, python-brace-format
-msgid "“{name}”: the analysis took too long"
-msgstr "«{name}»: l'analisi ha richiesto troppo tempo"
 
 #: src/anyfile/stratum/media.py:68
 msgid "FFprobe gave an unreadable answer"
@@ -1302,6 +1350,146 @@ msgstr "Il file prodotto non si riesce a rileggere"
 #: src/anyfile/stratum/media.py:251
 msgid "The produced file does not contain the expected track"
 msgstr "Il file prodotto non contiene la traccia attesa"
+
+#: src/anyfile/stratum/pdf.py:124
+msgid "FILE"
+msgstr "FILE"
+
+#: src/anyfile/stratum/pdf.py:127
+#, python-brace-format
+msgid "Embedded file #{n}"
+msgstr "File incorporato n. {n}"
+
+#: src/anyfile/stratum/pdf.py:153
+msgid "{n} images"
+msgstr "{n} pagina"
+
+#: src/anyfile/stratum/pdf.py:155
+#, python-brace-format
+msgid "{n} attachments"
+msgstr "{n} allegati"
+
+#: src/anyfile/stratum/pdf.py:157
+#, python-brace-format
+msgid "PDF document · {summary}"
+msgstr "Documento PDF · {summary}"
+
+#: src/anyfile/stratum/pdf.py:157
+msgid "no media or attachments"
+msgstr "nessun elemento multimediale o allegato"
+
+#: src/anyfile/stratum/pdf.py:168
+msgid "Invalid attachment component"
+msgstr "Componente allegato non valido"
+
+#: src/anyfile/stratum/pdf.py:179
+msgid "Invalid image component"
+msgstr "Componente immagine non valido"
+
+#: src/anyfile/stratum/pdf.py:200
+#, python-brace-format
+msgid "No image extracted from page {n}"
+msgstr "Nessuna immagine estratta dalla pagina {n}"
+
+#: src/anyfile/stratum/pdf.py:208
+msgid "Cannot extract component kind: {kind}"
+msgstr "Impossibile estrarre il tipo di componente: {kind}"
+
+#: src/anyfile/stratum/pdf.py:214
+msgid "Extracted PDF component is empty or missing"
+msgstr "Il componente PDF estratto è vuoto o mancante"
+
+#: src/anyfile/stratum/zip.py:34
+msgid "empty member name"
+msgstr "nome membro vuoto"
+
+#: src/anyfile/stratum/zip.py:37
+msgid "absolute path"
+msgstr "percorso assoluto"
+
+#: src/anyfile/stratum/zip.py:40
+msgid "drive letter in path"
+msgstr "lettera di unità nel percorso"
+
+#: src/anyfile/stratum/zip.py:43
+msgid "path traversal (..) detected"
+msgstr "rilevato path traversal (..)"
+
+#: src/anyfile/stratum/zip.py:46
+msgid "resolves to absolute path"
+msgstr "risolve in un percorso assoluto"
+
+#: src/anyfile/stratum/zip.py:53
+#, python-brace-format
+msgid "uncompressed size exceeds limit ({size})"
+msgstr "la dimensione decompressa supera il limite ({size})"
+
+#: src/anyfile/stratum/zip.py:59
+#, python-brace-format
+msgid "suspicious compression ratio ({ratio:.0f}:1)"
+msgstr "rapporto di compressione sospetto ({ratio:.0f}:1)"
+
+#: src/anyfile/stratum/zip.py:73
+#, python-brace-format
+msgid "Corrupted or invalid ZIP archive: {error}"
+msgstr "Archivio ZIP corrotto o non valido: {error}"
+
+#: src/anyfile/stratum/zip.py:75
+msgid "Cannot open ZIP archive: {error}"
+msgstr "Impossibile leggere il file: {error}"
+
+#: src/anyfile/stratum/zip.py:106
+msgid "directory entry"
+msgstr "voce di cartella"
+
+#: src/anyfile/stratum/zip.py:113
+msgid "FOLDER"
+msgstr "CARTELLA"
+
+#: src/anyfile/stratum/zip.py:113
+msgid "BIN"
+msgstr "BIN"
+
+#: src/anyfile/stratum/zip.py:129
+#, python-brace-format
+msgid "ZIP archive · {count} items · {size}"
+msgstr "Archivio ZIP · {count} elementi · {size}"
+
+#: src/anyfile/stratum/zip.py:140
+#, python-brace-format
+msgid "Missing filename for member {id}"
+msgstr "Nome file mancante per il membro {id}"
+
+#: src/anyfile/stratum/zip.py:144
+msgid "Unsafe member path: {reason}"
+msgstr "non estraibile: {reason}"
+
+#: src/anyfile/stratum/zip.py:151
+#, python-brace-format
+msgid "Member “{name}” not found in archive"
+msgstr "Membro “{name}” non trovato nell'archivio"
+
+#: src/anyfile/stratum/zip.py:155
+#, python-brace-format
+msgid "Security violation: {reason}"
+msgstr "Violazione di sicurezza: {reason}"
+
+#: src/anyfile/stratum/zip.py:169
+msgid "Extracted size exceeded limit during extraction"
+msgstr "La dimensione estratta ha superato il limite consentito"
+
+#: src/anyfile/stratum/zip.py:172
+msgid "Failed to extract member “{name}”: {error}"
+msgstr "Estrazione del membro “{name}” non riuscita: {error}"
+
+#: src/anyfile/stratum/zip.py:178
+msgid "Extracted file does not exist"
+msgstr "Il file estratto non esiste"
+
+#: src/anyfile/stratum/zip.py:183
+#, python-brace-format
+msgid "Extracted size mismatch (expected {expected}, got {actual})"
+msgstr "Dimensione estratta non corrispondente (prevista {expected}, effettiva {actual})"
 
 #
 #: src/anyfile/ui/conversion_view.py:25
@@ -1569,7 +1757,7 @@ msgid "Show results"
 msgstr "Mostra risultati"
 
 #: src/anyfile/ui/main_window.py:156 src/anyfile/ui/radial.py:944
-#: src/anyfile/ui/stratum_view.py:483
+#: src/anyfile/ui/stratum_view.py:486
 msgid "Cancel"
 msgstr "Annulla"
 
@@ -1951,7 +2139,7 @@ msgid_plural "{n} unrecognized files will be ignored"
 msgstr[0] "{n} file non riconosciuto sarà ignorato"
 msgstr[1] "{n} file non riconosciuti saranno ignorati"
 
-#: src/anyfile/ui/radial.py:1038 src/anyfile/ui/stratum_view.py:525
+#: src/anyfile/ui/radial.py:1038 src/anyfile/ui/stratum_view.py:528
 msgid "Esc: continue in the background · Centre: cancel"
 msgstr "Esc: continua in background · Centro: annulla"
 
@@ -2042,140 +2230,140 @@ msgstr "I motori mancanti non sono inclusi nella versione Flatpak."
 msgid "All the engines are installed."
 msgstr "Tutti i motori sono installati."
 
-#: src/anyfile/ui/stratum_view.py:142
+#: src/anyfile/ui/stratum_view.py:145
 #, python-brace-format
 msgid "No track found in “{name}”"
 msgstr "Nessuna traccia trovata in «{name}»"
 
-#: src/anyfile/ui/stratum_view.py:350
+#: src/anyfile/ui/stratum_view.py:353
 #, python-brace-format
 msgid "{failed} of {total} not extracted."
 msgstr "{failed} di {total} non estratte."
 
-#: src/anyfile/ui/stratum_view.py:354
+#: src/anyfile/ui/stratum_view.py:357
 msgid "Extraction failed"
 msgstr "Estrazione non riuscita"
 
-#: src/anyfile/ui/stratum_view.py:359
+#: src/anyfile/ui/stratum_view.py:362
 msgid "Extraction complete"
 msgstr "Estrazione completata"
 
-#: src/anyfile/ui/stratum_view.py:368
+#: src/anyfile/ui/stratum_view.py:371
 #, python-brace-format
 msgid "{n} track extracted"
 msgid_plural "{n} tracks extracted"
 msgstr[0] "{n} traccia estratta"
 msgstr[1] "{n} tracce estratte"
 
-#: src/anyfile/ui/stratum_view.py:413
+#: src/anyfile/ui/stratum_view.py:416
 #, python-brace-format
 msgid "{n} track"
 msgid_plural "{n} tracks"
 msgstr[0] "{n} traccia"
 msgstr[1] "{n} tracce"
 
-#: src/anyfile/ui/stratum_view.py:458
+#: src/anyfile/ui/stratum_view.py:461
 msgid "converted"
 msgstr "convertita"
 
-#: src/anyfile/ui/stratum_view.py:458
+#: src/anyfile/ui/stratum_view.py:461
 msgid "as it is"
 msgstr "così com'è"
 
-#: src/anyfile/ui/stratum_view.py:461
+#: src/anyfile/ui/stratum_view.py:464
 msgid "Analyzing"
 msgstr "Analisi"
 
-#: src/anyfile/ui/stratum_view.py:465
+#: src/anyfile/ui/stratum_view.py:468
 msgid "track"
 msgid_plural "tracks"
 msgstr[0] "traccia"
 msgstr[1] "tracce"
 
-#: src/anyfile/ui/stratum_view.py:468
+#: src/anyfile/ui/stratum_view.py:471
 msgid "All tracks"
 msgstr "Tutte le tracce"
 
-#: src/anyfile/ui/stratum_view.py:486
+#: src/anyfile/ui/stratum_view.py:489
 msgid "Extracting"
 msgstr "Estrazione"
 
-#: src/anyfile/ui/stratum_view.py:512
+#: src/anyfile/ui/stratum_view.py:515
 #, python-brace-format
 msgid "Looking inside “{name}”…"
 msgstr "Guardo dentro «{name}»…"
 
-#: src/anyfile/ui/stratum_view.py:517
+#: src/anyfile/ui/stratum_view.py:520
 msgid ""
 "Click the centre or press Enter to extract · the original stays untouched"
 msgstr "Clic sul centro o Invio per estrarre · l'originale resta intatto"
 
-#: src/anyfile/ui/stratum_view.py:520
+#: src/anyfile/ui/stratum_view.py:523
 msgid "Click the tracks to take out · Esc: back"
 msgstr "Clic sulle tracce da estrarre · Esc: indietro"
 
-#: src/anyfile/ui/stratum_view.py:521
+#: src/anyfile/ui/stratum_view.py:524
 msgid "Click the tracks to take out · Esc or the centre: back to ANYFILE"
 msgstr "Clic sulle tracce da estrarre · Esc o il centro: torna ad ANYFILE"
 
-#: src/anyfile/ui/stratum_view.py:522
+#: src/anyfile/ui/stratum_view.py:525
 msgid "Click the tracks to take out · Esc to close"
 msgstr "Clic sulle tracce da estrarre · Esc per chiudere"
 
-#: src/anyfile/ui/stratum_view.py:529
+#: src/anyfile/ui/stratum_view.py:532
 msgid "Esc or the centre: back to ANYFILE"
 msgstr "Esc o il centro: torna ad ANYFILE"
 
-#: src/anyfile/ui/stratum_view.py:535
+#: src/anyfile/ui/stratum_view.py:538
 #, python-brace-format
 msgid "{n} track: click to see it"
 msgid_plural "{n} tracks: click to see them"
 msgstr[0] "{n} traccia: clic per vederla"
 msgstr[1] "{n} tracce: clic per vederle"
 
-#: src/anyfile/ui/stratum_view.py:543
+#: src/anyfile/ui/stratum_view.py:546
 #, python-brace-format
 msgid "Cannot be extracted: {reason}"
 msgstr "Non si può estrarre: {reason}"
 
-#: src/anyfile/ui/stratum_view.py:547
+#: src/anyfile/ui/stratum_view.py:550
 #, python-brace-format
 msgid "saved as .{ext}, without re-encoding"
 msgstr "salvata come .{ext}, senza ricodifica"
 
-#: src/anyfile/ui/stratum_view.py:549
+#: src/anyfile/ui/stratum_view.py:552
 msgid "Click to deselect"
 msgstr "Clic per deselezionare"
 
-#: src/anyfile/ui/stratum_view.py:549
+#: src/anyfile/ui/stratum_view.py:552
 msgid "Click to select"
 msgstr "Clic per selezionare"
 
-#: src/anyfile/ui/stratum_view.py:550
+#: src/anyfile/ui/stratum_view.py:553
 #, python-brace-format
 msgid "{action} · saved as .{ext}, without re-encoding"
 msgstr "{action} · salvata come .{ext}, senza ricodifica"
 
-#: src/anyfile/ui/stratum_view.py:552
+#: src/anyfile/ui/stratum_view.py:555
 #, python-brace-format
 msgid "Move outwards to convert it: {formats}"
 msgstr "Sposta il puntatore verso l'esterno per convertirla: {formats}"
 
-#: src/anyfile/ui/stratum_view.py:557
+#: src/anyfile/ui/stratum_view.py:560
 #, python-brace-format
 msgid "Converted to .{ext}: text and timings stay the same"
 msgstr "Convertiti in .{ext}: testo e tempi restano gli stessi"
 
-#: src/anyfile/ui/stratum_view.py:560
+#: src/anyfile/ui/stratum_view.py:563
 #, python-brace-format
 msgid "Converted to .{ext} · {quality}: {details}"
 msgstr "Convertita in .{ext} · {quality}: {details}"
 
-#: src/anyfile/ui/stratum_view.py:564
+#: src/anyfile/ui/stratum_view.py:567
 msgid "downmixed to stereo"
 msgstr "ridotta a stereo"
 
-#: src/anyfile/ui/stratum_view.py:566
+#: src/anyfile/ui/stratum_view.py:569
 #, python-brace-format
 msgid "Converted to .{ext}, without loss"
 msgstr "Convertita in .{ext}, senza perdita"
