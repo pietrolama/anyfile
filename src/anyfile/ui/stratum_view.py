@@ -45,6 +45,8 @@ KIND_COLORS = {
     Kind.SUBTITLE: "#9b59b6",
     Kind.COVER: "#3daee9",
     Kind.MEMBER: "#27ae60",
+    Kind.IMAGE: "#1abc9c",
+    Kind.ATTACHMENT: "#e67e22",
 }
 # Beyond this many tracks of one kind, the slices would be too thin to read.
 MAX_TRACKS = 32

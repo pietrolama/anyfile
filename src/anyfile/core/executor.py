@@ -24,7 +24,7 @@ from anyfile.models.file_info import FileInfo
 from anyfile.models.job import Job
 from anyfile.models.tool import Tool, ToolOption
 from anyfile import stratum
-from anyfile.stratum import EXTRACT, media, zip as stratum_zip
+from anyfile.stratum import EXTRACT, media, pdf as stratum_pdf, zip as stratum_zip
 
 
 class Executor:
@@ -240,7 +240,7 @@ class Executor:
             link = work_dir / f"input.{info.format.ext}"
             system.link_or_copy(src, link)
             try:
-                anatomy = stratum.explode(info, link, self.registry, job.cancel_event)
+                anatomy = stratum.explode(info, link, self.registry, job.cancel_event, password=job.password)
                 component_id, target = stratum.parse_option(job.option)
                 component = anatomy.get(component_id)
                 if component is None:
@@ -261,6 +261,14 @@ class Executor:
                     if job.cancel_event.is_set():
                         raise ConversionCancelled()
                     if problem := stratum_zip.check(component, produced, runner):
+                        raise ValidationError(problem)
+                elif info.format.id == "pdf":
+                    produced = work_dir / f"output.{ext}"
+                    runner = Runner(job.cancel_event)
+                    stratum_pdf.extract(link, component, produced, runner, password=job.password)
+                    if job.cancel_event.is_set():
+                        raise ConversionCancelled()
+                    if problem := stratum_pdf.check(component, produced, runner):
                         raise ValidationError(problem)
                 else:
                     # Quality only matters when the track is converted: a copy stays as it is.

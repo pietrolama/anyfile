@@ -14,6 +14,8 @@ class Kind(Enum):
     SUBTITLE = N_("Subtitles")
     COVER = N_("Cover")
     MEMBER = N_("Files")
+    IMAGE = N_("Images")
+    ATTACHMENT = N_("Attachments")
 
     @property
     def label(self) -> str:
