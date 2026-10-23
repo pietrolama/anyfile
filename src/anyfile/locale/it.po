@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: anyfile\n"
 "Report-Msgid-Bugs-To: https://github.com/pietrolama/anyfile/issues\n"
-"POT-Creation-Date: 2026-10-22 14:35+0200\n"
+"POT-Creation-Date: 2026-10-23 07:54+0200\n"
 "PO-Revision-Date: 2026-10-20 12:00+0200\n"
 "Last-Translator: pietrolama\n"
 "Language-Team: Italian\n"
@@ -14,7 +14,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: src/anyfile/app.py:28 src/anyfile/cli.py:105
+#: src/anyfile/app.py:28 src/anyfile/cli.py:119
 #, python-brace-format
 msgid "anyfile: history not available: {error}"
 msgstr "anyfile: cronologia non disponibile: {error}"
@@ -27,16 +27,20 @@ msgstr "avviato dal menu contestuale di Dolphin"
 msgid "show the radial menu under the pointer instead of the window"
 msgstr "mostra il menu radiale sotto il puntatore invece della finestra"
 
-#: src/anyfile/app.py:49
+#: src/anyfile/app.py:50
+msgid "STRATUM: show the tracks inside the file and extract them"
+msgstr "STRATUM: mostra le tracce contenute nel file e le estrae"
+
+#: src/anyfile/app.py:51
 msgid "open the conversion history"
 msgstr "apre la cronologia delle conversioni"
 
-#: src/anyfile/app.py:50
 #
+#: src/anyfile/app.py:52
 msgid "organize the pages of the PDF files"
 msgstr "organizza le pagine dei file PDF"
 
-#: src/anyfile/app.py:58
+#: src/anyfile/app.py:61
 msgid ""
 "anyfile: PySide6 is not installed, so the graphical interface is not "
 "available.\n"
@@ -45,19 +49,19 @@ msgstr ""
 "anyfile: PySide6 non è installato; l'interfaccia grafica non è disponibile.\n"
 "Usa 'anyfile convert FILE -t FORMATO' oppure installa PySide6."
 
-#: src/anyfile/cli.py:28
+#: src/anyfile/cli.py:31
 msgid "ANYFILE — local file converter."
 msgstr "ANYFILE — convertitore di file locale."
 
-#: src/anyfile/cli.py:29
+#: src/anyfile/cli.py:32
 msgid "Without a command it opens the graphical interface: anyfile [FILE...]"
 msgstr "Senza comandi apre l'interfaccia grafica: anyfile [FILE...]"
 
-#: src/anyfile/cli.py:34
+#: src/anyfile/cli.py:37
 msgid "convert one or more files"
 msgstr "converte uno o più file"
 
-#: src/anyfile/cli.py:37
+#: src/anyfile/cli.py:40
 msgid ""
 "target format (e.g. png, mp3, pdf); the file's own format compresses it "
 "(e.g. photo.jpg -t jpg)"
@@ -65,15 +69,15 @@ msgstr ""
 "formato di destinazione (es. png, mp3, pdf); lo stesso formato del file lo "
 "comprime (es. foto.jpg -t jpg)"
 
-#: src/anyfile/cli.py:40 src/anyfile/cli.py:55
+#: src/anyfile/cli.py:43 src/anyfile/cli.py:58
 msgid "destination folder (default: the folder of each file)"
 msgstr "cartella di destinazione (predefinita: la cartella di ciascun file)"
 
-#: src/anyfile/cli.py:41 src/anyfile/cli.py:56
+#: src/anyfile/cli.py:44 src/anyfile/cli.py:59 src/anyfile/cli.py:73
 msgid "overwrite existing files"
 msgstr "sovrascrive i file già esistenti"
 
-#: src/anyfile/cli.py:43
+#: src/anyfile/cli.py:46
 msgid ""
 "max, balanced (default) or small; only applies to lossy formats (JPEG, WebP, "
 "MP3, video...)"
@@ -81,7 +85,7 @@ msgstr ""
 "max, balanced (predefinita) o small; vale solo per i formati con perdita "
 "(JPEG, WebP, MP3, video...)"
 
-#: src/anyfile/cli.py:46
+#: src/anyfile/cli.py:49
 msgid ""
 "file holding the password of protected PDFs (“-”: standard input); without "
 "it, the password is asked when needed"
@@ -89,25 +93,25 @@ msgstr ""
 "file con la password dei PDF protetti («-»: standard input); senza, la "
 "password viene chiesta quando serve"
 
-#: src/anyfile/cli.py:49
+#: src/anyfile/cli.py:52
 msgid "edit one or more files: resize, rotate, remove audio..."
 msgstr "modifica uno o più file: ridimensiona, ruota, togli l'audio..."
 
-#: src/anyfile/cli.py:52
+#: src/anyfile/cli.py:55
 msgid "the edit to apply (see “anyfile info FILE” for those available)"
 msgstr ""
 "la modifica da applicare (vedi «anyfile info FILE» per quelle disponibili)"
 
-#: src/anyfile/cli.py:53
+#: src/anyfile/cli.py:56
 msgid "the edit's option, e.g. 50 for resize (default: the usual one)"
 msgstr ""
 "l'opzione della modifica, es. 50 per resize (predefinita: quella abituale)"
 
-#: src/anyfile/cli.py:58
+#: src/anyfile/cli.py:61
 msgid "max, balanced (default) or small, when the file has to be re-encoded"
 msgstr "max, balanced (predefinita) o small, quando il file va ricodificato"
 
-#: src/anyfile/cli.py:60
+#: src/anyfile/cli.py:63
 msgid ""
 "file holding the password of protected PDFs, or the new one for “protect” "
 "(“-”: standard input); without it, the password is asked"
@@ -115,182 +119,238 @@ msgstr ""
 "file con la password dei PDF protetti, o quella nuova per «protect» («-»: "
 "standard input); senza, la password viene chiesta"
 
-#: src/anyfile/cli.py:63
+#: src/anyfile/cli.py:66
+msgid "STRATUM: show the tracks inside a video and extract them"
+msgstr "STRATUM: mostra le tracce contenute in un video e le estrae"
+
+#: src/anyfile/cli.py:69
+msgid ""
+"the tracks to extract, by the number shown, optionally with the format to "
+"convert them to: 1 or 1:mp3 (without it, only the list)"
+msgstr ""
+"le tracce da estrarre, con il numero mostrato, eventualmente con il formato "
+"in cui convertirle: 1 oppure 1:mp3 (senza, solo l'elenco)"
+
+#: src/anyfile/cli.py:72
+msgid "destination folder (default: the folder of the file)"
+msgstr "cartella di destinazione (predefinita: la cartella del file)"
+
+#: src/anyfile/cli.py:75
 msgid "show the detected format and the possible conversions"
 msgstr "mostra il formato rilevato e le conversioni possibili"
 
-#: src/anyfile/cli.py:66
+#: src/anyfile/cli.py:78
 msgid "show the installed conversion engines"
 msgstr "mostra i motori di conversione installati"
 
-#: src/anyfile/cli.py:68
+#: src/anyfile/cli.py:80
 msgid "show the conversion history"
 msgstr "mostra la cronologia delle conversioni"
 
-#: src/anyfile/cli.py:69
+#: src/anyfile/cli.py:81
 msgid "how many entries to show (default: 20)"
 msgstr "quante voci mostrare (predefinito: 20)"
 
-#: src/anyfile/cli.py:70
+#: src/anyfile/cli.py:82
 msgid "only failed conversions"
 msgstr "solo le conversioni non riuscite"
 
-#: src/anyfile/cli.py:71
+#: src/anyfile/cli.py:83
 msgid "delete the whole history"
 msgstr "cancella tutta la cronologia"
 
-#: src/anyfile/cli.py:76
+#: src/anyfile/cli.py:88
 msgid "repeat conversions from the history with the same settings"
 msgstr "ripete conversioni della cronologia con le stesse impostazioni"
 
-#: src/anyfile/cli.py:77
+#: src/anyfile/cli.py:89
 msgid "number shown by “anyfile history”"
 msgstr "numero indicato da «anyfile history»"
 
-#: src/anyfile/cli.py:115
+#: src/anyfile/cli.py:129
 msgid "History cleared."
 msgstr "Cronologia svuotata."
 
-#: src/anyfile/cli.py:119
+#: src/anyfile/cli.py:133
 msgid "The history is empty."
 msgstr "La cronologia è vuota."
 
-#: src/anyfile/cli.py:119 src/anyfile/ui/history_window.py:114
+#: src/anyfile/cli.py:133 src/anyfile/ui/history_window.py:114
 msgid "The history is turned off."
 msgstr "La cronologia è disattivata."
 
-#: src/anyfile/cli.py:125
+#: src/anyfile/cli.py:139
 msgid "To repeat: anyfile repeat ID"
 msgstr "Per ripetere: anyfile repeat ID"
 
-#: src/anyfile/cli.py:137
+#: src/anyfile/cli.py:151
 #, python-brace-format
 msgid "anyfile: no entry {id} in the history"
 msgstr "anyfile: nessuna voce {id} in cronologia"
 
-#: src/anyfile/cli.py:147
+#: src/anyfile/cli.py:161
 #, python-brace-format
 msgid "{n} conversions"
 msgstr "{n} conversioni"
 
-#: src/anyfile/cli.py:149
+#: src/anyfile/cli.py:163
 #, python-brace-format
 msgid "missing: {programs}"
 msgstr "mancante: {programs}"
 
-#: src/anyfile/cli.py:152
+#: src/anyfile/cli.py:166
 msgid "To install the missing engines:"
 msgstr "Per installare i motori mancanti:"
 
-#: src/anyfile/cli.py:158
+#: src/anyfile/cli.py:172
 msgid "content signature"
 msgstr "firma del contenuto"
 
-#: src/anyfile/cli.py:159
+#: src/anyfile/cli.py:173
 msgid "text content"
 msgstr "contenuto testuale"
 
-#: src/anyfile/cli.py:160
+#: src/anyfile/cli.py:174
 msgid "MIME type"
 msgstr "tipo MIME"
 
-#: src/anyfile/cli.py:161
+#: src/anyfile/cli.py:175
 msgid "extension"
 msgstr "estensione"
 
-#: src/anyfile/cli.py:173
+#: src/anyfile/cli.py:187
 #, python-brace-format
 msgid "Format: {format} ({category}), detected from: {method}"
 msgstr "Formato: {format} ({category}), rilevato da: {method}"
 
-#: src/anyfile/cli.py:176
+#: src/anyfile/cli.py:190
 msgid "Warning: the extension does not match the content"
 msgstr "Attenzione: l'estensione non corrisponde al contenuto"
 
-#: src/anyfile/cli.py:180 src/anyfile/core/history.py:137
-#: src/anyfile/ui/conversion_view.py:82 src/anyfile/ui/radial.py:712
-#: src/anyfile/ui/radial.py:923
+#: src/anyfile/cli.py:194 src/anyfile/core/history.py:137
+#: src/anyfile/ui/conversion_view.py:82 src/anyfile/ui/radial.py:866
+#: src/anyfile/ui/radial.py:1008
 #, python-brace-format
 msgid "via {formats}"
 msgstr "via {formats}"
 
-#: src/anyfile/cli.py:182
+#: src/anyfile/cli.py:196
 #, python-brace-format
 msgid "Conversions: {targets}"
 msgstr "Conversioni: {targets}"
 
-#: src/anyfile/cli.py:182
+#: src/anyfile/cli.py:196
 msgid "none"
 msgstr "nessuna"
 
-#: src/anyfile/cli.py:184
+#: src/anyfile/cli.py:198
 msgid "(* with quality presets: --quality max|balanced|small)"
 msgstr "(* con preset di qualità: --quality max|balanced|small)"
 
-#: src/anyfile/cli.py:186
+#: src/anyfile/cli.py:200
 msgid "Protected PDF: a password is needed to open it"
 msgstr "PDF protetto: serve una password per aprirlo"
 
-#: src/anyfile/cli.py:188
+#: src/anyfile/cli.py:202
 msgid "Protected PDF: opens without a password, with restrictions"
 msgstr "PDF protetto: si apre senza password, con delle restrizioni"
 
-#: src/anyfile/cli.py:191
+#: src/anyfile/cli.py:205
 #, python-brace-format
 msgid "Edits: {tools}"
 msgstr "Modifiche: {tools}"
 
-#: src/anyfile/cli.py:194
+#: src/anyfile/cli.py:208
 #, python-brace-format
 msgid "With {engine}: {formats}"
 msgstr "Con {engine}: {formats}"
 
-#: src/anyfile/cli.py:201
+#: src/anyfile/cli.py:215
 #, python-brace-format
 msgid "anyfile: unknown format: {format}"
 msgstr "anyfile: formato sconosciuto: {format}"
 
-#: src/anyfile/cli.py:206 src/anyfile/cli.py:223
+#: src/anyfile/cli.py:220 src/anyfile/cli.py:237
 #, python-brace-format
 msgid "anyfile: unknown quality: {quality} (max, balanced, small)"
 msgstr "anyfile: qualità sconosciuta: {quality} (max, balanced, small)"
 
-#: src/anyfile/cli.py:218
+#: src/anyfile/cli.py:232
 #, python-brace-format
 msgid "anyfile: unknown edit: {tool} ({tools})"
 msgstr "anyfile: modifica sconosciuta: {tool} ({tools})"
 
-#: src/anyfile/cli.py:241
+#: src/anyfile/cli.py:254
+#, python-brace-format
+msgid "anyfile: file not found: {path}"
+msgstr "anyfile: file non trovato: {path}"
+
+#: src/anyfile/cli.py:265
+#, python-brace-format
+msgid "anyfile: no track {ids} in “{name}”"
+msgstr "anyfile: nessuna traccia {ids} in «{name}»"
+
+#: src/anyfile/cli.py:272
+#, python-brace-format
+msgid "anyfile: track {id} cannot be saved as {format} ({choices})"
+msgstr "anyfile: la traccia {id} non si può salvare come {format} ({choices})"
+
+#: src/anyfile/cli.py:281
+msgid "No track found"
+msgstr "Nessuna traccia trovata"
+
+#: src/anyfile/cli.py:288 src/anyfile/ui/stratum_view.py:537
+msgid "default"
+msgstr "predefinita"
+
+#: src/anyfile/cli.py:288 src/anyfile/ui/stratum_view.py:420
+#: src/anyfile/ui/stratum_view.py:537
+msgid "forced"
+msgstr "forzati"
+
+#: src/anyfile/cli.py:293
+#, python-brace-format
+msgid "not extractable: {reason}"
+msgstr "non estraibile: {reason}"
+
+#: src/anyfile/cli.py:295
+msgid ""
+"To extract: anyfile explode FILE -x ID... (ID:FORMAT to convert, e.g. 1:mp3)"
+msgstr ""
+"Per estrarre: anyfile explode FILE -x ID... (ID:FORMATO per convertire, es. "
+"1:mp3)"
+
+#: src/anyfile/cli.py:303
 #, python-brace-format
 msgid "anyfile: cannot read the password: {error}"
 msgstr "anyfile: impossibile leggere la password: {error}"
 
-#: src/anyfile/cli.py:268
+#: src/anyfile/cli.py:330
 #, python-brace-format
 msgid "Password for “{name}”: "
 msgstr "Password di «{name}»: "
 
-#: src/anyfile/cli.py:272
+#: src/anyfile/cli.py:334
 msgid "Wrong password."
 msgstr "Password errata."
 
-#: src/anyfile/cli.py:279
+#: src/anyfile/cli.py:341
 msgid "New password: "
 msgstr "Nuova password: "
 
-#: src/anyfile/cli.py:281
+#: src/anyfile/cli.py:343
 msgid "anyfile: the password cannot be empty"
 msgstr "anyfile: la password non può essere vuota"
 
-#: src/anyfile/cli.py:283
+#: src/anyfile/cli.py:345
 msgid "Repeat the password: "
 msgstr "Ripeti la password: "
 
-#: src/anyfile/cli.py:284
+#: src/anyfile/cli.py:346
 msgid "anyfile: the passwords do not match"
 msgstr "anyfile: le password non coincidono"
 
-#: src/anyfile/cli.py:319
+#: src/anyfile/cli.py:381
 msgid ""
 "Give it with --password-file FILE, or run the command in a terminal to type "
 "it"
@@ -298,7 +358,7 @@ msgstr ""
 "Indicala con --password-file FILE, oppure lancia il comando in un terminale "
 "per digitarla"
 
-#: src/anyfile/cli.py:324
+#: src/anyfile/cli.py:386
 msgid "cancelled"
 msgstr "annullato"
 
@@ -320,27 +380,28 @@ msgstr "Impossibile leggere il file: {error}"
 msgid "Unrecognized format"
 msgstr "Formato non riconosciuto"
 
-#: src/anyfile/core/executor.py:55
+#: src/anyfile/core/executor.py:58
 #, python-brace-format
 msgid "“{name}” is protected by a password"
 msgstr "«{name}» è protetto da una password"
 
-#: src/anyfile/core/executor.py:61
+#: src/anyfile/core/executor.py:64
 #, python-brace-format
 msgid "Wrong password for “{name}”"
 msgstr "Password errata per «{name}»"
 
-#: src/anyfile/core/executor.py:72 src/anyfile/core/executor.py:178
+#: src/anyfile/core/executor.py:77 src/anyfile/core/executor.py:183
+#: src/anyfile/core/executor.py:230
 #, python-brace-format
 msgid "File not found: {path}"
 msgstr "File non trovato: {path}"
 
-#: src/anyfile/core/executor.py:152
+#: src/anyfile/core/executor.py:157
 #, python-brace-format
 msgid "Step {n} of {total} ({source} → {target}): {message}"
 msgstr "Passaggio {n} di {total} ({source} → {target}): {message}"
 
-#: src/anyfile/core/executor.py:161
+#: src/anyfile/core/executor.py:166
 #, python-brace-format
 msgid ""
 "“{name}” is already compact: the compressed version would not be smaller "
@@ -349,62 +410,77 @@ msgstr ""
 "«{name}» è già compatto: la versione compressa non sarebbe più leggera "
 "({after} contro {before})"
 
-#: src/anyfile/core/executor.py:165
+#: src/anyfile/core/executor.py:170
 #, python-brace-format
 msgid "{name}-compressed"
 msgstr "{name}-compresso"
 
-#: src/anyfile/core/executor.py:167 src/anyfile/engines/pdf.py:12
+#: src/anyfile/core/executor.py:172 src/anyfile/engines/pdf.py:12
 #, python-brace-format
 msgid "{name}-pages"
 msgstr "{name}-pagine"
 
-#: src/anyfile/core/executor.py:185
+#: src/anyfile/core/executor.py:190
 #, python-brace-format
 msgid "“{name}” cannot be used for {tool}"
 msgstr "«{name}» non si può usare per {tool}"
 
-#: src/anyfile/core/executor.py:223
+#: src/anyfile/core/executor.py:247
+#, python-brace-format
+msgid "“{name}” has no track {id}"
+msgstr "«{name}» non ha una traccia {id}"
+
+#: src/anyfile/core/executor.py:249
+#, python-brace-format
+msgid "“{name}”: track {id} cannot be extracted: {reason}"
+msgstr "«{name}»: la traccia {id} non si può estrarre: {reason}"
+
+#: src/anyfile/core/executor.py:253
+#, python-brace-format
+msgid "Track {id} cannot be saved as {format}: use {choices}"
+msgstr "La traccia {id} non si può salvare come {format}: usa {choices}"
+
+#: src/anyfile/core/executor.py:282
 #, python-brace-format
 msgid "“{name}”: this edit is not available for {format}"
 msgstr "«{name}»: questa modifica non è disponibile per {format}"
 
-#: src/anyfile/core/executor.py:226
+#: src/anyfile/core/executor.py:285
 #, python-brace-format
 msgid "“{name}” is already protected: unlock it first"
 msgstr "«{name}» è già protetto: prima sbloccalo"
 
-#: src/anyfile/core/executor.py:227
+#: src/anyfile/core/executor.py:286
 #, python-brace-format
 msgid "“{name}” is not protected"
 msgstr "«{name}» non è protetto"
 
-#: src/anyfile/core/executor.py:230
+#: src/anyfile/core/executor.py:289
 #, python-brace-format
 msgid "{tool} needs a password"
 msgstr "{tool} richiede una password"
 
-#: src/anyfile/core/executor.py:232
+#: src/anyfile/core/executor.py:291
 #, python-brace-format
 msgid "{tool} needs at least two files"
 msgstr "{tool} richiede almeno due file"
 
-#: src/anyfile/core/executor.py:235
+#: src/anyfile/core/executor.py:294
 #, python-brace-format
 msgid "{tool}: choose the pages first"
 msgstr "{tool}: prima scegli le pagine"
 
-#: src/anyfile/core/executor.py:237
+#: src/anyfile/core/executor.py:296
 #, python-brace-format
 msgid "Unknown option “{option}” for {tool}: use {choices}"
 msgstr "Opzione «{option}» sconosciuta per {tool}: usa {choices}"
 
-#: src/anyfile/core/executor.py:261
+#: src/anyfile/core/executor.py:320
 #, python-brace-format
 msgid "Cannot create the folder {folder}: {error}"
 msgstr "Impossibile creare la cartella {folder}: {error}"
 
-#: src/anyfile/core/executor.py:264
+#: src/anyfile/core/executor.py:323
 #, python-brace-format
 msgid "Cannot write to {folder}: choose another destination folder"
 msgstr ""
@@ -433,16 +509,25 @@ msgstr "ieri {time}"
 msgid "%Y-%m-%d %H:%M"
 msgstr "%d/%m/%Y %H:%M"
 
-#: src/anyfile/core/history.py:131 src/anyfile/ui/radial.py:985
+#: src/anyfile/core/history.py:131 src/anyfile/ui/radial.py:1070
 #, python-brace-format
 msgid "Compress {format}"
 msgstr "Comprimi {format}"
 
-#: src/anyfile/core/history.py:157
+#: src/anyfile/core/history.py:148
+#, python-brace-format
+msgid "track {id}"
+msgstr "traccia {id}"
+
+#: src/anyfile/core/history.py:149 src/anyfile/ui/stratum_view.py:465
+msgid "Extract"
+msgstr "Estrai"
+
+#: src/anyfile/core/history.py:165
 msgid "Already compact: no file created"
 msgstr "Già compatto: nessun file creato"
 
-#: src/anyfile/core/history.py:239
+#: src/anyfile/core/history.py:249
 #, python-brace-format
 msgid "anyfile: history not updated: {error}"
 msgstr "anyfile: cronologia non aggiornata: {error}"
@@ -504,7 +589,7 @@ msgstr "non è incluso nella versione Flatpak"
 msgid "The engine produced no file"
 msgstr "Il motore non ha prodotto alcun file"
 
-#: src/anyfile/core/validation.py:34
+#: src/anyfile/core/validation.py:34 src/anyfile/stratum/media.py:240
 msgid "The produced file is empty"
 msgstr "Il file prodotto è vuoto"
 
@@ -1088,17 +1173,25 @@ msgstr "Password errata"
 msgid "Cannot read the pages of the PDF"
 msgstr "Impossibile leggere le pagine del PDF"
 
-#: src/anyfile/models/conversion.py:10
-msgid "Image"
-msgstr "Immagine"
+#: src/anyfile/models/component.py:12 src/anyfile/models/conversion.py:12
+msgid "Video"
+msgstr "Video"
 
-#: src/anyfile/models/conversion.py:11
+#: src/anyfile/models/component.py:13 src/anyfile/models/conversion.py:11
 msgid "Audio"
 msgstr "Audio"
 
-#: src/anyfile/models/conversion.py:12
-msgid "Video"
-msgstr "Video"
+#: src/anyfile/models/component.py:14
+msgid "Subtitles"
+msgstr "Sottotitoli"
+
+#: src/anyfile/models/component.py:15
+msgid "Cover"
+msgstr "Copertina"
+
+#: src/anyfile/models/conversion.py:10
+msgid "Image"
+msgstr "Immagine"
 
 #: src/anyfile/models/conversion.py:13
 msgid "Document"
@@ -1148,22 +1241,70 @@ msgstr "In coda"
 msgid "Running"
 msgstr "In corso"
 
-#: src/anyfile/models/job.py:18 src/anyfile/ui/radial.py:840
+#: src/anyfile/models/job.py:18 src/anyfile/ui/radial.py:951
+#: src/anyfile/ui/stratum_view.py:488
 msgid "Done"
 msgstr "Fatto"
 
 #: src/anyfile/models/job.py:19 src/anyfile/ui/main_window.py:347
 #: src/anyfile/ui/main_window.py:353 src/anyfile/ui/main_window.py:365
-#: src/anyfile/ui/radial.py:844
+#: src/anyfile/ui/radial.py:955 src/anyfile/ui/stratum_view.py:492
 msgid "Error"
 msgstr "Errore"
 
-#: src/anyfile/models/job.py:21 src/anyfile/ui/radial.py:842
+#: src/anyfile/models/job.py:21 src/anyfile/ui/radial.py:953
 msgid "Already compact"
 msgstr "Già compatto"
 
-#: src/anyfile/ui/conversion_view.py:25
+#: src/anyfile/stratum/__init__.py:64
+#, python-brace-format
+msgid "STRATUM cannot look inside {format} files yet"
+msgstr "STRATUM non sa ancora guardare dentro i file {format}"
+
+#: src/anyfile/stratum/__init__.py:65
+msgid "unrecognized"
+msgstr "non riconosciuti"
+
+#: src/anyfile/stratum/__init__.py:83
+#, python-brace-format
+msgid "“{name}”: the analysis took too long"
+msgstr "«{name}»: l'analisi ha richiesto troppo tempo"
+
+#: src/anyfile/stratum/media.py:68
+msgid "FFprobe gave an unreadable answer"
+msgstr "FFprobe ha dato una risposta illeggibile"
+
+#: src/anyfile/stratum/media.py:104
+msgid "this image format cannot be saved as it is"
+msgstr "questo formato d'immagine non si può salvare così com'è"
+
+#: src/anyfile/stratum/media.py:140
+#, python-brace-format
+msgid "{fps} fps"
+msgstr "{fps} fps"
+
+#: src/anyfile/stratum/media.py:151
+#, python-brace-format
+msgid "{n} channel"
+msgid_plural "{n} channels"
+msgstr[0] "{n} canale"
+msgstr[1] "{n} canali"
+
+#: src/anyfile/stratum/media.py:154
+#, python-brace-format
+msgid "{rate} kHz"
+msgstr "{rate} kHz"
+
+#: src/anyfile/stratum/media.py:246
+msgid "The produced file cannot be read back"
+msgstr "Il file prodotto non si riesce a rileggere"
+
+#: src/anyfile/stratum/media.py:251
+msgid "The produced file does not contain the expected track"
+msgstr "Il file prodotto non contiene la traccia attesa"
+
 #
+#: src/anyfile/ui/conversion_view.py:25
 msgid "Choose…"
 msgstr "Scegli…"
 
@@ -1171,7 +1312,7 @@ msgstr "Scegli…"
 msgid "Compress  (same format)"
 msgstr "Comprimi  (stesso formato)"
 
-#: src/anyfile/ui/conversion_view.py:90 src/anyfile/ui/radial.py:149
+#: src/anyfile/ui/conversion_view.py:90 src/anyfile/ui/radial.py:158
 msgid "Tools"
 msgstr "Strumenti"
 
@@ -1187,8 +1328,8 @@ msgstr "File"
 msgid "Detected format"
 msgstr "Formato rilevato"
 
-#: src/anyfile/ui/conversion_view.py:126
 #
+#: src/anyfile/ui/conversion_view.py:126
 msgid "Convert or edit"
 msgstr "Converti o modifica"
 
@@ -1259,7 +1400,7 @@ msgstr "Operazione"
 msgid "Result"
 msgstr "Esito"
 
-#: src/anyfile/ui/history_window.py:75 src/anyfile/ui/pages_window.py:144
+#: src/anyfile/ui/history_window.py:75 src/anyfile/ui/pages_window.py:227
 msgid "Show result"
 msgstr "Mostra risultato"
 
@@ -1268,7 +1409,7 @@ msgid "Repeat on other files…"
 msgstr "Ripeti su altri file…"
 
 #: src/anyfile/ui/history_window.py:79 src/anyfile/ui/main_window.py:83
-#: src/anyfile/ui/main_window.py:339 src/anyfile/ui/pages_window.py:179
+#: src/anyfile/ui/main_window.py:339 src/anyfile/ui/pages_window.py:262
 msgid "Remove"
 msgstr "Rimuovi"
 
@@ -1427,7 +1568,8 @@ msgstr "Qualità:"
 msgid "Show results"
 msgstr "Mostra risultati"
 
-#: src/anyfile/ui/main_window.py:156 src/anyfile/ui/radial.py:833
+#: src/anyfile/ui/main_window.py:156 src/anyfile/ui/radial.py:944
+#: src/anyfile/ui/stratum_view.py:483
 msgid "Cancel"
 msgstr "Annulla"
 
@@ -1443,17 +1585,17 @@ msgstr "Scegli i file da convertire"
 msgid "Destination folder"
 msgstr "Cartella di destinazione"
 
-#: src/anyfile/ui/main_window.py:265 src/anyfile/ui/radial.py:559
+#: src/anyfile/ui/main_window.py:265 src/anyfile/ui/radial.py:744
 #, python-brace-format
 msgid "Files to add after “{name}”"
 msgstr "File da aggiungere dopo «{name}»"
 
-#: src/anyfile/ui/main_window.py:266 src/anyfile/ui/radial.py:560
+#: src/anyfile/ui/main_window.py:266 src/anyfile/ui/radial.py:745
 #, python-brace-format
 msgid "Supported files ({patterns})"
 msgstr "File supportati ({patterns})"
 
-#: src/anyfile/ui/main_window.py:291 src/anyfile/ui/radial.py:620
+#: src/anyfile/ui/main_window.py:291 src/anyfile/ui/radial.py:805
 #, python-brace-format
 msgid "{n} file converted"
 msgid_plural "{n} files converted"
@@ -1467,7 +1609,7 @@ msgid_plural "{n} already compact"
 msgstr[0] "{n} già compatto"
 msgstr[1] "{n} già compatti"
 
-#: src/anyfile/ui/main_window.py:299 src/anyfile/ui/radial.py:604
+#: src/anyfile/ui/main_window.py:299 src/anyfile/ui/radial.py:789
 msgid "Conversion complete"
 msgstr "Conversione completata"
 
@@ -1529,94 +1671,94 @@ msgstr "Conversioni in corso"
 msgid "Some conversions are still running. Cancel them and quit?"
 msgstr "Ci sono conversioni in corso. Vuoi annullarle e uscire?"
 
-#: src/anyfile/ui/pages_window.py:119
+#: src/anyfile/ui/pages_window.py:199
 #, python-brace-format
 msgid "Organize pages — {name}"
 msgstr "Organizza pagine — {name}"
 
-#: src/anyfile/ui/pages_window.py:138
 #
+#: src/anyfile/ui/pages_window.py:221
 msgid "Save selected pages"
 msgstr "Salva le pagine selezionate"
 
-#: src/anyfile/ui/pages_window.py:139
+#: src/anyfile/ui/pages_window.py:222
 msgid "A new PDF with only the selected pages, in this order"
 msgstr "Un nuovo PDF con solo le pagine selezionate, in quest'ordine"
 
-#: src/anyfile/ui/pages_window.py:141
 #
+#: src/anyfile/ui/pages_window.py:224
 msgid "Save"
 msgstr "Salva"
 
-#: src/anyfile/ui/pages_window.py:170
+#: src/anyfile/ui/pages_window.py:253
 msgid "Pages"
 msgstr "Pagine"
 
-#: src/anyfile/ui/pages_window.py:174
 #
+#: src/anyfile/ui/pages_window.py:257
 msgid "Rotate left"
 msgstr "Ruota a sinistra"
 
-#: src/anyfile/ui/pages_window.py:175
 #
+#: src/anyfile/ui/pages_window.py:258
 msgid "Rotate right"
 msgstr "Ruota a destra"
 
-#: src/anyfile/ui/pages_window.py:176
+#: src/anyfile/ui/pages_window.py:259
 msgid "Move earlier"
 msgstr "Sposta prima"
 
-#: src/anyfile/ui/pages_window.py:177
+#: src/anyfile/ui/pages_window.py:260
 msgid "Move later"
 msgstr "Sposta dopo"
 
-#: src/anyfile/ui/pages_window.py:178
+#: src/anyfile/ui/pages_window.py:261
 msgid "Duplicate"
 msgstr "Duplica"
 
-#: src/anyfile/ui/pages_window.py:180
+#: src/anyfile/ui/pages_window.py:263
 msgid "Start over"
 msgstr "Ricomincia"
 
-#: src/anyfile/ui/pages_window.py:181
+#: src/anyfile/ui/pages_window.py:264
 msgid "Back to the pages as they are in the file"
 msgstr "Torna alle pagine come sono nel file"
 
-#: src/anyfile/ui/pages_window.py:236
+#: src/anyfile/ui/pages_window.py:319
 #, python-brace-format
 msgid "Page {n}"
 msgstr "Pagina {n}"
 
-#: src/anyfile/ui/pages_window.py:297
+#: src/anyfile/ui/pages_window.py:378
 #, python-brace-format
 msgid "{n} page"
 msgid_plural "{n} pages"
 msgstr[0] "{n} pagina"
 msgstr[1] "{n} pagine"
 
-#: src/anyfile/ui/pages_window.py:299
+#: src/anyfile/ui/pages_window.py:380
 #, python-brace-format
 msgid "{n} removed"
 msgid_plural "{n} removed"
 msgstr[0] "{n} tolta"
 msgstr[1] "{n} tolte"
 
-#: src/anyfile/ui/pages_window.py:301
+#: src/anyfile/ui/pages_window.py:382
 #, python-brace-format
 msgid "{n} rotated"
 msgid_plural "{n} rotated"
 msgstr[0] "{n} ruotata"
 msgstr[1] "{n} ruotate"
 
-#: src/anyfile/ui/pages_window.py:303
+#: src/anyfile/ui/pages_window.py:384
 msgid "new order"
 msgstr "nuovo ordine"
 
-#: src/anyfile/ui/pages_window.py:328
+#: src/anyfile/ui/pages_window.py:409
 msgid "Saving…"
 msgstr "Salvataggio…"
 
-#: src/anyfile/ui/pages_window.py:337
+#: src/anyfile/ui/pages_window.py:418
 #, python-brace-format
 msgid "Saved as “{name}”"
 msgstr "Salvato come «{name}»"
@@ -1674,176 +1816,188 @@ msgstr "PDF protetto"
 msgid "“{name}” is protected. Enter its password to open it."
 msgstr "«{name}» è protetto. Inserisci la password per aprirlo."
 
-#: src/anyfile/ui/radial.py:141
+#: src/anyfile/ui/radial.py:147
 msgid "Compress"
 msgstr "Comprimi"
 
-#: src/anyfile/ui/radial.py:141
+#: src/anyfile/ui/radial.py:147
 msgid "COMPRESS"
 msgstr "COMPRIMI"
 
-#: src/anyfile/ui/radial.py:146
+#: src/anyfile/ui/radial.py:152
 msgid "More formats"
 msgstr "Altri formati"
 
-#: src/anyfile/ui/radial.py:149
+#: src/anyfile/ui/radial.py:154
+msgid "Look inside"
+msgstr "Guarda dentro"
+
+#: src/anyfile/ui/radial.py:158
 msgid "TOOLS"
 msgstr "STRUMENTI"
 
-#: src/anyfile/ui/radial.py:595
+#: src/anyfile/ui/radial.py:780
 #, python-brace-format
 msgid "{failed} of {total} not converted."
 msgstr "{failed} di {total} non convertiti."
 
-#: src/anyfile/ui/radial.py:599
+#: src/anyfile/ui/radial.py:784
 msgid "Conversion failed"
 msgstr "Conversione non riuscita"
 
-#: src/anyfile/ui/radial.py:616
+#: src/anyfile/ui/radial.py:801
 #, python-brace-format
 msgid "{n} file edited"
 msgid_plural "{n} files edited"
 msgstr[0] "{n} file modificato"
 msgstr[1] "{n} file modificati"
 
-#: src/anyfile/ui/radial.py:618
+#: src/anyfile/ui/radial.py:803
 #, python-brace-format
 msgid "{n} file compressed"
 msgid_plural "{n} files compressed"
 msgstr[0] "{n} file compresso"
 msgstr[1] "{n} file compressi"
 
-#: src/anyfile/ui/radial.py:622
+#: src/anyfile/ui/radial.py:807
 #, python-brace-format
 msgid "{n} already compact (original unchanged)"
 msgid_plural "{n} already compact (originals unchanged)"
 msgstr[0] "{n} già compatto (originale invariato)"
 msgstr[1] "{n} già compatti (originali invariati)"
 
-#: src/anyfile/ui/radial.py:814 src/anyfile/ui/radial.py:827
+#: src/anyfile/ui/radial.py:925 src/anyfile/ui/radial.py:938
 msgid "Formats"
 msgstr "Formati"
 
-#: src/anyfile/ui/radial.py:816
+#: src/anyfile/ui/radial.py:927
 msgid "Full"
 msgstr "Finestra"
 
-#: src/anyfile/ui/radial.py:816
+#: src/anyfile/ui/radial.py:927
 msgid "window"
 msgstr "completa"
 
-#: src/anyfile/ui/radial.py:870
+#: src/anyfile/ui/radial.py:964
 msgid "Unknown format"
 msgstr "Formato sconosciuto"
 
-#: src/anyfile/ui/radial.py:873 src/anyfile/ui/radial.py:930
+#: src/anyfile/ui/radial.py:967 src/anyfile/ui/radial.py:1015
 #, python-brace-format
 msgid "{n} file"
 msgid_plural "{n} files"
 msgstr[0] "{n} file"
 msgstr[1] "{n} file"
 
-#: src/anyfile/ui/radial.py:875
+#: src/anyfile/ui/radial.py:969
 msgid "different formats"
 msgstr "formati diversi"
 
-#: src/anyfile/ui/radial.py:909
+#: src/anyfile/ui/radial.py:990
+msgid "STRATUM: the tracks inside the file, to take out one by one"
+msgstr "STRATUM: le tracce contenute nel file, da estrarre una per una"
+
+#: src/anyfile/ui/radial.py:991
+msgid "Audio, subtitles, video and cover, copied or converted"
+msgstr "Audio, sottotitoli, video e copertina, copiati o convertiti"
+
+#: src/anyfile/ui/radial.py:994
 #, python-brace-format
 msgid "Tools: {names}"
 msgstr "Strumenti: {names}"
 
-#: src/anyfile/ui/radial.py:909
+#: src/anyfile/ui/radial.py:994
 msgid "Tab switches wheel"
 msgstr "Tab cambia ruota"
 
-#: src/anyfile/ui/radial.py:913
+#: src/anyfile/ui/radial.py:998
 msgid "Show all the conversions in the full window"
 msgstr "Mostra tutte le conversioni nella finestra completa"
 
-#: src/anyfile/ui/radial.py:925
+#: src/anyfile/ui/radial.py:1010
 #, python-brace-format
 msgid "{format} for {n} of {total} files"
 msgstr "{format} per {n} file su {total}"
 
-#: src/anyfile/ui/radial.py:927
+#: src/anyfile/ui/radial.py:1012
 msgid "the others cannot be converted to this format"
 msgstr "gli altri non si convertono in questo formato"
 
-#: src/anyfile/ui/radial.py:939
+#: src/anyfile/ui/radial.py:1024
 #, python-brace-format
 msgid "Move outwards (or press {keys}) to change quality"
 msgstr "Scorri verso l'esterno (o premi {keys}) per cambiare qualità"
 
-#: src/anyfile/ui/radial.py:943
+#: src/anyfile/ui/radial.py:1028
 msgid "No file recognized. Click the centre for details."
 msgstr "Nessun file riconosciuto. Clic al centro per i dettagli."
 
-#: src/anyfile/ui/radial.py:944
+#: src/anyfile/ui/radial.py:1029
 msgid "No conversion available for these files."
 msgstr "Nessuna conversione disponibile per questi file."
 
-#: src/anyfile/ui/radial.py:946
+#: src/anyfile/ui/radial.py:1031
 msgid "Click a tool · Esc or the centre: back to the formats"
 msgstr "Clic su uno strumento · Esc o il centro: torna ai formati"
 
-#: src/anyfile/ui/radial.py:947
+#: src/anyfile/ui/radial.py:1032
 msgid "Click a format to convert · Esc to close"
 msgstr "Clic su un formato per convertire · Esc per chiudere"
 
-#: src/anyfile/ui/radial.py:949
+#: src/anyfile/ui/radial.py:1034
 #, python-brace-format
 msgid "{n} unrecognized file will be ignored"
 msgid_plural "{n} unrecognized files will be ignored"
 msgstr[0] "{n} file non riconosciuto sarà ignorato"
 msgstr[1] "{n} file non riconosciuti saranno ignorati"
 
-#: src/anyfile/ui/radial.py:953
+#: src/anyfile/ui/radial.py:1038 src/anyfile/ui/stratum_view.py:525
 msgid "Esc: continue in the background · Centre: cancel"
 msgstr "Esc: continua in background · Centro: annulla"
 
-#: src/anyfile/ui/radial.py:956
+#: src/anyfile/ui/radial.py:1041
 msgid "Click the centre for details"
 msgstr "Clic al centro per i dettagli"
 
-#: src/anyfile/ui/radial.py:969
+#: src/anyfile/ui/radial.py:1054
 #, python-brace-format
 msgid "{n} file does not support it"
 msgid_plural "{n} files do not support it"
 msgstr[0] "{n} file non la supporta"
 msgstr[1] "{n} file non la supportano"
 
-#: src/anyfile/ui/radial.py:971 src/anyfile/ui/radial.py:996
+#: src/anyfile/ui/radial.py:1056 src/anyfile/ui/radial.py:1081
 msgid "The originals stay untouched"
 msgstr "Gli originali restano intatti"
 
-#: src/anyfile/ui/radial.py:972 src/anyfile/ui/radial.py:997
+#: src/anyfile/ui/radial.py:1057 src/anyfile/ui/radial.py:1082
 msgid "The original stays untouched"
 msgstr "L'originale resta intatto"
 
-#: src/anyfile/ui/radial.py:974
+#: src/anyfile/ui/radial.py:1059
 msgid "click to choose the files to add after this one"
 msgstr "clic per scegliere i file da aggiungere dopo questo"
 
-#: src/anyfile/ui/radial.py:976
+#: src/anyfile/ui/radial.py:1061
 #, python-brace-format
 msgid "move outwards to choose: {options}"
 msgstr "sposta verso l'esterno per scegliere: {options}"
 
-#: src/anyfile/ui/radial.py:988
+#: src/anyfile/ui/radial.py:1073
 #, python-brace-format
 msgid "Compress {n} file ({formats})"
 msgid_plural "Compress {n} files ({formats})"
 msgstr[0] "Comprimi {n} file ({formats})"
 msgstr[1] "Comprimi {n} file ({formats})"
 
-#: src/anyfile/ui/radial.py:993
+#: src/anyfile/ui/radial.py:1078
 #, python-brace-format
 msgid "{n} cannot be compressed without changing format"
 msgid_plural "{n} cannot be compressed without changing format"
 msgstr[0] "{n} non comprimibile senza cambiare formato"
 msgstr[1] "{n} non comprimibili senza cambiare formato"
 
-#: src/anyfile/ui/radial.py:999
+#: src/anyfile/ui/radial.py:1084
 msgid "move outwards for “Small”"
 msgstr "scorri verso l'esterno per «Leggera»"
 
@@ -1887,6 +2041,144 @@ msgstr "I motori mancanti non sono inclusi nella versione Flatpak."
 #: src/anyfile/ui/settings.py:107
 msgid "All the engines are installed."
 msgstr "Tutti i motori sono installati."
+
+#: src/anyfile/ui/stratum_view.py:142
+#, python-brace-format
+msgid "No track found in “{name}”"
+msgstr "Nessuna traccia trovata in «{name}»"
+
+#: src/anyfile/ui/stratum_view.py:350
+#, python-brace-format
+msgid "{failed} of {total} not extracted."
+msgstr "{failed} di {total} non estratte."
+
+#: src/anyfile/ui/stratum_view.py:354
+msgid "Extraction failed"
+msgstr "Estrazione non riuscita"
+
+#: src/anyfile/ui/stratum_view.py:359
+msgid "Extraction complete"
+msgstr "Estrazione completata"
+
+#: src/anyfile/ui/stratum_view.py:368
+#, python-brace-format
+msgid "{n} track extracted"
+msgid_plural "{n} tracks extracted"
+msgstr[0] "{n} traccia estratta"
+msgstr[1] "{n} tracce estratte"
+
+#: src/anyfile/ui/stratum_view.py:413
+#, python-brace-format
+msgid "{n} track"
+msgid_plural "{n} tracks"
+msgstr[0] "{n} traccia"
+msgstr[1] "{n} tracce"
+
+#: src/anyfile/ui/stratum_view.py:458
+msgid "converted"
+msgstr "convertita"
+
+#: src/anyfile/ui/stratum_view.py:458
+msgid "as it is"
+msgstr "così com'è"
+
+#: src/anyfile/ui/stratum_view.py:461
+msgid "Analyzing"
+msgstr "Analisi"
+
+#: src/anyfile/ui/stratum_view.py:465
+msgid "track"
+msgid_plural "tracks"
+msgstr[0] "traccia"
+msgstr[1] "tracce"
+
+#: src/anyfile/ui/stratum_view.py:468
+msgid "All tracks"
+msgstr "Tutte le tracce"
+
+#: src/anyfile/ui/stratum_view.py:486
+msgid "Extracting"
+msgstr "Estrazione"
+
+#: src/anyfile/ui/stratum_view.py:512
+#, python-brace-format
+msgid "Looking inside “{name}”…"
+msgstr "Guardo dentro «{name}»…"
+
+#: src/anyfile/ui/stratum_view.py:517
+msgid ""
+"Click the centre or press Enter to extract · the original stays untouched"
+msgstr "Clic sul centro o Invio per estrarre · l'originale resta intatto"
+
+#: src/anyfile/ui/stratum_view.py:520
+msgid "Click the tracks to take out · Esc: back"
+msgstr "Clic sulle tracce da estrarre · Esc: indietro"
+
+#: src/anyfile/ui/stratum_view.py:521
+msgid "Click the tracks to take out · Esc or the centre: back to ANYFILE"
+msgstr "Clic sulle tracce da estrarre · Esc o il centro: torna ad ANYFILE"
+
+#: src/anyfile/ui/stratum_view.py:522
+msgid "Click the tracks to take out · Esc to close"
+msgstr "Clic sulle tracce da estrarre · Esc per chiudere"
+
+#: src/anyfile/ui/stratum_view.py:529
+msgid "Esc or the centre: back to ANYFILE"
+msgstr "Esc o il centro: torna ad ANYFILE"
+
+#: src/anyfile/ui/stratum_view.py:535
+#, python-brace-format
+msgid "{n} track: click to see it"
+msgid_plural "{n} tracks: click to see them"
+msgstr[0] "{n} traccia: clic per vederla"
+msgstr[1] "{n} tracce: clic per vederle"
+
+#: src/anyfile/ui/stratum_view.py:543
+#, python-brace-format
+msgid "Cannot be extracted: {reason}"
+msgstr "Non si può estrarre: {reason}"
+
+#: src/anyfile/ui/stratum_view.py:547
+#, python-brace-format
+msgid "saved as .{ext}, without re-encoding"
+msgstr "salvata come .{ext}, senza ricodifica"
+
+#: src/anyfile/ui/stratum_view.py:549
+msgid "Click to deselect"
+msgstr "Clic per deselezionare"
+
+#: src/anyfile/ui/stratum_view.py:549
+msgid "Click to select"
+msgstr "Clic per selezionare"
+
+#: src/anyfile/ui/stratum_view.py:550
+#, python-brace-format
+msgid "{action} · saved as .{ext}, without re-encoding"
+msgstr "{action} · salvata come .{ext}, senza ricodifica"
+
+#: src/anyfile/ui/stratum_view.py:552
+#, python-brace-format
+msgid "Move outwards to convert it: {formats}"
+msgstr "Sposta il puntatore verso l'esterno per convertirla: {formats}"
+
+#: src/anyfile/ui/stratum_view.py:557
+#, python-brace-format
+msgid "Converted to .{ext}: text and timings stay the same"
+msgstr "Convertiti in .{ext}: testo e tempi restano gli stessi"
+
+#: src/anyfile/ui/stratum_view.py:560
+#, python-brace-format
+msgid "Converted to .{ext} · {quality}: {details}"
+msgstr "Convertita in .{ext} · {quality}: {details}"
+
+#: src/anyfile/ui/stratum_view.py:564
+msgid "downmixed to stereo"
+msgstr "ridotta a stereo"
+
+#: src/anyfile/ui/stratum_view.py:566
+#, python-brace-format
+msgid "Converted to .{ext}, without loss"
+msgstr "Convertita in .{ext}, senza perdita"
 
 #~ msgid "Convert all to:"
 #~ msgstr "Converti tutti in:"

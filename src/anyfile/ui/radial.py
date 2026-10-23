@@ -22,6 +22,7 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import QFileDialog, QWidget
 
+from anyfile import stratum
 from anyfile.core import formats
 from anyfile.core.detector import detect
 from anyfile.core.executor import Executor
@@ -53,6 +54,7 @@ CATEGORY_COLORS = {
 MORE_COLOR = "#7f8c8d"
 COMPRESS_COLOR = "#6c5ce7"
 TOOLS_COLOR = "#1abc9c"
+STRATUM_COLOR = "#34495e"
 # Key of the “Compress” slice: every file stays in its own format.
 COMPRESS = "="
 OK_COLOR = "#27ae60"
@@ -68,7 +70,7 @@ CAPTION_Y = 256.0
 MARGIN = 300.0
 HOVER_GROW = 8.0
 GAP = 3.0
-MAX_SLICES = 14
+MAX_SLICES = 15
 DONE_CLOSE_MS = 1300
 
 
@@ -81,8 +83,9 @@ class Phase(Enum):
 
 @dataclass(frozen=True)
 class Entry:
-    # A conversion, an edit (tool), the switch to the edits wheel (tools=True), or
-    # none of them: the “More…” entry, which opens the full window.
+    # A conversion, an edit (tool), the switch to the edits wheel (tools=True), STRATUM's
+    # exploded view of the file (stratum=True), or none of them: the “More…” entry, which
+    # opens the full window.
     conversion: Route | None
     label: str
     short: str
@@ -92,10 +95,11 @@ class Entry:
     paths: tuple[Path, ...] = ()
     tool: Tool | None = None
     tools: bool = False
+    stratum: bool = False
 
     @property
     def is_more(self) -> bool:
-        return self.conversion is None and self.tool is None and not self.tools
+        return self.conversion is None and self.tool is None and not self.tools and not self.stratum
 
 
 Option = tuple[Route, tuple[Path, ...]]
@@ -124,10 +128,12 @@ def _category_order(option: Option) -> tuple[int, int, str]:
     return (0 if conv.is_compression else 1), fmt.category.order, fmt.label.lower()
 
 
-def build_entries(options: list[Option], tools: tuple[Path, ...] = ()) -> list[Entry]:
+def build_entries(options: list[Option], tools: tuple[Path, ...] = (),
+                  explode: Path | None = None) -> list[Entry]:
     """The formats wheel; `tools` are the files that can also be edited, which adds the
-    slice that opens the tools wheel."""
-    room = MAX_SLICES - (1 if tools else 0)
+    slice that opens the tools wheel; `explode` is a file STRATUM can look inside, which
+    adds the slice that opens its exploded view."""
+    room = MAX_SLICES - (1 if tools else 0) - (1 if explode else 0)
     truncated = len(options) > room
     if truncated:
         # Keep the targets that apply to the most files; the others are in the window.
@@ -144,6 +150,9 @@ def build_entries(options: list[Option], tools: tuple[Path, ...] = ()) -> list[E
                                  CATEGORY_COLORS[fmt.category], paths))
     if truncated:
         entries.append(Entry(None, _("More formats"), "…", "", MORE_COLOR))
+    if explode:
+        entries.append(Entry(None, _("Look inside"), "STRATUM", _("Look inside"), STRATUM_COLOR,
+                             (explode,), stratum=True))
     if tools:
         # Last, so it sits at the top next to “Compress”.
         entries.append(Entry(None, _("Tools"), _("TOOLS"), _("Tools"), TOOLS_COLOR, tools, tools=True))
@@ -192,41 +201,20 @@ def sector(a0: float, a1: float, r_in: float, r_out: float, gap: float = GAP) ->
     return path
 
 
-class RadialMenu(QWidget):
-    open_window = Signal(list)  # list[Path]: hand over to the full window
-    open_pages = Signal(list)  # list[Path]: PDFs whose pages are organized in their own window
+class RadialOverlay(QWidget):
+    """Full-screen transparent window that draws a wheel around the pointer: what the
+    formats wheel and STRATUM's exploded view have in common (placement, opening
+    animation, centre, caption and progress)."""
+
     finished = Signal()
 
-    def __init__(self, registry: Registry, paths: list[Path], history: History | None = None) -> None:
+    def __init__(self, title: str) -> None:
         super().__init__(None, Qt.WindowType.FramelessWindowHint
                          | Qt.WindowType.WindowStaysOnTopHint)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setMouseTracking(True)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
-        self.setWindowTitle("ANYFILE")
-
-        self.registry = registry
-        self.settings = Settings()
-        self.paths = paths
-        self.infos = [detect(p) for p in paths]
-        self.recognized = [i for i in self.infos if i.format]
-        options = selection_targets(self.infos, registry)
-        self.tool_entries = tool_entries(self.infos, registry)
-        editable = tuple(dict.fromkeys(p for e in self.tool_entries for p in e.paths))
-        self.format_entries = build_entries(options, editable)
-        self.entries = self.format_entries
-        self.ring = Ring(INNER, OUTER, len(self.entries))
-
-        self.phase = Phase.CHOOSING
-        self.hover: int | None = None
-        # Value of the outer ring under the pointer: a Quality, or a tool option id.
-        self.hover_option: Quality | str | None = None
-        self.default_quality = self.settings.quality
-        self.chosen: Entry | None = None
-        self.jobs: dict[int, Job] = {}
-        self.in_background = False
-        self.error_text = ""
-        self._done = False
+        self.setWindowTitle(title)
 
         self.origin: QPointF | None = None
         self.t = 0.0  # progress of the open/close animation
@@ -238,13 +226,11 @@ class RadialMenu(QWidget):
         self._spinner = QTimer(self, interval=16)
         self._spinner.timeout.connect(self._on_spin)
 
-        self.executor = Executor(registry)
-        self.queue = QtJobQueue(self.executor, self, history=history)
-        self.queue.job_updated.connect(self._on_job)
-
     # --- opening and placement ----------------------------------------------
 
-    def popup(self) -> None:
+    def popup(self, at: QPointF | None = None) -> None:
+        """Opens under the pointer, or around `at` (in the window's coordinates, e.g. the
+        centre of the wheel this one replaces)."""
         screen = QGuiApplication.screenAt(QCursor.pos()) or QGuiApplication.primaryScreen()
         if screen:
             self.setScreen(screen)
@@ -252,6 +238,8 @@ class RadialMenu(QWidget):
         self.showFullScreen()
         self.activateWindow()
         self.setFocus()
+        if at is not None:
+            self._place(at)
         QTimer.singleShot(0, self._place_from_cursor)
         # No news about the pointer: open in the centre.
         QTimer.singleShot(300, lambda: self._place(QPointF(self.rect().center())))
@@ -272,6 +260,9 @@ class RadialMenu(QWidget):
         self.origin = QPointF(x, y)
         self._animate(1.0, 180, QEasingCurve.Type.OutCubic)
         self._update_hover(pos)
+
+    def _update_hover(self, pos: QPointF) -> None:
+        """What lies under the pointer changed: the subclass updates its highlight."""
 
     def enterEvent(self, event: QEnterEvent) -> None:  # noqa: N802
         self._place(event.position())
@@ -303,6 +294,218 @@ class RadialMenu(QWidget):
     def _scale(self) -> float:
         return 0.82 + 0.18 * self.t
 
+    # --- outer ring of the slice under the pointer ---------------------------
+
+    def options(self, index: int | None) -> list[tuple[object, str]]:
+        """Values of the outer ring for the slice, in their natural order, with their
+        short labels. None of them by default."""
+        return []
+
+    def preset_arc(self, index: int) -> tuple[float, float]:
+        """Arc of the preset ring: centred on the slice, at least SUB_MIN_SPAN wide."""
+        a0, a1 = self.ring.bounds(index)
+        span = max(a1 - a0, SUB_MIN_SPAN)
+        mid = (a0 + a1) / 2
+        return mid - span / 2, mid + span / 2
+
+    def preset_order(self, index: int) -> list:
+        """Ring values clockwise along the arc, with the first one (e.g. “Maximum”)
+        always on the left or at the top. At the bottom and on the left, clockwise runs
+        right to left or bottom to top, so the order is reversed there."""
+        order = [value for value, _label in self.options(index)]
+        return order[::-1] if 135 < self.ring.mid_angle(index) < 315 else order
+
+    def _option_at(self, dx: float, dy: float) -> tuple[bool, object | None]:
+        """Whether the point holds the slice under the pointer through its outer ring, and
+        the ring value under it (None between the slice and the ring)."""
+        if not self.options(self.hover):
+            return False, None
+        r, angle = math.hypot(dx, dy), clockwise_angle(dx, dy)
+        a0, a1 = self.preset_arc(self.hover)
+        # Beyond the ring and within the preset arc the slice stays locked, even when
+        # moving diagonally over the neighbouring slices.
+        if not (OUTER < r <= SUB_OUT + 24 and in_arc(angle, a0, a1)):
+            return False, None
+        if r < SUB_IN:
+            return True, None
+        order = self.preset_order(self.hover)
+        k = min(int(((angle - a0) % 360) / ((a1 - a0) / len(order))), len(order) - 1)
+        return True, order[k]
+
+    # --- drawing --------------------------------------------------------
+
+    def _painter(self) -> QPainter:
+        """A painter with the origin at the centre of the wheel, and the palette colours."""
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        p.setRenderHint(QPainter.RenderHint.TextAntialiasing)
+        p.fillRect(self.rect(), QColor(0, 0, 0, int(40 * self.t)))
+        p.translate(self.origin)
+        p.scale(self._scale(), self._scale())
+        p.setOpacity(self.t)
+
+        pal = self.palette()
+        self.c_base = pal.color(pal.ColorRole.Window)
+        self.c_text = pal.color(pal.ColorRole.WindowText)
+        self.c_muted = mix(self.c_base, self.c_text, 0.55)
+        return p
+
+    def _font(self, scale: float = 1.0, bold: bool = False) -> QFont:
+        f = QFont(self.font())
+        f.setPointSizeF(f.pointSizeF() * scale)
+        f.setBold(bold)
+        return f
+
+    def _paint_shadow(self, p: QPainter) -> None:
+        plate = BAND_OUT + 7
+        r = plate + 26
+        g = QRadialGradient(QPointF(0, 4), r)
+        g.setColorAt(plate / r - 0.02, QColor(0, 0, 0, 70))
+        g.setColorAt(1.0, QColor(0, 0, 0, 0))
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(g)
+        p.drawEllipse(QPointF(0, 4), r, r)
+        # Background disc under the slices and the category arcs.
+        p.setBrush(self.c_base)
+        p.drawEllipse(QPointF(0, 0), plate, plate)
+
+    def _paint_group_label(self, p: QPainter, text: str, angle: float, color: QColor) -> None:
+        p.setFont(self._font(0.85, bold=True))
+        fm = QFontMetricsF(p.font())
+        w, h = fm.horizontalAdvance(text) + 14, fm.height() + 4
+        # The box moves outwards along the direction of the group, so it never touches
+        # the arc whatever the angle.
+        ux, uy = polar(angle, 1.0)
+        ax, ay = polar(angle, BAND_OUT + 6)
+        cx, cy = ax + ux * w / 2, ay + uy * h / 2
+        box = QRectF(cx - w / 2, cy - h / 2, w, h)
+        # Own background: the label sits on the desktop wallpaper, which can be anything.
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(self.c_base)
+        p.drawRoundedRect(box, h / 2, h / 2)
+        p.setPen(color.lighter(130) if self.c_base.lightness() < 128 else color.darker(115))
+        p.drawText(box, Qt.AlignmentFlag.AlignCenter, text)
+
+    def _center_lines(self, p: QPainter, big: str, line1: str, line2: str,
+                      accent: QColor | None = None) -> None:
+        p.setPen(accent or self.c_text)
+        font = self._font(1.9 if len(big) <= 4 else 1.4, bold=True)
+        width = QFontMetricsF(font).horizontalAdvance(big)
+        if width > 108:
+            font.setPointSizeF(max(font.pointSizeF() * 108 / width, 7.0))
+        p.setFont(font)
+        p.drawText(QRectF(-56, -34, 112, 36), Qt.AlignmentFlag.AlignCenter, big)
+        p.setPen(self.c_text)
+        p.setFont(self._font(0.85))
+        fm = QFontMetricsF(p.font())
+        for k, line in enumerate((line1, line2)):
+            if line:
+                text = fm.elidedText(line, Qt.TextElideMode.ElideRight, 104)
+                p.drawText(QRectF(-56, 4 + k * 16, 112, 16), Qt.AlignmentFlag.AlignCenter, text)
+
+    def _paint_arc(self, p: QPainter, r: float, color: QColor, value: float | None) -> None:
+        """Progress ring inside the centre; a spinning arc while the value is unknown."""
+        rect = QRectF(-r, -r, 2 * r, 2 * r)
+        p.setBrush(Qt.BrushStyle.NoBrush)
+        p.setPen(QPen(mix(self.c_base, color, 0.2), 5))
+        p.drawEllipse(rect)
+        pen = QPen(color, 5)
+        pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+        p.setPen(pen)
+        if value is None:
+            p.drawArc(rect, int(qt_angle(self.spin) * 16), int(-90 * 16))
+        elif value > 0:
+            p.drawArc(rect, 90 * 16, int(-360 * value * 16))
+
+    def _paint_options(self, p: QPainter, color: QColor, default, current) -> None:
+        """The outer ring of the slice under the pointer, with its default value marked."""
+        options = dict(self.options(self.hover))
+        a0, a1 = self.preset_arc(self.hover)
+        order = self.preset_order(self.hover)
+        part = (a1 - a0) / len(order)
+        for k, value in enumerate(order):
+            b0 = a0 + k * part
+            active = value == current
+            p.setPen(QPen(mix(self.c_base, color, 0.5), 1))
+            p.setBrush(color if active else mix(self.c_base, color, 0.12))
+            p.drawPath(sector(b0, b0 + part, SUB_IN, SUB_OUT))
+            x, y = polar(b0 + part / 2, (SUB_IN + SUB_OUT) / 2)
+            is_default = value == default
+            label = options[value] + (" •" if is_default and not active else "")
+            # Horizontal room: the arc's length at the top and bottom, only the ring's
+            # thickness on the sides, where the ring runs vertically.
+            mid = math.radians(b0 + part / 2)
+            arc = math.radians(part) * (SUB_IN + SUB_OUT) / 2
+            room = arc * abs(math.cos(mid)) + (SUB_OUT - SUB_IN) * abs(math.sin(mid)) - 6
+            font = self._font(0.8, bold=active or is_default)
+            width = QFontMetricsF(font).horizontalAdvance(label)
+            if width > room:
+                font.setPointSizeF(max(font.pointSizeF() * room / width, 6.0))
+            p.setFont(font)
+            p.setPen(QColor("white") if active else self.c_text)
+            p.drawText(QRectF(x - 50, y - 9, 100, 18), Qt.AlignmentFlag.AlignCenter, label)
+
+    def _caption(self) -> tuple[str, QColor | None]:
+        return "", None
+
+    def _paint_caption(self, p: QPainter) -> None:
+        text, color = self._caption()
+        if not text:
+            return
+        p.setOpacity(self.t)
+        p.setFont(self._font(0.9))
+        fm = QFontMetricsF(p.font())
+        max_w = 440.0
+        bounds = fm.boundingRect(QRectF(0, 0, max_w, 200),
+                                 Qt.TextFlag.TextWordWrap | Qt.AlignmentFlag.AlignCenter, text)
+        w = min(max_w, bounds.width()) + 28
+        h = min(bounds.height(), fm.lineSpacing() * 4) + 14
+        box = QRectF(-w / 2, CAPTION_Y, w, h)
+        p.setPen(QPen(mix(self.c_base, self.c_text, 0.15), 1))
+        p.setBrush(self.c_base)
+        p.drawRoundedRect(box, h / 2 if h < 40 else 12, h / 2 if h < 40 else 12)
+        p.setPen(color or self.c_text)
+        p.drawText(box.adjusted(14, 7, -14, -7),
+                   Qt.TextFlag.TextWordWrap | Qt.AlignmentFlag.AlignCenter, text)
+
+
+class RadialMenu(RadialOverlay):
+    open_window = Signal(list)  # list[Path]: hand over to the full window
+    open_pages = Signal(list)  # list[Path]: PDFs whose pages are organized in their own window
+    open_stratum = Signal(Path, QPointF)  # the file and the centre of the wheel, where STRATUM opens
+
+    def __init__(self, registry: Registry, paths: list[Path], history: History | None = None) -> None:
+        super().__init__("ANYFILE")
+        self.registry = registry
+        self.settings = Settings()
+        self.paths = paths
+        self.infos = [detect(p) for p in paths]
+        self.recognized = [i for i in self.infos if i.format]
+        options = selection_targets(self.infos, registry)
+        self.tool_entries = tool_entries(self.infos, registry)
+        editable = tuple(dict.fromkeys(p for e in self.tool_entries for p in e.paths))
+        # STRATUM looks inside one file at a time.
+        explode = (self.infos[0].path if len(self.infos) == 1 and stratum.supported(self.infos[0])
+                   and registry.engine("ffmpeg").available else None)
+        self.format_entries = build_entries(options, editable, explode)
+        self.entries = self.format_entries
+        self.ring = Ring(INNER, OUTER, len(self.entries))
+
+        self.phase = Phase.CHOOSING
+        self.hover: int | None = None
+        # Value of the outer ring under the pointer: a Quality, or a tool option id.
+        self.hover_option: Quality | str | None = None
+        self.default_quality = self.settings.quality
+        self.chosen: Entry | None = None
+        self.jobs: dict[int, Job] = {}
+        self.in_background = False
+        self.error_text = ""
+        self._done = False
+
+        self.executor = Executor(registry)
+        self.queue = QtJobQueue(self.executor, self, history=history)
+        self.queue.job_updated.connect(self._on_job)
+
     # --- interaction --------------------------------------------------------
 
     def presets(self, index: int | None) -> Presets:
@@ -320,20 +523,6 @@ class RadialMenu(QWidget):
         if entry.tool:
             return [(o.id, o.label) for o in entry.tool.options]
         return [(q, q.short) for q in self.presets(index)]
-
-    def preset_arc(self, index: int) -> tuple[float, float]:
-        """Arc of the preset ring: centred on the slice, at least SUB_MIN_SPAN wide."""
-        a0, a1 = self.ring.bounds(index)
-        span = max(a1 - a0, SUB_MIN_SPAN)
-        mid = (a0 + a1) / 2
-        return mid - span / 2, mid + span / 2
-
-    def preset_order(self, index: int) -> list[Quality | str]:
-        """Ring values clockwise along the arc, with the first one (e.g. “Maximum”)
-        always on the left or at the top. At the bottom and on the left, clockwise runs
-        right to left or bottom to top, so the order is reversed there."""
-        order = [value for value, _label in self.options(index)]
-        return order[::-1] if 135 < self.ring.mid_angle(index) < 315 else order
 
     def default_for(self, index: int | None) -> Quality:
         """Quality for a direct click on the slice: the default one, if the slice offers it."""
@@ -357,17 +546,8 @@ class RadialMenu(QWidget):
             return None, None
         s = self._scale()
         dx, dy = (pos.x() - self.origin.x()) / s, (pos.y() - self.origin.y()) / s
-        if self.phase is Phase.CHOOSING and self.options(self.hover):
-            r, angle = math.hypot(dx, dy), clockwise_angle(dx, dy)
-            a0, a1 = self.preset_arc(self.hover)
-            # Beyond the ring and within the preset arc the slice stays locked, even when
-            # moving diagonally over the neighbouring slices.
-            if OUTER < r <= SUB_OUT + 24 and in_arc(angle, a0, a1):
-                if r < SUB_IN:
-                    return self.hover, None
-                order = self.preset_order(self.hover)
-                k = min(int(((angle - a0) % 360) / ((a1 - a0) / len(order))), len(order) - 1)
-                return self.hover, order[k]
+        if self.phase is Phase.CHOOSING and (locked := self._option_at(dx, dy))[0]:
+            return self.hover, locked[1]
         return self.ring.hit(dx, dy), None
 
     def _hit(self, pos: QPointF) -> int | None:
@@ -450,6 +630,11 @@ class RadialMenu(QWidget):
                     self._to_window()
             elif self.entries[hit].tools:
                 self._show_wheel(tools=True)
+            elif self.entries[hit].stratum:
+                # The exploded view takes the wheel's place, around the same point.
+                self.hide()
+                self.open_stratum.emit(self.entries[hit].paths[0], self.origin)
+                self._close()
             elif self.entries[hit].is_more:
                 self._to_window()
             elif self.entries[hit].tool and self.entries[hit].tool.free_option:
@@ -639,44 +824,13 @@ class RadialMenu(QWidget):
     def paintEvent(self, _event: QPaintEvent) -> None:  # noqa: N802
         if self.origin is None:
             return
-        p = QPainter(self)
-        p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        p.setRenderHint(QPainter.RenderHint.TextAntialiasing)
-        p.fillRect(self.rect(), QColor(0, 0, 0, int(40 * self.t)))
-        p.translate(self.origin)
-        p.scale(self._scale(), self._scale())
-        p.setOpacity(self.t)
-
-        pal = self.palette()
-        self.c_base = pal.color(pal.ColorRole.Window)
-        self.c_text = pal.color(pal.ColorRole.WindowText)
-        self.c_muted = mix(self.c_base, self.c_text, 0.55)
-
+        p = self._painter()
         self._paint_shadow(p)
         self._paint_slices(p)
         self._paint_presets(p)
         self._paint_center(p)
         self._paint_caption(p)
         p.end()
-
-    def _font(self, scale: float = 1.0, bold: bool = False) -> QFont:
-        f = QFont(self.font())
-        f.setPointSizeF(f.pointSizeF() * scale)
-        f.setBold(bold)
-        return f
-
-    def _paint_shadow(self, p: QPainter) -> None:
-        plate = BAND_OUT + 7
-        r = plate + 26
-        g = QRadialGradient(QPointF(0, 4), r)
-        g.setColorAt(plate / r - 0.02, QColor(0, 0, 0, 70))
-        g.setColorAt(1.0, QColor(0, 0, 0, 0))
-        p.setPen(Qt.PenStyle.NoPen)
-        p.setBrush(g)
-        p.drawEllipse(QPointF(0, 4), r, r)
-        # Background disc under the slices and the category arcs.
-        p.setBrush(self.c_base)
-        p.drawEllipse(QPointF(0, 0), plate, plate)
 
     def _paint_slices(self, p: QPainter) -> None:
         dim = 0.35 if self.phase is not Phase.CHOOSING else 1.0
@@ -755,52 +909,9 @@ class RadialMenu(QWidget):
         return [text[:cut], text[cut + 1:]]
 
     def _paint_presets(self, p: QPainter) -> None:
-        options = dict(self.options(self.hover)) if self.phase is Phase.CHOOSING else {}
-        if not options:
-            return
-        color = QColor(self.entries[self.hover].color)
-        a0, a1 = self.preset_arc(self.hover)
-        order = self.preset_order(self.hover)
-        part = (a1 - a0) / len(order)
-        default = self.default_option(self.hover)
-        for k, value in enumerate(order):
-            b0 = a0 + k * part
-            active = value == self.hover_option
-            p.setPen(QPen(mix(self.c_base, color, 0.5), 1))
-            p.setBrush(color if active else mix(self.c_base, color, 0.12))
-            p.drawPath(sector(b0, b0 + part, SUB_IN, SUB_OUT))
-            x, y = polar(b0 + part / 2, (SUB_IN + SUB_OUT) / 2)
-            is_default = value == default
-            label = options[value] + (" •" if is_default and not active else "")
-            # Horizontal room: the arc's length at the top and bottom, only the ring's
-            # thickness on the sides, where the ring runs vertically.
-            mid = math.radians(b0 + part / 2)
-            arc = math.radians(part) * (SUB_IN + SUB_OUT) / 2
-            room = arc * abs(math.cos(mid)) + (SUB_OUT - SUB_IN) * abs(math.sin(mid)) - 6
-            font = self._font(0.8, bold=active or is_default)
-            width = QFontMetricsF(font).horizontalAdvance(label)
-            if width > room:
-                font.setPointSizeF(max(font.pointSizeF() * room / width, 6.0))
-            p.setFont(font)
-            p.setPen(QColor("white") if active else self.c_text)
-            p.drawText(QRectF(x - 50, y - 9, 100, 18), Qt.AlignmentFlag.AlignCenter, label)
-
-    def _paint_group_label(self, p: QPainter, text: str, angle: float, color: QColor) -> None:
-        p.setFont(self._font(0.85, bold=True))
-        fm = QFontMetricsF(p.font())
-        w, h = fm.horizontalAdvance(text) + 14, fm.height() + 4
-        # The box moves outwards along the direction of the group, so it never touches
-        # the arc whatever the angle.
-        ux, uy = polar(angle, 1.0)
-        ax, ay = polar(angle, BAND_OUT + 6)
-        cx, cy = ax + ux * w / 2, ay + uy * h / 2
-        box = QRectF(cx - w / 2, cy - h / 2, w, h)
-        # Own background: the label sits on the desktop wallpaper, which can be anything.
-        p.setPen(Qt.PenStyle.NoPen)
-        p.setBrush(self.c_base)
-        p.drawRoundedRect(box, h / 2, h / 2)
-        p.setPen(color.lighter(130) if self.c_base.lightness() < 128 else color.darker(115))
-        p.drawText(box, Qt.AlignmentFlag.AlignCenter, text)
+        if self.phase is Phase.CHOOSING and self.options(self.hover):
+            self._paint_options(p, QColor(self.entries[self.hover].color), self.default_option(self.hover),
+                                self.hover_option)
 
     def _paint_center(self, p: QPainter) -> None:
         r = INNER - 2
@@ -843,23 +954,6 @@ class RadialMenu(QWidget):
         else:
             self._center_lines(p, "✕", _("Error"), "", accent=QColor(ERROR_COLOR))
 
-    def _center_lines(self, p: QPainter, big: str, line1: str, line2: str,
-                      accent: QColor | None = None) -> None:
-        p.setPen(accent or self.c_text)
-        font = self._font(1.9 if len(big) <= 4 else 1.4, bold=True)
-        width = QFontMetricsF(font).horizontalAdvance(big)
-        if width > 108:
-            font.setPointSizeF(max(font.pointSizeF() * 108 / width, 7.0))
-        p.setFont(font)
-        p.drawText(QRectF(-56, -34, 112, 36), Qt.AlignmentFlag.AlignCenter, big)
-        p.setPen(self.c_text)
-        p.setFont(self._font(0.85))
-        fm = QFontMetricsF(p.font())
-        for k, line in enumerate((line1, line2)):
-            if line:
-                text = fm.elidedText(line, Qt.TextElideMode.ElideRight, 104)
-                p.drawText(QRectF(-56, 4 + k * 16, 112, 16), Qt.AlignmentFlag.AlignCenter, text)
-
     def _paint_file_summary(self, p: QPainter) -> None:
         if len(self.infos) == 1:
             info = self.infos[0]
@@ -886,24 +980,15 @@ class RadialMenu(QWidget):
                    fm.elidedText(detail, Qt.TextElideMode.ElideRight, 104))
 
     def _paint_progress(self, p: QPainter, r: float) -> None:
-        color = QColor(self.chosen.color) if self.chosen else self.c_text
-        rect = QRectF(-r, -r, 2 * r, 2 * r)
-        p.setBrush(Qt.BrushStyle.NoBrush)
-        p.setPen(QPen(mix(self.c_base, color, 0.2), 5))
-        p.drawEllipse(rect)
-        pen = QPen(color, 5)
-        pen.setCapStyle(Qt.PenCapStyle.RoundCap)
-        p.setPen(pen)
-        value = self.progress()
-        if value is None:
-            p.drawArc(rect, int(qt_angle(self.spin) * 16), int(-90 * 16))
-        elif value > 0:
-            p.drawArc(rect, 90 * 16, int(-360 * value * 16))
+        self._paint_arc(p, r, QColor(self.chosen.color) if self.chosen else self.c_text, self.progress())
 
     def _caption(self) -> tuple[str, QColor | None]:
         if self.phase is Phase.CHOOSING:
             if self.hover is not None and self.hover != CENTER:
                 entry = self.entries[self.hover]
+                if entry.stratum:
+                    return (_("STRATUM: the tracks inside the file, to take out one by one") + "\n"
+                            + _("Audio, subtitles, video and cover, copied or converted")), None
                 if entry.tools:
                     names = ", ".join(e.label for e in self.tool_entries)
                     return _("Tools: {names}").format(names=names) + "\n" + _("Tab switches wheel"), None
@@ -998,23 +1083,3 @@ class RadialMenu(QWidget):
         if self.hover_option is None:
             text += " · " + _("move outwards for “Small”")
         return text
-
-    def _paint_caption(self, p: QPainter) -> None:
-        text, color = self._caption()
-        if not text:
-            return
-        p.setOpacity(self.t)
-        p.setFont(self._font(0.9))
-        fm = QFontMetricsF(p.font())
-        max_w = 440.0
-        bounds = fm.boundingRect(QRectF(0, 0, max_w, 200),
-                                 Qt.TextFlag.TextWordWrap | Qt.AlignmentFlag.AlignCenter, text)
-        w = min(max_w, bounds.width()) + 28
-        h = min(bounds.height(), fm.lineSpacing() * 4) + 14
-        box = QRectF(-w / 2, CAPTION_Y, w, h)
-        p.setPen(QPen(mix(self.c_base, self.c_text, 0.15), 1))
-        p.setBrush(self.c_base)
-        p.drawRoundedRect(box, h / 2 if h < 40 else 12, h / 2 if h < 40 else 12)
-        p.setPen(color or self.c_text)
-        p.drawText(box.adjusted(14, 7, -14, -7),
-                   Qt.TextFlag.TextWordWrap | Qt.AlignmentFlag.AlignCenter, text)

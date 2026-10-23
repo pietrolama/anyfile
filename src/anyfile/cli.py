@@ -14,12 +14,15 @@ from anyfile.core.detector import detect
 from anyfile.core.executor import Executor
 from anyfile.core.jobs import JobQueue
 from anyfile.core.planner import available_targets
+from anyfile.core.errors import AnyfileError
 from anyfile.core.registry import Registry
 from anyfile.i18n import _
+from anyfile import stratum
+from anyfile.models.component import Kind
 from anyfile.models.conversion import Quality
 from anyfile.models.job import Job, JobStatus
 
-COMMANDS = ("convert", "edit", "info", "engines", "history", "repeat")
+COMMANDS = ("convert", "edit", "explode", "info", "engines", "history", "repeat")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -60,6 +63,15 @@ def build_parser() -> argparse.ArgumentParser:
                    help=_("file holding the password of protected PDFs, or the new one for "
                           "“protect” (“-”: standard input); without it, the password is asked"))
 
+    p = sub.add_parser("explode", help=_("STRATUM: show the tracks inside a video and extract them"))
+    p.add_argument("file", type=Path)
+    p.add_argument("-x", "--extract", nargs="+", metavar="ID",
+                   help=_("the tracks to extract, by the number shown, optionally with the format "
+                          "to convert them to: 1 or 1:mp3 (without it, only the list)"))
+    p.add_argument("-o", "--output-dir", type=Path,
+                   help=_("destination folder (default: the folder of the file)"))
+    p.add_argument("--overwrite", action="store_true", help=_("overwrite existing files"))
+
     p = sub.add_parser("info", help=_("show the detected format and the possible conversions"))
     p.add_argument("files", nargs="+", type=Path)
 
@@ -95,6 +107,8 @@ def main(argv: list[str]) -> int:
         return cmd_repeat(registry, args.ids)
     if args.command == "edit":
         return cmd_edit(registry, args)
+    if args.command == "explode":
+        return cmd_explode(registry, args)
     return cmd_convert(registry, args)
 
 
@@ -232,6 +246,54 @@ def cmd_edit(registry: Registry, args: argparse.Namespace) -> int:
     else:
         jobs_args = [(f, "", common) for f in args.files]
     return _run_jobs(registry, _open_history(), jobs_args, sys.stdout.isatty(), args.password_file)
+
+
+def cmd_explode(registry: Registry, args: argparse.Namespace) -> int:
+    path = args.file
+    if not path.is_file():
+        print(_("anyfile: file not found: {path}").format(path=path), file=sys.stderr)
+        return 2
+    info = detect(path)
+    try:
+        anatomy = stratum.explode(info, path, registry)
+    except AnyfileError as e:
+        print(f"anyfile: {e.message}", file=sys.stderr)
+        return 1
+    if args.extract:
+        unknown = [i for i in args.extract if anatomy.get(stratum.parse_option(i)[0]) is None]
+        if unknown:
+            print(_("anyfile: no track {ids} in “{name}”").format(ids=", ".join(unknown), name=path.name),
+                  file=sys.stderr)
+            return 2
+        for value in args.extract:
+            component_id, target = stratum.parse_option(value)
+            possible = stratum.targets(anatomy.get(component_id), registry)
+            if target and target not in possible:
+                print(_("anyfile: track {id} cannot be saved as {format} ({choices})").format(
+                    id=component_id, format=target, choices=", ".join(possible)), file=sys.stderr)
+                return 2
+        common = {"output_dir": args.output_dir, "overwrite": args.overwrite, "tool": stratum.EXTRACT}
+        jobs_args = [(path, "", {**common, "option": i}) for i in dict.fromkeys(args.extract)]
+        return _run_jobs(registry, _open_history(), jobs_args, sys.stdout.isatty())
+
+    print(f"{path.name} — {anatomy.summary}")
+    if not anatomy.components:
+        print("  " + _("No track found"))
+        return 0
+    for kind in Kind:
+        components = anatomy.of(kind)
+        if components:
+            print(f"  {kind.label}")
+        for c in components:
+            flags = [f for f, on in ((_("default"), c.default), (_("forced"), c.forced)) if on]
+            text = "  ".join(t for t in (c.short if c.language else "", c.codec, c.details,
+                                         f"“{c.title}”" if c.title else "", ", ".join(flags)) if t)
+            exts = stratum.targets(c, registry)
+            target = (" ".join(f".{e}" for e in exts) if exts
+                      else _("not extractable: {reason}").format(reason=c.reason))
+            print(f"    {c.id:>3}  {text}  → {target}")
+    print("\n" + _("To extract: anyfile explode FILE -x ID... (ID:FORMAT to convert, e.g. 1:mp3)"))
+    return 0
 
 
 def _read_password_file(path: Path) -> str | None:

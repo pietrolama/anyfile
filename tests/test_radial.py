@@ -322,6 +322,31 @@ def test_no_tools_slice_when_nothing_can_be_edited(make_menu, sample):
     assert not any(e.tools for e in menu.entries)
 
 
+@needs("ffmpeg", "ffprobe")
+def test_stratum_slice_only_for_a_single_video(make_menu, sample, tmp_path):
+    video = sample("mp4")
+    menu = make_menu(video)
+    entry = next(e for e in menu.entries if e.stratum)
+    assert entry.paths == (video,) and not entry.is_more
+    assert not any(e.stratum for e in make_menu(sample("wav")).entries)
+    other = tmp_path / "other.mp4"
+    other.write_bytes(video.read_bytes())
+    assert not any(e.stratum for e in make_menu(video, other).entries)
+
+
+@needs("ffmpeg", "ffprobe")
+def test_stratum_slice_hands_the_file_over_where_the_wheel_was(make_menu, sample):
+    video = sample("mp4")
+    menu = make_menu(video)
+    opened, finished = [], []
+    menu.open_stratum.connect(lambda path, at: opened.append((path, at)))
+    menu.finished.connect(lambda: finished.append(True))
+    click(menu, next(i for i, e in enumerate(menu.entries) if e.stratum))
+    assert opened == [(video, menu.origin)]
+    _settle(menu)
+    assert finished and not menu.isVisible()
+
+
 @needs("magick")
 def test_tool_option_from_the_outer_ring(app, make_menu, sample):
     src = sample("png")  # 64x48

@@ -141,6 +141,12 @@ def describe(entry: Entry) -> str:
 def _tool_labels(tool_id: str, option_id: str | None) -> tuple[str, str]:
     """Translated names of an edit and its option, from what the engines declare."""
     from anyfile.core.registry import default_engines
+    from anyfile.stratum import EXTRACT
+
+    if tool_id == EXTRACT:
+        component_id, _sep, target = (option_id or "").partition(":")
+        track = _("track {id}").format(id=component_id) if component_id else ""
+        return _("Extract"), f"{track} → {target.upper()}" if target else track
 
     for engine in default_engines():
         for tool in engine.declared_tools():
@@ -151,10 +157,14 @@ def _tool_labels(tool_id: str, option_id: str | None) -> tuple[str, str]:
 
 
 def describe_result(entry: Entry) -> str:
+    from anyfile.stratum import EXTRACT
+
     if entry.status is JobStatus.FAILED:
         return entry.message
     if entry.status is JobStatus.UNCHANGED:
         return _("Already compact: no file created")
+    if entry.tool == EXTRACT:
+        return format_size(entry.output_size)  # a part of the file: no saving to report
     sizes = f"{format_size(entry.source_size)} → {format_size(entry.output_size)}"
     if entry.saved is not None and entry.source_size:
         change = -entry.saved / entry.source_size

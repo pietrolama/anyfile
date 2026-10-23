@@ -14,14 +14,17 @@ from anyfile.core.history import format_size
 from anyfile.core.errors import AnyfileError, ConversionCancelled, NothingGained, PasswordRequired
 from anyfile.core.planner import plan
 from anyfile.core.registry import Registry
-from anyfile.core.validation import validate_output
+from anyfile.core.validation import ValidationError, validate_output
 from anyfile.i18n import _
 from anyfile.engines.base import ConversionContext, ProgressFn, Runner
+from anyfile.engines.ffmpeg import AUDIO_PRESETS
 from anyfile.engines.qpdf import QpdfEngine
 from anyfile.models.conversion import Format, Quality
 from anyfile.models.file_info import FileInfo
 from anyfile.models.job import Job
 from anyfile.models.tool import Tool, ToolOption
+from anyfile import stratum
+from anyfile.stratum import EXTRACT, media
 
 
 class Executor:
@@ -65,6 +68,8 @@ class Executor:
     # --- running -----------------------------------------------------------------
 
     def run(self, job: Job, progress: ProgressFn = lambda _value: None) -> Path:
+        if job.tool == EXTRACT:
+            return self._extract(job, progress)
         if job.tool and job.others:
             return self._combine(job, progress)
         src = job.source
@@ -214,6 +219,60 @@ class Executor:
             validate_output(produced, target)
             name = tool.result_name(job.source.stem)
             return self._place(job, produced, False, out_dir, target, name, name)
+        finally:
+            shutil.rmtree(work_dir, ignore_errors=True)
+
+    def _extract(self, job: Job, progress: ProgressFn) -> Path:
+        """STRATUM: one component of the file (job.option) copied out into a file of its
+        own. The file is analyzed again here: what the interface showed may be stale."""
+        src = job.source
+        if not src.is_file():
+            raise AnyfileError(_("File not found: {path}").format(path=src))
+        info = detect(src)
+        job.source_size = info.size
+        job.source_format = info.format.id if info.format else None
+        if not stratum.supported(info):
+            stratum.explode(info, src, self.registry)  # raises the error that explains why
+
+        out_dir = _writable_dir(job.output_dir or src.parent)
+        work_dir = Path(tempfile.mkdtemp(prefix=".anyfile-", dir=out_dir))
+        try:
+            link = work_dir / f"input.{info.format.ext}"
+            system.link_or_copy(src, link)
+            try:
+                anatomy = stratum.explode(info, link, self.registry, job.cancel_event)
+                component_id, target = stratum.parse_option(job.option)
+                component = anatomy.get(component_id)
+                if component is None:
+                    raise AnyfileError(_("“{name}” has no track {id}").format(name=src.name, id=component_id))
+                if not component.extractable:
+                    raise AnyfileError(_("“{name}”: track {id} cannot be extracted: {reason}").format(
+                        name=src.name, id=component.id, reason=component.reason))
+                possible = stratum.targets(component, self.registry)
+                if target and target not in possible:
+                    raise AnyfileError(_("Track {id} cannot be saved as {format}: use {choices}").format(
+                        id=component.id, format=target.upper(), choices=", ".join(possible)))
+                ext = target or component.ext
+                job.target = ext
+                # Quality only matters when the track is converted: a copy stays as it is.
+                job.applied_quality = job.quality if ext != component.ext and ext in AUDIO_PRESETS else None
+                engine = stratum.media_engine(self.registry)
+                produced = work_dir / f"output.{ext}"
+                ctx = ConversionContext(Runner(job.cancel_event), progress, src, job.quality, info.format.id)
+                media.extract(engine, component, link, info.format.id, produced, anatomy.duration, ctx, ext)
+                if job.cancel_event.is_set():
+                    raise ConversionCancelled()
+                if problem := media.check(engine, component, produced, ctx.runner, ext):
+                    raise ValidationError(problem)
+            except AnyfileError as e:
+                e.message = e.message.replace(str(link), src.name)
+                e.details = e.details.replace(str(link), str(src))
+                raise
+            name = stratum.result_name(src.stem, component)
+            output = place(produced, out_dir / f"{name}.{ext}", overwrite=job.overwrite,
+                           protect=src)
+            job.output_size = _size(output)
+            return output
         finally:
             shutil.rmtree(work_dir, ignore_errors=True)
 

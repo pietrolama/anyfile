@@ -1,4 +1,4 @@
-"""Starting the graphical interface: anyfile [--radial | --history] [FILE...]"""
+"""Starting the graphical interface: anyfile [--radial | --explode | --history] [FILE...]"""
 
 from __future__ import annotations
 
@@ -46,12 +46,15 @@ def run(argv: list[str]) -> int:
                         help=_("started from the Dolphin context menu"))
     parser.add_argument("--radial", action="store_true",
                         help=_("show the radial menu under the pointer instead of the window"))
+    parser.add_argument("--explode", action="store_true",
+                        help=_("STRATUM: show the tracks inside the file and extract them"))
     parser.add_argument("--history", action="store_true", help=_("open the conversion history"))
     parser.add_argument("--pages", action="store_true", help=_("organize the pages of the PDF files"))
     parser.add_argument("files", nargs="*")
     args, qt_args = parser.parse_known_args(argv)
 
     try:
+        from PySide6.QtCore import QPointF
         from PySide6.QtGui import QIcon
         from PySide6.QtWidgets import QApplication
     except ImportError:
@@ -90,17 +93,46 @@ def run(argv: list[str]) -> int:
             if window := open_pages_window(registry, path, history):
                 windows.append(window)
 
-    if args.radial and paths:
+    def track(overlay) -> None:
+        """A wheel or exploded view: the app quits when the last of them, and of the
+        windows, is gone (a wheel hides while a conversion continues in the background)."""
+        windows.append(overlay)
+
+        def closed() -> None:
+            windows.remove(overlay)
+            if not windows:
+                app.quit()
+
+        overlay.finished.connect(closed)
+
+    def open_menu(files: list[Path], at: QPointF | None = None) -> None:
         from anyfile.ui.radial import RadialMenu
 
+        menu = RadialMenu(registry, files, history)
+        menu.open_window.connect(open_window)
+        menu.open_pages.connect(open_pages)
+        menu.open_stratum.connect(lambda path, point: open_stratum(path, point, from_wheel=True))
+        track(menu)
+        menu.popup(at)
+
+    def open_stratum(path: Path, at: QPointF | None = None, from_wheel: bool = False) -> None:
+        from anyfile.ui.stratum_view import ExplodedView
+
+        view = ExplodedView(registry, path, history, from_wheel=from_wheel)
+        # Back to a new wheel, opened before this view closes so the app stays alive.
+        view.back.connect(lambda path, point: open_menu([path], point))
+        track(view)
+        view.popup(at)
+
+    if args.radial and paths:
         # The menu hides while a conversion continues in the background: the app quits
         # when the menu says so, not when the last window closes.
         app.setQuitOnLastWindowClosed(False)
-        menu = RadialMenu(registry, paths, history)
-        menu.open_window.connect(open_window)
-        menu.open_pages.connect(open_pages)
-        menu.finished.connect(lambda: None if windows else app.quit())
-        menu.popup()
+        open_menu(paths)
+    elif args.explode and paths:
+        # One file: its anatomy is what the view shows.
+        app.setQuitOnLastWindowClosed(False)
+        open_stratum(paths[0])
     elif args.pages and paths:
         open_pages(paths)
         if not windows:
